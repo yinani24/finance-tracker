@@ -1,0 +1,18 @@
+.env
+data/transactions.csv
+data/accounts.json
+data/goals.json
+reports/*
+!reports/.gitkeep
+
+# Bank statements — contain real financial data, never commit
+statements/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.superpowers/
+.DS_Store
+**/.DS_Store
+.worktrees/
+statements_manifest.json
