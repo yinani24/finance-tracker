@@ -1,0 +1,551 @@
+{# templates/dashboard.html.j2 #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Dashboard</title>
+<style>{{ daisyui_css }}</style>
+<script>{{ alpine_js }}</script>
+<script>{{ chartjs }}</script>
+<style>
+  * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; box-sizing: border-box; }
+  body { background: #09090b; color: #fafafa; margin: 0; padding: 0; min-height: 100vh; }
+
+  /* Design tokens */
+  :root {
+    --bg:       #09090b;
+    --surface:  #18181b;
+    --surface2: #27272a;
+    --border:   #3f3f46;
+    --muted:    #71717a;
+    --green:    #22c55e;
+    --red:      #ef4444;
+    --blue:     #3b82f6;
+    --purple:   #a855f7;
+    --amber:    #f59e0b;
+    --cyan:     #06b6d4;
+  }
+
+  .card { background: var(--surface); border: 1px solid var(--surface2); border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
+  .card:hover { border-color: var(--border); }
+  .card-accent-green::before  { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--green),transparent); border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
+  .card-accent-red::before    { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--red),transparent);   border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
+  .card-accent-blue::before   { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--blue),transparent);  border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
+  .card-accent-purple::before { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--purple),transparent);border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
+
+  .kpi-label { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+  .kpi-value { font-size:1.65rem; font-weight:700; margin:6px 0 4px; letter-spacing:-0.02em; }
+  .kpi-sub   { font-size:0.7rem; color:var(--muted); margin-top:4px; }
+
+  .badge { display:inline-flex; align-items:center; font-size:0.68rem; font-weight:600; padding:2px 8px; border-radius:999px; }
+  .badge-up      { background:rgba(239,68,68,0.12);  color:var(--red); }
+  .badge-down    { background:rgba(34,197,94,0.12);  color:var(--green); }
+  .badge-neutral { background:rgba(113,113,122,0.15); color:var(--muted); }
+  .badge-blue    { background:rgba(59,130,246,0.12); color:var(--blue); }
+
+  .tab-bar { display:flex; gap:2px; padding:4px; background:var(--surface); border:1px solid var(--surface2); border-radius:10px; width:fit-content; }
+  .tab-btn { padding:7px 18px; border-radius:7px; font-size:0.8rem; font-weight:500; color:var(--muted); cursor:pointer; border:none; background:transparent; transition:all 0.15s; }
+  .tab-btn:hover  { color:#fafafa; background:var(--surface2); }
+  .tab-btn.active { background:var(--surface2); color:#fafafa; font-weight:600; }
+
+  .section-label { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px; }
+
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .bar-track { flex:1; background:var(--surface2); border-radius:4px; height:7px; overflow:hidden; }
+  .bar-fill  { height:7px; border-radius:4px; }
+
+  .progress-track { background:var(--surface2); border-radius:6px; height:6px; }
+  .progress-fill  { height:6px; border-radius:6px; background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+
+  .insight-card { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; background:var(--surface); border:1px solid var(--surface2); border-radius:10px; }
+  .insight-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
+
+  .data-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .data-table th { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; padding:0 0 10px; text-align:left; border-bottom:1px solid var(--surface2); }
+  .data-table th:last-child { text-align:right; }
+  .data-table td { padding:9px 0; border-bottom:1px solid var(--surface2); color:#e4e4e7; vertical-align:middle; }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table td:last-child { text-align:right; font-weight:600; color:var(--red); }
+
+  .spark { display:flex; align-items:flex-end; gap:2px; height:22px; width:50px; }
+  .spark-bar { flex:1; border-radius:2px 2px 0 0; min-width:6px; }
+
+  .cat-badge { display:inline-block; font-size:0.68rem; font-weight:500; padding:2px 8px; border-radius:4px; }
+
+  [x-cloak] { display:none !important; }
+</style>
+</head>
+<body x-data="{ tab: 'overview' }">
+
+<div style="max-width:1100px;margin:0 auto;padding:28px 24px">
+
+  {# ── Header ── #}
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+    <div>
+      <div style="font-size:1.2rem;font-weight:700;letter-spacing:-0.01em">Finance Dashboard</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">Last updated: {{ generated_at }}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="font-size:0.75rem;background:var(--surface);border:1px solid var(--surface2);padding:5px 12px;border-radius:7px;color:var(--muted)">
+        {{ kpis.this_month }}
+      </div>
+    </div>
+  </div>
+
+  {# ── Tab Bar ── #}
+  <div class="tab-bar" style="margin-bottom:24px">
+    <button class="tab-btn" :class="tab==='overview'  ? 'active' : ''" @click="tab='overview'">Overview</button>
+    <button class="tab-btn" :class="tab==='spending'  ? 'active' : ''" @click="tab='spending'">Spending</button>
+    <button class="tab-btn" :class="tab==='goals'     ? 'active' : ''" @click="tab='goals'">Goals</button>
+    <button class="tab-btn" :class="tab==='insights'  ? 'active' : ''" @click="tab='insights'">Insights</button>
+  </div>
+
+  {# ════════════════════════════════════════════
+     OVERVIEW TAB
+  ════════════════════════════════════════════ #}
+  <div x-show="tab==='overview'">
+
+    {# KPI Row #}
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="card card-accent-green">
+        <div class="kpi-label">Net Worth</div>
+        <div class="kpi-value" style="color:var(--green)">${{ kpis.net_worth | format_currency }}</div>
+        <div class="kpi-sub">All accounts combined</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Income</div>
+        <div class="kpi-value">${{ kpis.income | format_currency }}</div>
+        <div class="kpi-sub">{{ kpis.this_month }}</div>
+      </div>
+      <div class="card card-accent-red">
+        <div class="kpi-label">Expenses</div>
+        <div class="kpi-value" style="color:var(--red)">${{ kpis.expenses | format_currency }}</div>
+        <div class="kpi-sub">{{ kpis.this_month }}</div>
+      </div>
+      <div class="card card-accent-blue">
+        <div class="kpi-label">Saved</div>
+        <div class="kpi-value" style="color:var(--blue)">${{ kpis.saved | format_currency }}</div>
+        {% if kpis.monthly_target > 0 %}
+        <div class="kpi-sub">
+          <span class="badge {% if kpis.saved >= kpis.monthly_target %}badge-down{% else %}badge-up{% endif %}">
+            {% if kpis.saved >= kpis.monthly_target %}✓ Goal hit{% else %}${{ (kpis.monthly_target - kpis.saved) | format_currency }} behind{% endif %}
+          </span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Charts row #}
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-label">Monthly Spending — 12 Months</div>
+        <canvas id="trendChart" style="max-height:160px"></canvas>
+      </div>
+      <div class="card">
+        <div class="section-label">Account Balances</div>
+        {% for a in account_balances %}
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:0.78rem">{{ a.name }}</span>
+            <span style="font-size:0.78rem;font-weight:600;color:{% if a.balance >= 0 %}var(--green){% else %}var(--red){% endif %}">
+              {% if a.balance < 0 %}-{% endif %}${{ a.balance | abs | format_currency }}
+            </span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:{{ [a.share_of_total * 100, 100] | min }}%"></div>
+          </div>
+        </div>
+        {% else %}
+        <div style="font-size:0.8rem;color:var(--muted)">No accounts configured.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Top Merchants #}
+    {% if top_merchants %}
+    <div class="card">
+      <div class="section-label">Top Merchants — {{ kpis.this_month }}</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:32px">#</th>
+            <th>Merchant</th>
+            <th>Category</th>
+            <th style="text-align:center">Txns</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in top_merchants %}
+          <tr>
+            <td style="color:var(--muted)">{{ loop.index }}</td>
+            <td style="font-weight:500">{{ m.name }}</td>
+            <td>
+              <span class="cat-badge" style="background:rgba(59,130,246,0.1);color:var(--blue)">{{ m.category }}</span>
+            </td>
+            <td style="text-align:center;color:var(--muted)">{{ m.tx_count }}×</td>
+            <td>${{ m.amount | format_currency }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════════════════════════════════
+     SPENDING TAB
+  ════════════════════════════════════════════ #}
+  <div x-show="tab==='spending'" x-cloak>
+
+    {# Period selector (UI only) #}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:0.88rem;font-weight:600">Spending Breakdown</div>
+      <div style="display:flex;gap:4px">
+        {% for period in ['This Month', '3 Months', '6 Months', 'Year'] %}
+        <button style="padding:4px 12px;border-radius:6px;font-size:0.72rem;border:1px solid var(--surface2);cursor:pointer;
+          {% if loop.first %}background:var(--surface2);color:#fafafa;font-weight:600;{% else %}background:var(--surface);color:var(--muted);{% endif %}">
+          {{ period }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Row 1: Donut + Waterfall #}
+    <div class="grid-2" style="margin-bottom:12px">
+
+      {# Category donut #}
+      <div class="card">
+        <div class="section-label">Where It Went</div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <div style="flex-shrink:0;position:relative">
+            <canvas id="donutChart" style="width:110px;height:110px"></canvas>
+          </div>
+          <div style="flex:1">
+            {% for item in spending_pct %}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:0.76rem;color:#a1a1aa">{{ item.name }}</span>
+              <span style="font-size:0.76rem;font-weight:600">${{ item.amount | format_currency }}</span>
+            </div>
+            {% else %}
+            <div style="font-size:0.8rem;color:var(--muted)">No expense data.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      {# Income vs Expenses bar #}
+      <div class="card">
+        <div class="section-label">Income vs Expenses</div>
+        <canvas id="incomeChart" style="max-height:140px"></canvas>
+        {% if kpis.income > 0 %}
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-size:0.72rem;color:var(--blue)">
+          Savings rate <strong>{{ "%.1f" | format(kpis.savings_rate * 100) }}%</strong>
+          {% if kpis.monthly_target > 0 %} — need <strong>{{ "%.1f" | format(kpis.monthly_target / kpis.income * 100) }}%</strong> to hit goal{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Row 2: Per-category sparkline trends #}
+    {% if category_trends %}
+    <div class="card" style="margin-bottom:12px">
+      <div class="section-label">Category Trend — Last 3 Months</div>
+      {% for trend in category_trends %}
+      <div style="display:flex;align-items:center;gap:14px;{% if not loop.last %}margin-bottom:14px{% endif %}">
+        <div style="width:120px;font-size:0.78rem;color:#e4e4e7;font-weight:500;flex-shrink:0">{{ trend.name }}</div>
+        <div class="spark">
+          {% set all_amounts = trend.prior_amounts + [trend.current_amount] %}
+          {% set max_amt = all_amounts | max %}
+          {% for amt in all_amounts %}
+          <div class="spark-bar" style="
+            height:{{ [((amt / max_amt * 100) if max_amt > 0 else 0) | int, 4] | max }}%;
+            background:{% if loop.last %}{% if trend.direction == 'up' %}var(--red){% elif trend.direction == 'down' %}var(--green){% else %}var(--blue){% endif %}{% else %}var(--surface2){% endif %};
+            opacity:{% if loop.last %}1{% else %}0.5{% endif %}">
+          </div>
+          {% endfor %}
+        </div>
+        <div style="font-size:0.76rem;font-weight:600;color:#e4e4e7;width:70px;flex-shrink:0">${{ trend.current_amount | format_currency }}</div>
+        <span class="badge {% if trend.direction == 'up' %}badge-up{% elif trend.direction == 'down' %}badge-down{% else %}badge-neutral {% endif %}">
+          {% if trend.direction == 'up' %}↑{% elif trend.direction == 'down' %}↓{% else %}→{% endif %}
+          {{ "%.0f" | format((trend.pct_change * 100) | abs) }}%
+        </span>
+        {% if trend.prior_amounts %}
+        <div style="font-size:0.68rem;color:var(--muted);flex:1">
+          {% for amt in trend.prior_amounts %}${{ amt | format_currency }}{% if not loop.last %} → {% endif %}{% endfor %} → ${{ trend.current_amount | format_currency }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Row 3: % of income #}
+    {% if spending_pct %}
+    <div class="card">
+      <div class="section-label">Where Did My Money Go — % of Income</div>
+      {% for item in spending_pct %}
+      <div style="display:flex;align-items:center;gap:10px;{% if not loop.last %}margin-bottom:10px{% endif %}">
+        <div style="width:120px;font-size:0.78rem;color:#a1a1aa;flex-shrink:0">{{ item.name }}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:{{ [item.pct_of_income, 100] | min }}%;background:var(--blue)"></div></div>
+        <div style="width:65px;text-align:right;font-size:0.72rem;font-weight:600;color:var(--blue);flex-shrink:0">{{ item.pct_of_income }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════════════════════════════════
+     GOALS TAB
+  ════════════════════════════════════════════ #}
+  <div x-show="tab==='goals'" x-cloak>
+    <div class="grid-2" style="margin-bottom:12px">
+
+      {# Monthly streak #}
+      <div class="card">
+        <div class="section-label">Monthly Savings Streak</div>
+        {% set streak = monthly_streak %}
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px">
+          <span style="font-size:2.2rem;font-weight:700;color:var(--amber)">{{ streak.get('current', 0) }}</span>
+          <span style="font-size:0.85rem;color:var(--muted)">months in a row · Best: {{ streak.get('best', 0) }}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          {% for month_key, hit in streak.get('history', {}).items() %}
+          <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:600;
+            {% if hit %}background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green)
+            {% else %}background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:var(--red){% endif %}">
+            {{ month_key[-2:] }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Monthly target #}
+      <div class="card">
+        <div class="section-label">Monthly Target</div>
+        {% if monthly_target > 0 %}
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+          <span style="font-size:1.5rem;font-weight:700;color:var(--blue)">${{ kpis.saved | format_currency }}</span>
+          <span style="font-size:0.8rem;color:var(--muted)">of ${{ monthly_target | format_currency }} goal</span>
+        </div>
+        <div class="progress-track" style="margin-bottom:8px">
+          <div class="progress-fill" style="width:{{ [kpis.saved / monthly_target * 100, 100] | min }}%"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted)">
+          {% if kpis.saved >= monthly_target %}On track ✓{% else %}${{ (monthly_target - kpis.saved) | format_currency }} behind target{% endif %}
+        </div>
+        {% else %}
+        <div style="font-size:0.8rem;color:var(--muted)">No monthly target set. Run: <code>finance goal set monthly --amount 1500</code></div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Named goals #}
+    {% if goals_display %}
+    <div class="card">
+      <div class="section-label">Named Goals</div>
+      {% for g in goals_display %}
+      <div style="{% if not loop.last %}margin-bottom:20px{% endif %}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <div style="font-size:0.85rem;font-weight:600">{{ g.name }}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:0.72rem;color:var(--muted)">${{ g.current | format_currency }} / ${{ g.target | format_currency }}</span>
+            <span class="badge badge-blue">{{ g.pct }}%</span>
+          </div>
+        </div>
+        <div class="progress-track" style="margin-bottom:6px">
+          <div class="progress-fill" style="width:{{ [g.pct, 100] | min }}%"></div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted)">Deadline: {{ g.deadline }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="font-size:0.8rem;color:var(--muted)">
+      No named goals. Run: <code>finance goal set "Emergency Fund" --target 10000 --by 2026-12</code>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ════════════════════════════════════════════
+     INSIGHTS TAB
+  ════════════════════════════════════════════ #}
+  <div x-show="tab==='insights'" x-cloak>
+
+    {# Health Score #}
+    <div class="card" style="display:flex;align-items:center;gap:24px;margin-bottom:12px">
+      <div style="position:relative;flex-shrink:0">
+        <canvas id="healthChart" style="width:90px;height:90px"></canvas>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+          <div style="font-size:1.3rem;font-weight:700;color:{% if health.score >= 80 %}var(--green){% elif health.score >= 60 %}var(--amber){% else %}var(--red){% endif %}">{{ health.grade }}</div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:1rem;font-weight:700;margin-bottom:4px">
+          Financial Health Score: <span style="color:{% if health.score >= 80 %}var(--green){% elif health.score >= 60 %}var(--amber){% else %}var(--red){% endif %}">{{ health.score }} / 100</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          {% for area in health.passing %}
+          <span style="padding:3px 10px;border-radius:6px;background:rgba(34,197,94,0.1);color:var(--green);font-size:0.68rem;font-weight:600">✓ {{ area }}</span>
+          {% endfor %}
+          {% for area in health.failing %}
+          <span style="padding:3px 10px;border-radius:6px;background:rgba(239,68,68,0.1);color:var(--red);font-size:0.68rem;font-weight:600">✗ {{ area }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# Actionable Cuts #}
+    {% if cuts %}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-label" style="margin-bottom:0">Actionable Cuts</div>
+      <div style="font-size:0.72rem;color:var(--green);font-weight:600">
+        Potential: ${{ cuts | sum(attribute='potential_saving') | format_currency }}/mo
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      {% for cut in cuts %}
+      <div class="insight-card">
+        <div class="insight-icon" style="background:rgba(239,68,68,0.1)">{{ cut.icon }}</div>
+        <div style="flex:1">
+          <div style="font-size:0.82rem;font-weight:600;margin-bottom:3px">{{ cut.description }}</div>
+          <div style="font-size:0.74rem;color:var(--muted)">{{ cut.detail }}</div>
+        </div>
+        <div style="font-size:0.82rem;font-weight:700;color:var(--green);flex-shrink:0;white-space:nowrap">
+          +${{ cut.potential_saving | format_currency }}/mo
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Action Plan #}
+    {% if action_plan %}
+    <div class="card">
+      <div class="section-label">Your Action Plan</div>
+      {% for step in action_plan %}
+      <div style="display:flex;gap:12px;align-items:flex-start;{% if not loop.last %}margin-bottom:14px{% endif %}">
+        <div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;
+          {% if loop.index == 1 %}background:rgba(239,68,68,0.15);border:1px solid var(--red);color:var(--red)
+          {% elif loop.index == 2 %}background:rgba(245,158,11,0.15);border:1px solid var(--amber);color:var(--amber)
+          {% else %}background:rgba(34,197,94,0.15);border:1px solid var(--green);color:var(--green){% endif %}">
+          {{ step.step }}
+        </div>
+        <div>
+          <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px">{{ step.month_label }} — {{ step.action }}</div>
+          <div style="font-size:0.74rem;color:var(--muted)">{{ step.description }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="font-size:0.8rem;color:var(--muted)">
+      No actionable cuts found — your spending looks well-controlled.
+    </div>
+    {% endif %}
+
+  </div>{# end insights #}
+
+  <div style="font-size:0.68rem;color:var(--muted);text-align:right;margin-top:20px">Generated: {{ generated_at }}</div>
+</div>{# end container #}
+
+<script>
+// Trend bar chart (Overview)
+(function() {
+  const el = document.getElementById('trendChart');
+  if (!el) return;
+  new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: {{ trend_labels | tojson }},
+      datasets: [{
+        data: {{ trend_values | tojson }},
+        backgroundColor: {{ trend_labels | tojson }}.map((_, i, arr) =>
+          i === arr.length - 1 ? 'rgba(239,68,68,0.8)' : 'rgba(63,63,70,0.6)'
+        ),
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#71717a', font: { size: 10 } }, grid: { color: '#27272a' } },
+        y: { ticks: { color: '#71717a', font: { size: 10 }, callback: v => '$' + v.toLocaleString() }, grid: { color: '#27272a' } }
+      }
+    }
+  });
+})();
+
+// Category donut (Spending)
+(function() {
+  const el = document.getElementById('donutChart');
+  if (!el) return;
+  const labels = {{ spending_pct | map(attribute='name') | list | tojson }};
+  const data   = {{ spending_pct | map(attribute='amount') | list | tojson }};
+  if (!data.length) return;
+  new Chart(el, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: ['#ef4444','#3b82f6','#a855f7','#f59e0b','#22c55e','#06b6d4','#ec4899'], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: false, cutout: '70%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.toLocaleString('en-US',{minimumFractionDigits:2})}` } } }
+    }
+  });
+})();
+
+// Income vs Expenses bar (Spending)
+(function() {
+  const el = document.getElementById('incomeChart');
+  if (!el) return;
+  new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: ['Income', 'Expenses', 'Saved'],
+      datasets: [{
+        data: [{{ kpis.income }}, {{ kpis.expenses }}, {{ kpis.saved }}],
+        backgroundColor: ['rgba(34,197,94,0.7)', 'rgba(239,68,68,0.7)', 'rgba(59,130,246,0.7)'],
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#71717a' }, grid: { color: '#27272a' } },
+        y: { ticks: { color: '#71717a', callback: v => '$' + v.toLocaleString() }, grid: { color: '#27272a' } }
+      }
+    }
+  });
+})();
+
+// Health score ring (Insights)
+(function() {
+  const el = document.getElementById('healthChart');
+  if (!el) return;
+  const score = {{ health.score }};
+  const color = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#ef4444';
+  new Chart(el, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [score, 100 - score],
+        backgroundColor: [color, '#27272a'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: false, cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+})();
+</script>
+</body>
+</html>

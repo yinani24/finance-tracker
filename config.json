@@ -1,0 +1,38 @@
+{
+  "bank_formats": {
+    "chase": {
+      "date_col": "Transaction Date",
+      "amount_col": "Amount",
+      "merchant_col": "Description",
+      "amount_sign": "standard"
+    },
+    "bofa": {
+      "date_col": "Date",
+      "amount_col": "Amount",
+      "merchant_col": "Description",
+      "amount_sign": "standard"
+    },
+    "amex": {
+      "date_col": "Date",
+      "amount_col": "Amount",
+      "merchant_col": "Description",
+      "amount_sign": "inverted"
+    }
+  },
+  "import_accounts": {
+    "chase_credit":   "Chase-CreditCard",
+    "bofa_visa":      "BofA-Visa",
+    "bofa_checking":  "BofA-Checking",
+    "robinhood":      "Robinhood"
+  },
+  "categories": {
+    "Food & Dining": ["chipotle", "mcdonald", "doordash", "uber eats", "grubhub", "starbucks", "restaurant", "pizza", "sushi", "cafe", "diner"],
+    "Transport": ["uber", "lyft", "shell", "exxon", "bp", "chevron", "parking", "metro", "transit", "toll"],
+    "Subscriptions": ["netflix", "spotify", "apple", "amazon prime", "adobe", "hulu", "disney", "youtube", "openai"],
+    "Shopping": ["amazon", "target", "walmart", "costco", "best buy", "gap", "zara", "h&m"],
+    "Health": ["cvs", "walgreens", "rite aid", "urgent care", "doctor", "dentist", "gym", "planet fitness"],
+    "Income": ["payroll", "direct deposit", "salary", "zelle from", "venmo from"],
+    "Investments": ["robinhood", "fidelity", "vanguard", "schwab"],
+    "Other": []
+  }
+}
