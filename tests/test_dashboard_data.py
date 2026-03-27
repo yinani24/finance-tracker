@@ -504,3 +504,54 @@ def test_get_at_risk_goals_handles_malformed_goal():
     goals = {"goals": [{"name": "Bad Goal"}]}  # missing deadline and created
     result = _get_at_risk_goals(goals, today=TODAY)
     assert result == []
+
+
+class TestComputeCardIntelligence:
+    def test_empty_cards_returns_empty_state(self, sample_df):
+        from dashboard.analytics import compute_card_intelligence
+        result = compute_card_intelligence(sample_df, {"cards": []})
+        assert result["has_cards"] is False
+        assert result["optimal_per_category"] == []
+        assert result["card_values"] == []
+        assert result["missed_rewards_annual"] == 0.0
+        assert result["upgrade_recommendations"] == []
+
+    def test_none_cards_returns_empty_state(self, sample_df):
+        from dashboard.analytics import compute_card_intelligence
+        result = compute_card_intelligence(sample_df, None)
+        assert result["has_cards"] is False
+
+    def test_empty_df_returns_empty_state(self):
+        import pandas as pd
+        from dashboard.analytics import compute_card_intelligence
+        cards = {"cards": [{"name": "CSP", "annual_fee": 95, "reward_type": "points",
+                            "points_cpp": 0.0125,
+                            "rewards": {"Food & Dining": 3.0, "Other": 1.0}}]}
+        result = compute_card_intelligence(pd.DataFrame(), cards)
+        assert result["has_cards"] is False
+
+    def test_full_returns_correct_structure(self, sample_df):
+        from datetime import date
+        from dashboard.analytics import compute_card_intelligence
+        csp = {"name": "Chase Sapphire Preferred", "annual_fee": 95,
+               "reward_type": "points", "points_cpp": 0.0125,
+               "rewards": {"Food & Dining": 3.0, "Transport": 2.0,
+                           "Subscriptions": 1.0, "Other": 1.0}}
+        qs  = {"name": "Quicksilver", "annual_fee": 0,
+               "reward_type": "cashback", "points_cpp": 0.01,
+               "rewards": {"Food & Dining": 1.5, "Transport": 1.5,
+                           "Subscriptions": 1.5, "Other": 1.5}}
+        result = compute_card_intelligence(
+            sample_df, {"cards": [csp, qs]}, today=date(2026, 3, 15)
+        )
+        assert result["has_cards"] is True
+        assert result["missed_rewards_annual"] > 0
+        assert len(result["card_values"]) == 2
+        assert len(result["optimal_per_category"]) >= 1
+
+    def test_build_context_without_cards_has_card_intel_key(
+        self, sample_df, sample_accounts, sample_goals
+    ):
+        ctx = build_context(sample_df, sample_accounts, sample_goals, today=TODAY)
+        assert "card_intel" in ctx
+        assert ctx["card_intel"]["has_cards"] is False

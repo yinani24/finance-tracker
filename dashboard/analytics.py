@@ -2,21 +2,83 @@
 from __future__ import annotations
 import pandas as pd
 from datetime import date
+from core.cards import (
+    compute_optimal_card_per_category,
+    compute_card_annual_value,
+    compute_missed_rewards,
+    compute_upgrade_recommendations,
+)
 
 
-def build_context(df: pd.DataFrame, accounts: dict, goals: dict, today: date | None = None) -> dict:
+def compute_card_intelligence(
+    df: pd.DataFrame, cards: dict | None, today: date | None = None
+) -> dict:
+    """Compute credit card optimization intelligence from transaction history.
+
+    Args:
+        df: Full transactions DataFrame.
+        cards: Cards config dict with a "cards" list, or None.
+        today: Reference date for the trailing 3-month window; defaults to today's date.
+
+    Returns:
+        Dict with has_cards, optimal_per_category, card_values,
+        missed_rewards_annual, upgrade_recommendations.
+    """
+    _empty: dict = {
+        "has_cards": False,
+        "optimal_per_category": [],
+        "card_values": [],
+        "missed_rewards_annual": 0.0,
+        "upgrade_recommendations": [],
+    }
+    card_list = (cards or {}).get("cards", [])
+    if not card_list or df.empty:
+        return _empty
+
+    if today is None:
+        today = date.today()
+
+    # Annualised spending by category from the last 3 months
+    expense_df = df[df["amount"] < 0].copy()
+    expense_df["month"] = expense_df["date"].dt.strftime("%Y-%m")
+    month_list = []
+    for i in range(2, -1, -1):
+        yr = today.year + (today.month - 1 - i) // 12
+        mo = ((today.month - 1 - i) % 12) + 1
+        month_list.append(f"{yr:04d}-{mo:02d}")
+
+    spending_by_category: dict[str, float] = {}
+    for cat in expense_df["category"].unique():
+        cat_df = expense_df[expense_df["category"] == cat]
+        total_3mo = float(abs(cat_df[cat_df["month"].isin(month_list)]["amount"].sum()))
+        spending_by_category[cat] = round(total_3mo / 3 * 12, 2)
+
+    return {
+        "has_cards": True,
+        "optimal_per_category": compute_optimal_card_per_category(card_list, spending_by_category),
+        "card_values": [compute_card_annual_value(c, spending_by_category) for c in card_list],
+        "missed_rewards_annual": compute_missed_rewards(spending_by_category, card_list),
+        "upgrade_recommendations": compute_upgrade_recommendations(spending_by_category, card_list),
+    }
+
+
+def build_context(
+    df: pd.DataFrame, accounts: dict, goals: dict,
+    cards: dict | None = None, today: date | None = None
+) -> dict:
     """Assemble the full template context dictionary from raw data inputs.
 
     Args:
         df: DataFrame of all transactions with at least date, amount, category, and merchant columns.
         accounts: Accounts config dict with an "accounts" list of account objects.
         goals: Goals config dict with "monthly_target", "goals", and "monthly_streak" keys.
+        cards: Cards config dict with a "cards" list, or None.
         today: Reference date used for month calculations; defaults to today's date.
 
     Returns:
         A dict containing kpis, category_trends, health, cuts, action_plan, spending_pct,
         account_balances, top_merchants, trend_labels, trend_values, goals_display,
-        monthly_streak, monthly_target, and generated_at.
+        monthly_streak, monthly_target, card_intel, and generated_at.
     """
     if today is None:
         today = date.today()
@@ -30,6 +92,7 @@ def build_context(df: pd.DataFrame, accounts: dict, goals: dict, today: date | N
     spending_pct     = compute_spending_pct_of_income(df, kpis["income"], today=today)
     account_balances = compute_account_balances(accounts)
     top_merchants    = compute_top_merchants(df, this_month)
+    card_intel       = compute_card_intelligence(df, cards, today=today)
 
     # 12-month spending trend
     trend_labels, trend_values = [], []
@@ -71,6 +134,7 @@ def build_context(df: pd.DataFrame, accounts: dict, goals: dict, today: date | N
         "goals_display":    goals_display,
         "monthly_streak":   goals.get("monthly_streak", {}),
         "monthly_target":   goals.get("monthly_target", 0.0),
+        "card_intel":       card_intel,
         "generated_at":     today.strftime("%Y-%m-%d"),
     }
 
