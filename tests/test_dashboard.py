@@ -76,21 +76,31 @@ def test_alpine_js_inlined(runner_with_data, tmp_path):
 
 
 def test_dashboard_load_files_missing_csv(tmp_path):
-    """Cover FileNotFoundError path in _load_files (lines 28-29 in dashboard.py)."""
+    """Cover FileNotFoundError path in _load_files."""
     from dashboard import _load_files
-    import pandas as pd
-    # tmp_path has no transactions.csv → FileNotFoundError branch
-    df, accounts, goals = _load_files(str(tmp_path))
+    df, accounts, goals, cards = _load_files(str(tmp_path))
     assert df.empty
     assert accounts == {"accounts": []}
     assert goals["monthly_target"] == 0.0
+    assert cards == {"cards": []}
 
 
 def test_dashboard_load_files_with_goals(tmp_path):
-    """Cover goals.json load path in _load_files (lines 38-39 in dashboard.py)."""
+    """Cover goals.json load path in _load_files."""
     import json
     from dashboard import _load_files
     goals_data = {"monthly_target": 300.0, "goals": [], "monthly_streak": {}}
     (tmp_path / "goals.json").write_text(json.dumps(goals_data))
-    _, _, goals = _load_files(str(tmp_path))
+    _, _, goals, cards = _load_files(str(tmp_path))
     assert goals["monthly_target"] == 300.0
+    assert cards == {"cards": []}
+
+
+def test_dashboard_load_files_with_cards(tmp_path):
+    """Cover cards.json load path in _load_files."""
+    import json
+    from dashboard import _load_files
+    cards_data = {"cards": [{"name": "Test Card"}]}
+    (tmp_path / "cards.json").write_text(json.dumps(cards_data))
+    _, _, _, cards = _load_files(str(tmp_path))
+    assert cards["cards"][0]["name"] == "Test Card"
