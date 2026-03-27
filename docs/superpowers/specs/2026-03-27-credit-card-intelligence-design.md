@@ -200,16 +200,36 @@ def compute_card_intelligence(df: pd.DataFrame, cards: dict, today: date | None 
     }
 ```
 
-Returns `{"has_cards": False, ...empty lists...}` when `cards["cards"]` is empty — allows the template to render a graceful empty state.
+Returns all five keys in both the populated and empty-state cases — the template can reference every key unconditionally:
 
-**Spending by category** is derived from the last 3 months of transaction data (annualised), consistent with how `compute_category_trends` works.
+```python
+# empty state (cards["cards"] is empty or cards is None)
+{
+    "has_cards": False,
+    "optimal_per_category": [],
+    "card_values": [],
+    "missed_rewards_annual": 0.0,
+    "upgrade_recommendations": [],
+}
+```
+
+**Spending by category** is derived from the last 3 months of transaction data, annualised using:
+
+```
+monthly_avg = total_spend_last_3_months / 3
+annual_spend_per_category = monthly_avg_per_category × 12
+```
+
+This produces a `spending_by_category` dict with positive floats keyed by category name.
 
 ### `build_context()` update
 
-`cards` parameter added:
+`cards` parameter added with a default of `None` to preserve backward compatibility with all existing call sites and tests:
 ```python
-def build_context(df, accounts, goals, cards, today=None) -> dict:
+def build_context(df, accounts, goals, cards=None, today=None) -> dict:
 ```
+
+When `cards` is `None`, `compute_card_intelligence` is skipped and `card_intel` is set to the empty-state dict (`{"has_cards": False, ...}`). This ensures all 13+ existing `build_context` call sites in the test suite remain valid without modification.
 
 `card_intel` key added to the returned context dict.
 
@@ -217,7 +237,7 @@ def build_context(df, accounts, goals, cards, today=None) -> dict:
 
 ## Renderer Update
 
-`_load_files()` in `dashboard/renderer.py` loads `cards.json` alongside existing files. Falls back to `{"cards": []}` if absent (no file = graceful empty state in the Cards tab).
+`_load_files()` in `dashboard/renderer.py` loads `cards.json` alongside existing files. Falls back to `{"cards": []}` if absent (no file = graceful empty state in the Cards tab). Return type updated from a 3-tuple `(df, accounts, goals)` to a 4-tuple `(df, accounts, goals, cards)`, and the `build_dashboard()` call site unpacking updated accordingly.
 
 `build_context()` call updated to pass `cards`.
 
@@ -302,15 +322,19 @@ Unit tests for every function in `core/cards.py`:
 - `test_compute_upgrade_recommendations_excludes_owned` — no dupes
 - `test_compute_upgrade_recommendations_returns_top_two` — sorted correctly
 - `test_compute_upgrade_recommendations_empty_when_no_gain` — no false positives
+- `test_compute_upgrade_recommendations_no_user_cards` — returns [] when user_cards is empty
+- `test_compute_missed_rewards_empty_cards` — returns 0.0 when cards list is empty
 
 ### `tests/test_dashboard_data.py`
 - `test_compute_card_intelligence_empty_cards` — graceful empty state
 - `test_compute_card_intelligence_empty_df` — no transactions
-- `test_compute_card_intelligence_full` — end-to-end with fixture data
+- `test_compute_card_intelligence_full` — end-to-end using the existing `sample_df` fixture (Food & Dining, Transport, Subscriptions spend) with a two-card setup: Chase Sapphire Preferred + Quicksilver; asserts `missed_rewards_annual > 0` and `has_cards == True`
+- `test_build_context_without_cards` — existing call sites still work; `"card_intel"` key is present in returned context dict and `card_intel["has_cards"]` is `False`
 
 ### `tests/test_dashboard.py`
 - `test_dashboard_renders_cards_tab` — Cards tab present in rendered HTML
 - `test_dashboard_renders_cards_empty_state` — graceful when no cards
+- Update `test_dashboard_has_four_tabs` → rename to `test_dashboard_has_five_tabs` and assert 5 tabs (Overview, Spending, Goals, Insights, Cards)
 
 ### `tests/test_cli_summary.py`
 - `test_cards_command_no_cards_file` — runs without error, shows empty state
@@ -322,9 +346,11 @@ Unit tests for every function in `core/cards.py`:
 
 - All `spending_by_category` values passed to card functions are **positive** (expense amounts, already abs'd)
 - Cards with `annual_fee: 0` are always candidates — net value = gross rewards
-- If a category in `spending_by_category` has no matching key in `card.rewards`, fall back to the `"Other"` rewards rate
-- `compute_missed_rewards` treats the first card in `cards["cards"]` as the "current default" card
+- If a category in `spending_by_category` has no matching key in `card.rewards`, fall back to the `"Other"` rewards rate; if `"Other"` is also absent, use `0.0` (the `"Other"` key is required in `data/cards.example.json` and documented as mandatory)
+- `compute_missed_rewards` treats the first card in `cards["cards"]` as the "current default" card; returns `0.0` when `cards["cards"]` is empty
+- `compute_upgrade_recommendations` returns `[]` when `user_cards` is empty (no baseline to compare against); also add test `test_compute_upgrade_recommendations_no_user_cards` to the test list
 - `compute_upgrade_recommendations` never recommends a card the user already owns (matched by name, case-insensitive)
+- The `why` field in upgrade recommendations is generated as: "Identifies the category where the curated card's effective % most exceeds the user's best current card for that category." Format: `"{rate}x on {top_category} — your #{rank} category at ${monthly_spend:.0f}/mo"`
 
 ---
 
@@ -334,7 +360,59 @@ Unit tests for every function in `core/cards.py`:
 data/cards.json
 ```
 
-`data/cards.example.json` is committed as schema documentation.
+`data/cards.example.json` is committed as schema documentation. It must include at least two card examples (one points card, one cashback card) and every required field including `"Other"` in `rewards`:
+
+```json
+{
+  "cards": [
+    {
+      "name": "Chase Sapphire Preferred",
+      "issuer": "Chase",
+      "annual_fee": 95,
+      "reward_type": "points",
+      "points_cpp": 0.0125,
+      "rewards": {
+        "Food & Dining": 3.0,
+        "Transport": 2.0,
+        "Subscriptions": 1.0,
+        "Shopping": 1.0,
+        "Health": 1.0,
+        "Other": 1.0
+      }
+    },
+    {
+      "name": "Capital One Quicksilver",
+      "issuer": "Capital One",
+      "annual_fee": 0,
+      "reward_type": "cashback",
+      "points_cpp": 0.01,
+      "rewards": {
+        "Food & Dining": 1.5,
+        "Transport": 1.5,
+        "Subscriptions": 1.5,
+        "Shopping": 1.5,
+        "Health": 1.5,
+        "Other": 1.5
+      }
+    }
+  ]
+}
+```
+
+## CLAUDE.md Additions
+
+Add to the Commands section:
+```bash
+python3 main.py cards                # show card portfolio, optimizer, and upgrade picks
+```
+
+Add a new "Card Intelligence" subsection under Architecture → Key Modules:
+
+| Module | Responsibility |
+|--------|---------------|
+| `core/cards.py` | `load_cards()`, `compute_optimal_card_per_category()`, `compute_card_annual_value()`, `compute_missed_rewards()`, `compute_upgrade_recommendations()`. `CURATED_CARDS` = 8 hardcoded upgrade candidates. |
+
+Add to the security / gitignore section: `data/cards.json` — card profiles with annual fees and reward rates.
 
 ---
 
