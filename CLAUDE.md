@@ -26,6 +26,7 @@ python3 -m importers.real_data
 python3 main.py summary --month 2026-01
 python3 main.py top-categories --last 3months
 python3 main.py dashboard             # generates + opens reports/dashboard.html
+python3 main.py cards                 # show card portfolio, optimizer, and upgrade picks
 python3 main.py dashboard --no-open   # generate only (used in tests)
 python3 main.py networth
 python3 main.py account update Robinhood --balance 7011.78 --type investment
@@ -62,11 +63,12 @@ Bank PDFs/CSVs
 | `core/data_store.py` | `DataStore.add()`, `load()`, `update()`, `is_duplicate()`. `generate_id()` = 16-char SHA256 from `date+amount+merchant+account`. |
 | `core/categorizer.py` | Longest-match-wins keyword lookup. `normalize_merchant()` lowercases, strips branch numbers and asterisks. Keywords in `config.json → categories`. |
 | `core/goals.py` | Load/save `goals.json`. Named goals track `created` date for at-risk computation. |
+| `core/cards.py` | `load_cards()`, `compute_optimal_card_per_category()`, `compute_card_annual_value()`, `compute_missed_rewards()`, `compute_upgrade_recommendations()`. `CURATED_CARDS` = 8 hardcoded upgrade candidates. |
 | `importers/csv_parser.py` | Config-driven CSV parser. Amex uses `amount_sign: "inverted"` to flip signs. |
 | `importers/pdf_parser.py` | Generic PDF parser via `pdfplumber.extract_table()`. Simple table-format PDFs only. |
 | `importers/real_data.py` | Custom text-layout parsers for real Chase, BofA, Robinhood statements. Reads file paths from `statements_manifest.json` (gitignored). Account names from `config.json → import_accounts`. |
 | `dashboard/renderer.py` | Thin orchestrator: `_load_files()` → `build_context()` → Jinja2 render. |
-| `dashboard/analytics.py` | All analytics: `build_context()`, `compute_kpis()`, `compute_category_trends()`, `compute_health_score()`, `compute_actionable_cuts()`, `compute_action_plan()`, `compute_spending_pct_of_income()`, `compute_account_balances()`, `compute_top_merchants()`. |
+| `dashboard/analytics.py` | All analytics: `build_context()`, `compute_kpis()`, `compute_category_trends()`, `compute_health_score()`, `compute_actionable_cuts()`, `compute_action_plan()`, `compute_spending_pct_of_income()`, `compute_account_balances()`, `compute_top_merchants()`, `compute_card_intelligence()`. |
 | `main.py` | Click CLI. All commands accept `--data-dir` (hidden, default `data/`) for test isolation. |
 | `scripts/check_secrets.py` | Pre-commit hook: blocks commits with account numbers, card numbers, SSNs. |
 | `scripts/check_changelog.py` | Pre-commit hook: warns when CHANGELOG.md has no [Unreleased] entry. |
@@ -86,7 +88,7 @@ Bank PDFs/CSVs
 - **DaisyUI** (`daisyui.min.css`) — CSS framework
 - **Alpine.js** (`alpine.min.js`) — tab switching
 
-4 tabs: Overview, Spending, Goals, Insights.
+5 tabs: Overview, Spending, Goals, Insights, Cards.
 
 ---
 
@@ -100,6 +102,7 @@ statements_manifest.json # File paths to statements — copy from statements_man
 data/transactions.csv
 data/accounts.json
 data/goals.json
+data/cards.json
 reports/
 .worktrees/
 ```
