@@ -42,15 +42,16 @@ def test_dashboard_is_self_contained(runner_with_data, tmp_path):
     assert "cdn.jsdelivr.net" not in content
     assert "cdnjs.cloudflare.com" not in content
 
-def test_dashboard_has_four_tabs(runner_with_data, tmp_path):
+def test_dashboard_has_five_tabs(runner_with_data, tmp_path):
     runner, data_dir = runner_with_data
     out_path = str(tmp_path / "dashboard.html")
     runner.invoke(cli, ["dashboard", "--output", out_path, "--data-dir", str(data_dir), "--no-open"])
     content = open(out_path).read()
-    assert "tab='overview'" in content or "tab=&apos;overview&apos;" in content or "overview" in content
+    assert "overview" in content
     assert "Spending" in content
     assert "Goals" in content
     assert "Insights" in content
+    assert "Cards" in content
 
 def test_dashboard_contains_health_score(runner_with_data, tmp_path):
     runner, data_dir = runner_with_data
@@ -104,3 +105,35 @@ def test_dashboard_load_files_with_cards(tmp_path):
     (tmp_path / "cards.json").write_text(json.dumps(cards_data))
     _, _, _, cards = _load_files(str(tmp_path))
     assert cards["cards"][0]["name"] == "Test Card"
+
+
+def test_dashboard_renders_cards_empty_state(runner_with_data, tmp_path):
+    """Cards tab shows empty state when no cards.json is present."""
+    runner, data_dir = runner_with_data
+    out_path = str(tmp_path / "dashboard.html")
+    runner.invoke(cli, ["dashboard", "--output", out_path, "--data-dir", str(data_dir), "--no-open"])
+    content = open(out_path).read()
+    assert "No Cards Configured" in content
+
+
+def test_dashboard_renders_cards_tab_with_data(runner_with_data, tmp_path):
+    """Cards tab shows portfolio table when cards.json is present."""
+    import json
+    runner, data_dir = runner_with_data
+    cards = {
+        "cards": [{
+            "name": "Chase Sapphire Preferred",
+            "issuer": "Chase",
+            "annual_fee": 95,
+            "reward_type": "points",
+            "points_cpp": 0.0125,
+            "rewards": {"Food & Dining": 3.0, "Transport": 2.0,
+                        "Subscriptions": 1.0, "Other": 1.0},
+        }]
+    }
+    (data_dir / "cards.json").write_text(json.dumps(cards))
+    out_path = str(tmp_path / "dashboard.html")
+    runner.invoke(cli, ["dashboard", "--output", out_path, "--data-dir", str(data_dir), "--no-open"])
+    content = open(out_path).read()
+    assert "Card Portfolio" in content
+    assert "Chase Sapphire Preferred" in content

@@ -224,6 +224,42 @@ def test_cards_command_with_cards(runner_with_data):
     assert "Chase Sapphire Preferred" in result.output
 
 
+def test_cards_command_shows_optimization(tmp_path):
+    """Cover missed_rewards >= 5 and top-optimizer output (main.py lines 382, 390-396)."""
+    import json
+    from click.testing import CliRunner
+    runner = CliRunner()
+    # Seed large transactions so annualised spend is meaningful
+    for args in [
+        ["add", "--amount", "-500.00", "--merchant", "Chipotle",
+         "--account", "Chase", "--data-dir", str(tmp_path)],
+        ["add", "--amount", "-200.00", "--merchant", "Netflix",
+         "--account", "Chase", "--data-dir", str(tmp_path)],
+    ]:
+        runner.invoke(cli, args)
+    cards = {
+        "cards": [
+            {
+                "name": "Chase Sapphire Preferred",
+                "issuer": "Chase", "annual_fee": 95, "reward_type": "points",
+                "points_cpp": 0.0125,
+                "rewards": {"Food & Dining": 3.0, "Subscriptions": 1.0, "Other": 1.0},
+            },
+            {
+                "name": "BofA Travel",
+                "issuer": "BofA", "annual_fee": 95, "reward_type": "points",
+                "points_cpp": 0.01,
+                "rewards": {"Food & Dining": 1.5, "Subscriptions": 3.0, "Other": 1.5},
+            },
+        ]
+    }
+    (tmp_path / "cards.json").write_text(json.dumps(cards))
+    result = runner.invoke(cli, ["cards", "--data-dir", str(tmp_path)])
+    assert result.exit_code == 0
+    # missed_rewards >= 5 → callout shown; top_opts → optimizer table shown
+    assert "leaving" in result.output or "Category Optimizer" in result.output
+
+
 def test_dashboard_opens_browser(runner_with_data, tmp_path):
     """Cover the webbrowser.open path in dashboard command (finance.py line 341)."""
     from unittest.mock import patch

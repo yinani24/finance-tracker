@@ -29,10 +29,10 @@
 
   .card { background: var(--surface); border: 1px solid var(--surface2); border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
   .card:hover { border-color: var(--border); }
-  .card-accent-green::before  { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--green),transparent); border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
-  .card-accent-red::before    { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--red),transparent);   border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
-  .card-accent-blue::before   { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--blue),transparent);  border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
-  .card-accent-purple::before { content:''; display:block; height:2px; background:linear-gradient(90deg,var(--purple),transparent);border-radius:12px 12px 0 0; margin:-20px -20px 16px; }
+  .card-accent-green  { border-left: 3px solid var(--green)  !important; padding-left: 17px; }
+  .card-accent-red    { border-left: 3px solid var(--red)    !important; padding-left: 17px; }
+  .card-accent-blue   { border-left: 3px solid var(--blue)   !important; padding-left: 17px; }
+  .card-accent-purple { border-left: 3px solid var(--purple) !important; padding-left: 17px; }
 
   .kpi-label { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
   .kpi-value { font-size:1.65rem; font-weight:700; margin:6px 0 4px; letter-spacing:-0.02em; }
@@ -54,11 +54,11 @@
   .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
-  .bar-track { flex:1; background:var(--surface2); border-radius:4px; height:7px; overflow:hidden; }
-  .bar-fill  { height:7px; border-radius:4px; }
+  .bar-track { flex:1; background:var(--surface2); border-radius:999px; height:7px; overflow:hidden; }
+  .bar-fill  { height:7px; border-radius:999px; }
 
-  .progress-track { background:var(--surface2); border-radius:6px; height:6px; }
-  .progress-fill  { height:6px; border-radius:6px; background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+  .progress-track { background:var(--surface2); border-radius:999px; height:6px; }
+  .progress-fill  { height:6px; border-radius:999px; background:linear-gradient(90deg,var(--blue),var(--cyan)); }
 
   .insight-card { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; background:var(--surface); border:1px solid var(--surface2); border-radius:10px; }
   .insight-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
@@ -101,6 +101,7 @@
     <button class="tab-btn" :class="tab==='spending'  ? 'active' : ''" @click="tab='spending'">Spending</button>
     <button class="tab-btn" :class="tab==='goals'     ? 'active' : ''" @click="tab='goals'">Goals</button>
     <button class="tab-btn" :class="tab==='insights'  ? 'active' : ''" @click="tab='insights'">Insights</button>
+    <button class="tab-btn" :class="tab==='cards'     ? 'active' : ''" @click="tab='cards'">Cards</button>
   </div>
 
   {# ════════════════════════════════════════════
@@ -364,8 +365,12 @@
       {% endfor %}
     </div>
     {% else %}
-    <div class="card" style="font-size:0.8rem;color:var(--muted)">
-      No named goals. Run: <code>finance goal set "Emergency Fund" --target 10000 --by 2026-12</code>
+    <div class="card" style="text-align:center;padding:32px 24px">
+      <div style="font-size:1.5rem;margin-bottom:10px">🎯</div>
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:6px">No named goals yet</div>
+      <div style="font-size:0.75rem;color:var(--muted)">
+        Run: <code>finance goal set "Emergency Fund" --target 10000 --by 2026-12</code>
+      </div>
     </div>
     {% endif %}
   </div>
@@ -380,7 +385,7 @@
       <div style="position:relative;flex-shrink:0">
         <canvas id="healthChart" style="width:90px;height:90px"></canvas>
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-          <div style="font-size:1.3rem;font-weight:700;color:{% if health.score >= 80 %}var(--green){% elif health.score >= 60 %}var(--amber){% else %}var(--red){% endif %}">{{ health.grade }}</div>
+          <div style="font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;color:{% if health.score >= 80 %}var(--green){% elif health.score >= 60 %}var(--amber){% else %}var(--red){% endif %}">{{ health.grade }}</div>
         </div>
       </div>
       <div style="flex:1">
@@ -422,6 +427,8 @@
     </div>
     {% endif %}
 
+    <div style="height:1px;background:var(--surface2);margin:16px 0"></div>
+
     {# Action Plan #}
     {% if action_plan %}
     <div class="card">
@@ -448,6 +455,119 @@
     {% endif %}
 
   </div>{# end insights #}
+
+  {# ════════════════════════════════════════════
+     CARDS TAB
+  ════════════════════════════════════════════ #}
+  <div x-show="tab==='cards'" x-cloak>
+
+    {% if card_intel.has_cards %}
+
+      {# ── Card Portfolio ── #}
+      <div class="card" style="margin-bottom:12px">
+        <div class="section-label">Card Portfolio</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th style="text-align:right">Gross Rewards/yr</th>
+              <th style="text-align:right">Annual Fee</th>
+              <th style="text-align:right">Net Value/yr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cv in card_intel.card_values %}
+            <tr>
+              <td style="font-weight:500">{{ cv.name }}</td>
+              <td style="text-align:right;color:var(--green);font-weight:600">${{ cv.gross_rewards | format_currency }}</td>
+              <td style="text-align:right;color:var(--muted)">${{ cv.annual_fee | format_currency }}</td>
+              <td style="text-align:right;font-weight:700;color:{% if cv.net_value >= 0 %}var(--green){% else %}var(--red){% endif %}">${{ cv.net_value | format_currency }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ── Missed Rewards Callout ── #}
+      {% if card_intel.missed_rewards_annual > 0 %}
+      <div class="insight-card" style="margin-bottom:12px;border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05)">
+        <div class="insight-icon" style="background:rgba(245,158,11,0.15)">💡</div>
+        <div style="flex:1">
+          <div style="font-size:0.82rem;font-weight:600;margin-bottom:3px">Missed Rewards Opportunity</div>
+          <div style="font-size:0.74rem;color:var(--muted)">You could earn up to <strong style="color:var(--amber)">${{ card_intel.missed_rewards_annual | format_currency }}/yr</strong> more by using the best card for each category.</div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── Category Optimizer ── #}
+      {% if card_intel.optimal_per_category %}
+      <div class="card" style="margin-bottom:12px">
+        <div class="section-label">Category Optimizer — Best Card Per Spend</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Best Card</th>
+              <th style="text-align:right">Effective %</th>
+              <th style="text-align:right">Annual Gain</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in card_intel.optimal_per_category %}
+            <tr>
+              <td>
+                <span class="cat-badge" style="background:rgba(59,130,246,0.1);color:var(--blue)">{{ row.category }}</span>
+              </td>
+              <td style="font-weight:500">{{ row.best_card }}</td>
+              <td style="text-align:right;color:var(--muted)">{{ "%.1f" | format(row.effective_pct) }}%</td>
+              <td style="text-align:right;font-weight:700;color:var(--green)">${{ row.annual_gain | format_currency }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {# ── Upgrade Recommendations ── #}
+      {% if card_intel.upgrade_recommendations %}
+      <div class="card">
+        <div class="section-label">Upgrade Picks</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          {% for rec in card_intel.upgrade_recommendations %}
+          <div class="insight-card" style="border-color:rgba(168,85,247,0.25);background:rgba(168,85,247,0.04)">
+            <div class="insight-icon" style="background:rgba(168,85,247,0.15)">✦</div>
+            <div style="flex:1">
+              <div style="font-size:0.82rem;font-weight:600;margin-bottom:3px">{{ rec.name }}
+                <span style="font-size:0.7rem;color:var(--muted);font-weight:400">— ${{ rec.annual_fee | format_currency }}/yr fee</span>
+              </div>
+              <div style="font-size:0.74rem;color:var(--muted)">{{ rec.why }}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:0.82rem;font-weight:700;color:var(--purple)">+${{ rec.gain_over_best | format_currency }}/yr</div>
+              <div style="font-size:0.68rem;color:var(--muted)">vs your best card</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    {% else %}
+
+      {# ── Empty State ── #}
+      <div class="card" style="text-align:center;padding:48px 24px">
+        <div style="font-size:2rem;margin-bottom:12px">💳</div>
+        <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No Cards Configured</div>
+        <div style="font-size:0.8rem;color:var(--muted);max-width:400px;margin:0 auto;line-height:1.6">
+          Add your credit cards to unlock reward optimization, category analysis, and upgrade recommendations.
+        </div>
+        <div style="margin-top:16px;padding:10px 16px;background:var(--surface2);border-radius:8px;font-size:0.72rem;color:var(--muted);display:inline-block;text-align:left">
+          Copy <code>data/cards.example.json</code> → <code>data/cards.json</code> and fill in your cards.
+        </div>
+      </div>
+
+    {% endif %}
+  </div>{# end cards #}
 
   <div style="font-size:0.68rem;color:var(--muted);text-align:right;margin-top:20px">Generated: {{ generated_at }}</div>
 </div>{# end container #}
