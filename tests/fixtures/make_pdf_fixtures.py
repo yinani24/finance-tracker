@@ -65,9 +65,49 @@ def make_robinhood_pdf(path: str) -> None:
     doc.build(story)
 
 
+def make_chase_bank_pdf(path: str) -> None:
+    """Generate a Chase Bank combined checking/savings PDF fixture."""
+    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(path, pagesize=letter)
+    lines = [
+        "CHASE SECURE CHECKING",
+        "TRANSACTION DETAIL",
+        "Beginning Balance 235.88",
+        "12/18 Centavo Inc Payroll 1000.00 1235.88",
+        "01/08 Monthly Service Fee -4.95 1230.93",
+        "Online Transfer From Sav 1000.00 2230.93",
+        "Ending Balance 2230.93",
+        "CHASE SAVINGS",
+        "TRANSACTION DETAIL",
+        "Beginning Balance 527.99",
+        "12/18 Centavo Inc Payroll PPD ID: 9117571000 250.00 777.99",
+        "12/19 Online Transfer To Chk -250.00 527.99",
+        "Ending Balance 527.99",
+    ]
+    story = [Paragraph(line, styles["Normal"]) for line in lines]
+    doc.build(story)
+
+
+def make_amex_hysa_pdf(path: str) -> None:
+    """Generate an Amex High Yield Savings Account PDF fixture."""
+    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(path, pagesize=letter)
+    lines = [
+        "Account Activity",
+        "Date Transactions Debits Credits Balance",
+        "01/03/2026 Beginning Balance $10036.68",
+        "02/02/2026 Interest Payment $27.71 $10064.39",
+        "02/02/2026 Ending Balance $10064.39",
+    ]
+    story = [Paragraph(line, styles["Normal"]) for line in lines]
+    doc.build(story)
+
+
 if __name__ == "__main__":
     make_chase_pdf("tests/fixtures/chase_sample.pdf")
     make_bofa_visa_pdf("tests/fixtures/bofa_visa_sample.pdf")
     make_bofa_checking_pdf("tests/fixtures/bofa_checking_sample.pdf")
     make_robinhood_pdf("tests/fixtures/robinhood_sample.pdf")
+    make_chase_bank_pdf("tests/fixtures/chase_bank_sample.pdf")
+    make_amex_hysa_pdf("tests/fixtures/amex_hysa_sample.pdf")
     print("PDF fixtures created.")
