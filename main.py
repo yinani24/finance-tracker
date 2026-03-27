@@ -340,5 +340,69 @@ def dashboard(output: str, data_dir: str, no_open: bool) -> None:
     if not no_open:
         webbrowser.open(f"file://{os.path.abspath(path)}")
 
+# ── cards ──────────────────────────────────────────────────────────────────────
+
+@cli.command()
+@click.option("--data-dir", default="data", hidden=True)
+def cards(data_dir: str) -> None:
+    """Show credit card portfolio, optimizer, and upgrade recommendations."""
+    from core.cards import load_cards
+    from dashboard.analytics import compute_card_intelligence
+
+    card_data = load_cards(f"{data_dir}/cards.json")
+    if not card_data.get("cards"):
+        console.print("[yellow]No cards configured. Copy data/cards.example.json to data/cards.json and edit.[/yellow]")
+        return
+
+    store = DataStore(transactions_path=f"{data_dir}/transactions.csv")
+    df = store.load()
+    if not df.empty:
+        df["date"] = pd.to_datetime(df["date"])
+
+    intel = compute_card_intelligence(df, card_data)
+
+    # Portfolio table
+    t = Table(title="Card Portfolio", show_header=True)
+    t.add_column("Card")
+    t.add_column("Annual Fee", justify="right")
+    t.add_column("Est. Rewards/yr", justify="right")
+    t.add_column("Net Value", justify="right")
+    for cv in intel["card_values"]:
+        color = "green" if cv["net_value"] > 0 else "red"
+        t.add_row(
+            cv["name"],
+            f"${cv['annual_fee']:.2f}",
+            f"${cv['gross_rewards']:.2f}",
+            f"[{color}]${cv['net_value']:.2f}[/{color}]",
+        )
+    console.print(t)
+
+    # Missed rewards callout
+    if intel["missed_rewards_annual"] >= 5:
+        console.print(
+            f"\n[yellow]You're leaving [bold]${intel['missed_rewards_annual']:.2f}[/bold]/yr "
+            "on the table by not using the optimal card per category.[/yellow]"
+        )
+
+    # Top 3 category optimizations
+    top_opts = [o for o in intel["optimal_per_category"][:3] if o["annual_gain"] > 0]
+    if top_opts:
+        t2 = Table(title="Category Optimizer (Top 3)", show_header=True)
+        t2.add_column("Category")
+        t2.add_column("Use This Card")
+        t2.add_column("Annual Gain", justify="right")
+        for item in top_opts:
+            t2.add_row(item["category"], item["best_card"], f"[green]+${item['annual_gain']:.2f}[/green]")
+        console.print(t2)
+
+    # Top upgrade recommendation
+    if intel["upgrade_recommendations"]:
+        rec = intel["upgrade_recommendations"][0]
+        console.print(
+            f"\n[blue]Top upgrade:[/blue] {rec['name']} — {rec['why']} "
+            f"(+${rec['gain_over_best']:.2f}/yr over your best card)"
+        )
+
+
 if __name__ == "__main__":  # pragma: no cover
     cli()
