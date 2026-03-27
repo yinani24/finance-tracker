@@ -9,18 +9,19 @@ from dashboard.analytics import build_context
 _TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates")
 
 
-def _load_files(data_dir: str) -> tuple[pd.DataFrame, dict, dict]:
-    """Load transactions, accounts, and goals from the data directory.
+def _load_files(data_dir: str) -> tuple[pd.DataFrame, dict, dict, dict]:
+    """Load transactions, accounts, goals, and cards from the data directory.
 
     Args:
-        data_dir: Path to the directory containing transactions.csv, accounts.json, and goals.json.
+        data_dir: Path to the directory containing data files.
 
     Returns:
-        A 3-tuple of (transactions DataFrame, accounts dict, goals dict).
+        A 4-tuple of (transactions DataFrame, accounts dict, goals dict, cards dict).
     """
     store_path    = f"{data_dir}/transactions.csv"
     accounts_path = f"{data_dir}/accounts.json"
     goals_path    = f"{data_dir}/goals.json"
+    cards_path    = f"{data_dir}/cards.json"
 
     try:
         df = pd.read_csv(store_path)
@@ -38,7 +39,12 @@ def _load_files(data_dir: str) -> tuple[pd.DataFrame, dict, dict]:
         with open(goals_path) as f:
             goals = json.load(f)
 
-    return df, accounts, goals
+    cards = {"cards": []}
+    if os.path.exists(cards_path):
+        with open(cards_path) as f:
+            cards = json.load(f)
+
+    return df, accounts, goals, cards
 
 
 def build_dashboard(data_dir: str = "data", output_path: str = "reports/dashboard.html") -> str:
@@ -51,8 +57,8 @@ def build_dashboard(data_dir: str = "data", output_path: str = "reports/dashboar
     Returns:
         The output_path where the HTML file was written.
     """
-    df, accounts, goals = _load_files(data_dir)
-    context = build_context(df, accounts, goals)
+    df, accounts, goals, cards = _load_files(data_dir)
+    context = build_context(df, accounts, goals, cards=cards)
 
     env = Environment(loader=FileSystemLoader(_TEMPLATES_DIR))
     env.filters["format_currency"] = lambda v: f"{v:,.2f}"
