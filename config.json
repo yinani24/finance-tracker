@@ -20,10 +20,13 @@
     }
   },
   "import_accounts": {
-    "chase_credit":   "Chase-CreditCard",
-    "bofa_visa":      "BofA-Visa",
-    "bofa_checking":  "BofA-Checking",
-    "robinhood":      "Robinhood"
+    "chase_credit":        "Chase-CreditCard",
+    "chase_bank_checking": "Chase-Checking",
+    "chase_bank_savings":  "Chase-Savings",
+    "bofa_visa":           "BofA-Visa",
+    "bofa_checking":       "BofA-Checking",
+    "amex_hysa":           "Amex-HYSA",
+    "robinhood":           "Robinhood"
   },
   "categories": {
     "Food & Dining": ["chipotle", "mcdonald", "doordash", "uber eats", "grubhub", "starbucks", "restaurant", "pizza", "sushi", "cafe", "diner"],

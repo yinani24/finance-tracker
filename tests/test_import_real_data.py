@@ -27,10 +27,13 @@ def tmp_config(tmp_path):
         "categories": {"Food & Dining": ["chipotle", "whole foods"], "Other": []},
         "bank_formats": {},
         "import_accounts": {
-            "chase_credit": "Chase-CreditCard",
-            "bofa_visa": "BofA-Visa",
-            "bofa_checking": "BofA-Checking",
-            "robinhood": "Robinhood",
+            "chase_credit":        "Chase-CreditCard",
+            "chase_bank_checking": "Chase-Checking",
+            "chase_bank_savings":  "Chase-Savings",
+            "bofa_visa":           "BofA-Visa",
+            "bofa_checking":       "BofA-Checking",
+            "amex_hysa":           "Amex-HYSA",
+            "robinhood":           "Robinhood",
         }
     }
     path = tmp_path / "config.json"
@@ -46,11 +49,18 @@ def tmp_manifest(tmp_path):
             {"path": f"{FIXTURES}/chase_sample.pdf",
              "closing_year": 2024, "closing_month": 1}
         ],
+        "chase_bank": [
+            {"path": f"{FIXTURES}/chase_bank_sample.pdf",
+             "closing_year": 2026, "closing_month": 1}
+        ],
         "bofa_visa": [
             {"path": f"{FIXTURES}/bofa_visa_sample.pdf", "year": 2024}
         ],
         "bofa_checking": [
             {"path": f"{FIXTURES}/bofa_checking_sample.pdf"}
+        ],
+        "amex_hysa": [
+            {"path": f"{FIXTURES}/amex_hysa_sample.pdf"}
         ],
         "robinhood_csv": [
             {"path": f"{FIXTURES}/robinhood_sample.csv"}
@@ -251,6 +261,113 @@ def test_parse_robinhood_pdf_skips_when_file_missing(tmp_store, tmp_config):
     )
     assert added == 0
     assert skipped == 0
+
+
+# ── parse_chase_bank_pdf ─────────────────────────────────────────────────────
+
+def test_parse_chase_bank_pdf_skips_when_file_missing(tmp_store, tmp_config):
+    cat = Categorizer(tmp_config)
+    added, skipped = ird.parse_chase_bank_pdf(
+        tmp_store, cat, "/nonexistent.pdf",
+        "Chase-Checking", "Chase-Savings", 2026, 1
+    )
+    assert added == 0
+    assert skipped == 0
+
+
+def test_parse_chase_bank_pdf_returns_counts_for_fixture(tmp_store, tmp_config):
+    cat = Categorizer(tmp_config)
+    added, skipped = ird.parse_chase_bank_pdf(
+        tmp_store, cat, f"{FIXTURES}/chase_bank_sample.pdf",
+        "Chase-Checking", "Chase-Savings", 2026, 1
+    )
+    assert added >= 0
+    assert skipped >= 0
+
+
+def test_parse_chase_bank_pdf_exception_path(tmp_store, tmp_config, tmp_path):
+    """Cover the except-continue path in parse_chase_bank_pdf."""
+    cat = Categorizer(tmp_config)
+    fake_pdf = tmp_path / "fake.pdf"
+    fake_pdf.write_bytes(b"%PDF-1.4")
+    bank_text = "CHASE SECURE CHECKING\n12/18 Payroll 500.00 500.00"
+    mock_pdf = _make_pdf_mock([bank_text])
+    with patch("pdfplumber.open", return_value=mock_pdf), \
+         patch.object(tmp_store, "add", side_effect=ValueError("db error")):
+        added, skipped = ird.parse_chase_bank_pdf(
+            tmp_store, cat, str(fake_pdf),
+            "Chase-Checking", "Chase-Savings", 2026, 1
+        )
+    assert added == 0
+
+
+def test_parse_chase_bank_pdf_inner_branches(tmp_store, tmp_config, tmp_path):
+    """Cover: no-account skip, blank lines, account detection, skip_re, income, exception."""
+    cat = Categorizer(tmp_config)
+    fake_pdf = tmp_path / "fake.pdf"
+    fake_pdf.write_bytes(b"%PDF-1.4")
+    bank_text = "\n".join([
+        "Some header text before any account",  # no account set → skip
+        "",                                      # blank line
+        "CHASE SECURE CHECKING",                 # set checking account
+        "TRANSACTION DETAIL",                    # skip via _SKIP_CHASE_BANK
+        "Beginning Balance 235.88",              # skip via _SKIP_CHASE_BANK
+        "12/18 Centavo Inc Payroll 1000.00 1235.88",  # IMPORT income
+        "01/08 Monthly Service Fee -4.95 1230.93",    # IMPORT expense
+        "Online Transfer From Sav 1000.00 2230.93",   # skip via _SKIP_CHASE_BANK
+        "INVALID LINE",                          # no regex match
+        "99/99 BadDate -1.00 0.00",              # bad date → exception
+        "CHASE SAVINGS",                         # switch to savings
+        "12/18 Direct Deposit 250.00 250.00",    # IMPORT income (direct deposit)
+    ])
+    mock_pdf = _make_pdf_mock([bank_text])
+    with patch("pdfplumber.open", return_value=mock_pdf):
+        added, skipped = ird.parse_chase_bank_pdf(
+            tmp_store, cat, str(fake_pdf),
+            "Chase-Checking", "Chase-Savings", 2026, 1
+        )
+    assert added >= 0
+
+
+# ── parse_amex_hysa_pdf ──────────────────────────────────────────────────────
+
+def test_parse_amex_hysa_pdf_skips_when_file_missing(tmp_store, tmp_config):
+    cat = Categorizer(tmp_config)
+    added, skipped = ird.parse_amex_hysa_pdf(
+        tmp_store, cat, "/nonexistent.pdf", "Amex-HYSA"
+    )
+    assert added == 0
+    assert skipped == 0
+
+
+def test_parse_amex_hysa_pdf_returns_counts_for_fixture(tmp_store, tmp_config):
+    cat = Categorizer(tmp_config)
+    added, skipped = ird.parse_amex_hysa_pdf(
+        tmp_store, cat, f"{FIXTURES}/amex_hysa_sample.pdf", "Amex-HYSA"
+    )
+    assert added >= 0
+    assert skipped >= 0
+
+
+def test_parse_amex_hysa_pdf_inner_branches(tmp_store, tmp_config, tmp_path):
+    """Cover: blank lines, no-match lines, interest income, exception path."""
+    cat = Categorizer(tmp_config)
+    fake_pdf = tmp_path / "fake.pdf"
+    fake_pdf.write_bytes(b"%PDF-1.4")
+    hysa_text = "\n".join([
+        "Account Activity",                              # no match
+        "",                                              # blank line
+        "01/03/2026 Beginning Balance $10036.68",        # only one $ → no match
+        "02/02/2026 Interest Payment $27.71 $10064.39",  # IMPORT income
+        "99/99/2026 Interest Payment $1.00 $100.00",     # bad date → exception
+        "02/02/2026 Ending Balance $10064.39",           # only one $ → no match
+    ])
+    mock_pdf = _make_pdf_mock([hysa_text])
+    with patch("pdfplumber.open", return_value=mock_pdf):
+        added, skipped = ird.parse_amex_hysa_pdf(
+            tmp_store, cat, str(fake_pdf), "Amex-HYSA"
+        )
+    assert added == 1
 
 
 # ── run_import ────────────────────────────────────────────────────────────────

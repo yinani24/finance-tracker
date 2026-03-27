@@ -105,6 +105,157 @@ def _add_tx(
     return 1, 0
 
 
+# ── Chase Bank (Checking + Savings) ──────────────────────────────────────────
+
+_SKIP_CHASE_BANK = re.compile(
+    r"(Online Transfer|Payment To Chase Card|Beginning Balance|Ending Balance|"
+    r"TRANSACTION DETAIL|DATE\s+DESCRIPTION)",
+    re.IGNORECASE,
+)
+
+
+def parse_chase_bank_pdf(
+    store: DataStore,
+    cat: Categorizer,
+    filepath: str,
+    checking_account: str,
+    savings_account: str,
+    closing_year: int,
+    closing_month: int,
+) -> tuple[int, int]:
+    """
+    Parse a Chase Bank combined checking/savings PDF statement.
+
+    The combined statement contains both CHASE SECURE CHECKING and
+    CHASE SAVINGS sections in the same PDF. Internal transfers and
+    credit card payments are skipped automatically.
+
+    Args:
+        store: DataStore instance.
+        cat: Categorizer instance.
+        filepath: Path to the Chase Bank combined PDF.
+        checking_account: Account name for the checking account.
+        savings_account: Account name for the savings account.
+        closing_year: Statement closing year.
+        closing_month: Statement closing month.
+
+    Returns:
+        (added, skipped) counts.
+    """
+    tx_re = re.compile(
+        r'^(\d{2}/\d{2})(?:\s+\d{2}/\d{2})?\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$'
+    )
+    added, skipped = 0, 0
+    current_account = None
+
+    try:
+        pdf_file = pdfplumber.open(filepath)
+    except Exception:
+        return 0, 0
+
+    with pdf_file:
+        for page in pdf_file.pages:
+            text = page.extract_text() or ""
+            for line in text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                if "CHASE SECURE CHECKING" in line.upper():
+                    current_account = checking_account
+                    continue
+                if "CHASE SAVINGS" in line.upper():
+                    current_account = savings_account
+                    continue
+                if not current_account:
+                    continue
+                if _SKIP_CHASE_BANK.search(line):
+                    continue
+                m = tx_re.match(line)
+                if not m:
+                    continue
+                try:
+                    date_part = m.group(1)
+                    desc = m.group(2).strip()
+                    amount_str = m.group(3)
+                    tx_month = int(date_part.split("/")[0])
+                    tx_day = int(date_part.split("/")[1])
+                    year = infer_year(tx_month, closing_year, closing_month)
+                    date_str = f"{year}-{tx_month:02d}-{tx_day:02d}"
+                    amount = float(amount_str.replace(",", ""))
+                    is_income = bool(re.search(r"payroll|direct deposit", desc, re.I))
+                    a, s = _add_tx(
+                        store, cat, date_str, amount, desc, current_account,
+                        is_income=is_income,
+                    )
+                    added += a
+                    skipped += s
+                except Exception:
+                    continue
+
+    return added, skipped
+
+
+# ── Amex High Yield Savings ───────────────────────────────────────────────────
+
+def parse_amex_hysa_pdf(
+    store: DataStore,
+    cat: Categorizer,
+    filepath: str,
+    account: str,
+) -> tuple[int, int]:
+    """
+    Parse an American Express High Yield Savings Account PDF statement.
+
+    Imports interest payment and deposit transactions.
+
+    Args:
+        store: DataStore instance.
+        cat: Categorizer instance.
+        filepath: Path to the Amex HYSA PDF.
+        account: Account name to tag transactions with.
+
+    Returns:
+        (added, skipped) counts.
+    """
+    tx_re = re.compile(
+        r'^(\d{2}/\d{2}/\d{4})\s+(.+?)\s+\$([\d,]+\.\d{2})\s+\$([\d,]+\.\d{2})\s*$'
+    )
+    added, skipped = 0, 0
+
+    try:
+        pdf_file = pdfplumber.open(filepath)
+    except Exception:
+        return 0, 0
+
+    with pdf_file:
+        for page in pdf_file.pages:
+            text = page.extract_text() or ""
+            for line in text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                m = tx_re.match(line)
+                if not m:
+                    continue
+                try:
+                    date_str_raw, desc, amount_str = (
+                        m.group(1), m.group(2).strip(), m.group(3)
+                    )
+                    date_str = datetime.strptime(date_str_raw, "%m/%d/%Y").strftime("%Y-%m-%d")
+                    amount = float(amount_str.replace(",", ""))
+                    is_income = bool(re.search(r"interest|dividend", desc, re.I))
+                    a, s = _add_tx(
+                        store, cat, date_str, amount, desc, account,
+                        is_income=is_income,
+                    )
+                    added += a
+                    skipped += s
+                except Exception:
+                    continue
+
+    return added, skipped
+
+
 # ── Chase Credit Card ─────────────────────────────────────────────────────────
 
 def infer_year(tx_month: int, closing_year: int, closing_month: int) -> int:
@@ -543,6 +694,24 @@ def run_import(
         )
         added += a; skipped += s
         print(f"  Chase {entry['path']}: {a} added, {s} skipped")
+
+    for entry in manifest.get("chase_bank", []):
+        a, s = parse_chase_bank_pdf(
+            store, cat, entry["path"],
+            accounts.get("chase_bank_checking", "Chase-Checking"),
+            accounts.get("chase_bank_savings", "Chase-Savings"),
+            entry["closing_year"], entry["closing_month"],
+        )
+        added += a; skipped += s
+        print(f"  Chase Bank {entry['path']}: {a} added, {s} skipped")
+
+    for entry in manifest.get("amex_hysa", []):
+        a, s = parse_amex_hysa_pdf(
+            store, cat, entry["path"],
+            accounts.get("amex_hysa", "Amex-HYSA"),
+        )
+        added += a; skipped += s
+        print(f"  Amex HYSA {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("bofa_visa", []):
         a, s = parse_bofa_credit_pdf(
