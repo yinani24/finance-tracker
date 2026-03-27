@@ -2,6 +2,7 @@
 data/transactions.csv
 data/accounts.json
 data/goals.json
+data/cards.json
 reports/*
 !reports/.gitkeep
 
