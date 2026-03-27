@@ -194,6 +194,36 @@ def test_goal_status_no_named_goals(tmp_path):
     assert "No named goals" in result.output
 
 
+def test_cards_command_no_cards_file(tmp_path):
+    """Shows empty state message when data/cards.json does not exist."""
+    from click.testing import CliRunner
+    runner = CliRunner()
+    result = runner.invoke(cli, ["cards", "--data-dir", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "No cards configured" in result.output
+
+
+def test_cards_command_with_cards(runner_with_data):
+    """Shows portfolio table when cards.json is present."""
+    import json
+    runner, tmp_path = runner_with_data
+    cards = {
+        "cards": [{
+            "name": "Chase Sapphire Preferred",
+            "issuer": "Chase",
+            "annual_fee": 95,
+            "reward_type": "points",
+            "points_cpp": 0.0125,
+            "rewards": {"Food & Dining": 3.0, "Transport": 2.0,
+                        "Subscriptions": 1.0, "Other": 1.0},
+        }]
+    }
+    (tmp_path / "cards.json").write_text(json.dumps(cards))
+    result = runner.invoke(cli, ["cards", "--data-dir", str(tmp_path)])
+    assert result.exit_code == 0
+    assert "Chase Sapphire Preferred" in result.output
+
+
 def test_dashboard_opens_browser(runner_with_data, tmp_path):
     """Cover the webbrowser.open path in dashboard command (finance.py line 341)."""
     from unittest.mock import patch
