@@ -1,0 +1,190 @@
+{# Spending tab: donut, income vs expenses, category trends, % of income, fixed costs, subscriptions, food #}
+<div x-show="tab==='spending'" x-cloak>
+
+  {# Period selector #}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div style="font-size:0.95rem;font-weight:700;letter-spacing:-0.02em">Spending Breakdown</div>
+    <div class="join" style="border-radius:10px;overflow:hidden">
+      {% for period in ['This Month', '3 Months', '6 Months', 'Year'] %}
+      <button class="join-item btn btn-sm {% if loop.first %}btn-active{% endif %}" style="font-size:0.72rem;font-weight:600;letter-spacing:0">{{ period }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Row 1: Donut + Income vs Expenses #}
+  <div class="grid-2">
+    {# Category donut #}
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="section-label">Where It Went</div>
+        <div style="display:flex;align-items:center;gap:24px">
+          <div style="flex-shrink:0;position:relative">
+            <canvas id="donutChart" style="width:120px;height:120px"></canvas>
+          </div>
+          <div style="flex:1">
+            {% for item in spending_pct %}
+            <div style="display:flex;justify-content:space-between;align-items:center;{% if not loop.last %}margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--c-border){% endif %}">
+              <span style="font-size:0.78rem;color:var(--c-muted);font-weight:500">{{ item.name }}</span>
+              <span style="font-size:0.78rem;font-weight:700;font-feature-settings:'tnum'">${{ item.amount | format_currency }}</span>
+            </div>
+            {% else %}
+            <div style="font-size:0.8rem;color:var(--c-muted)">No expense data.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Income vs Expenses bar #}
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="section-label">Income vs Expenses</div>
+        <canvas id="incomeChart" style="max-height:140px"></canvas>
+        {% if kpis.income > 0 %}
+        <div style="margin-top:14px;padding:10px 14px;background:var(--c-bg);border-radius:10px;font-size:0.78rem;display:flex;align-items:center;gap:8px">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>
+            Savings rate <strong>{{ "%.1f" | format(kpis.savings_rate * 100) }}%</strong>
+            {% if kpis.monthly_target > 0 %} -- need <strong>{{ "%.1f" | format(kpis.monthly_target / kpis.income * 100) }}%</strong> to hit goal{% endif %}
+          </span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Row 2: Category trends #}
+  {% if category_trends %}
+  <div class="fin-card" style="margin-bottom:16px">
+    <div class="fin-card-body">
+      <div class="section-label">Category Trend -- Last 3 Months</div>
+      {% for trend in category_trends %}
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 0;{% if not loop.last %}border-bottom:1px solid var(--c-border){% endif %}">
+        <div style="width:120px;font-size:0.8rem;font-weight:600;flex-shrink:0;letter-spacing:-0.01em">{{ trend.name }}</div>
+        <div style="display:flex;align-items:flex-end;gap:2px;height:24px;width:50px">
+          {% set all_amounts = trend.prior_amounts + [trend.current_amount] %}
+          {% set max_amt = all_amounts | max %}
+          {% for amt in all_amounts %}
+          <div style="flex:1;border-radius:3px 3px 0 0;min-width:6px;
+            height:{{ [((amt / max_amt * 100) if max_amt > 0 else 0) | int, 4] | max }}%;
+            background:{% if loop.last %}{% if trend.direction == 'up' %}var(--c-error){% elif trend.direction == 'down' %}var(--c-success){% else %}var(--c-secondary){% endif %}{% else %}var(--c-border){% endif %};
+            opacity:{% if loop.last %}1{% else %}0.4{% endif %}">
+          </div>
+          {% endfor %}
+        </div>
+        <div style="font-size:0.8rem;font-weight:700;width:70px;flex-shrink:0;font-feature-settings:'tnum'">${{ trend.current_amount | format_currency }}</div>
+        <span class="badge badge-sm {% if trend.direction == 'up' %}badge-error{% elif trend.direction == 'down' %}badge-success{% else %}badge-ghost{% endif %}" style="gap:2px">
+          {% if trend.direction == 'up' %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+          {% elif trend.direction == 'down' %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          {% else %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+          {% endif %}
+          {{ "%.0f" | format((trend.pct_change * 100) | abs) }}%
+        </span>
+        {% if trend.prior_amounts %}
+        <div style="font-size:0.68rem;color:var(--c-muted);flex:1;font-feature-settings:'tnum'">
+          {% for amt in trend.prior_amounts %}${{ amt | format_currency }}{% if not loop.last %} &rarr; {% endif %}{% endfor %} &rarr; ${{ trend.current_amount | format_currency }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Row 3: % of income #}
+  {% if spending_pct %}
+  <div class="fin-card" style="margin-bottom:16px">
+    <div class="fin-card-body">
+      <div class="section-label">Where Did My Money Go -- % of Income</div>
+      {% for item in spending_pct %}
+      <div style="display:flex;align-items:center;gap:12px;{% if not loop.last %}margin-bottom:12px{% endif %}">
+        <div style="width:120px;font-size:0.78rem;color:var(--c-muted);font-weight:500;flex-shrink:0">{{ item.name }}</div>
+        <div style="flex:1;height:6px;border-radius:999px;background:var(--c-border);overflow:hidden">
+          <div style="height:100%;border-radius:999px;background:var(--c-primary);width:{{ [item.pct_of_income, 100] | min }}%;transition:width 0.6s cubic-bezier(0.16, 1, 0.3, 1)"></div>
+        </div>
+        <div style="width:55px;text-align:right;font-size:0.75rem;font-weight:700;color:var(--c-primary);flex-shrink:0;font-feature-settings:'tnum'">{{ item.pct_of_income }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Fixed Costs #}
+  {% if fixed_costs.total > 0 %}
+  <div class="fin-card" style="margin-bottom:16px">
+    <div class="fin-card-body">
+      <div class="section-label">Fixed Monthly Obligations</div>
+      <table class="table table-sm">
+        <tbody>
+          {% if fixed_costs.rent > 0 %}<tr><td style="font-weight:500">Rent / Housing</td><td style="text-align:right;font-weight:700;font-feature-settings:'tnum'">${{ fixed_costs.rent | format_currency }}/mo</td></tr>{% endif %}
+          {% if fixed_costs.phone > 0 %}<tr><td style="font-weight:500">Phone & Cell</td><td style="text-align:right;font-weight:700;font-feature-settings:'tnum'">${{ fixed_costs.phone | format_currency }}/mo</td></tr>{% endif %}
+          {% if fixed_costs.insurance > 0 %}<tr><td style="font-weight:500">Insurance</td><td style="text-align:right;font-weight:700;font-feature-settings:'tnum'">${{ fixed_costs.insurance | format_currency }}/mo</td></tr>{% endif %}
+          {% if fixed_costs.subscriptions > 0 %}<tr><td style="font-weight:500">Subscriptions</td><td style="text-align:right;font-weight:700;font-feature-settings:'tnum'">${{ fixed_costs.subscriptions | format_currency }}/mo</td></tr>{% endif %}
+          <tr style="border-top:2px solid var(--c-border)">
+            <td style="font-weight:700">Total Fixed</td>
+            <td style="text-align:right;font-weight:800;font-feature-settings:'tnum';color:{% if fixed_costs.pct_of_income > 0.55 %}var(--c-error){% elif fixed_costs.pct_of_income > 0.40 %}var(--c-warning){% else %}var(--c-success){% endif %}">
+              ${{ fixed_costs.total | format_currency }}/mo ({{ "%.0f" | format(fixed_costs.pct_of_income * 100) }}% of income)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Subscriptions Breakdown #}
+  {% if sub_breakdown.services %}
+  <div class="fin-card" style="margin-bottom:16px">
+    <div class="fin-card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="section-label" style="margin-bottom:0">Subscriptions</div>
+        <div style="font-size:0.72rem;color:var(--c-muted);font-weight:500;font-feature-settings:'tnum'">${{ sub_breakdown.total_monthly | format_currency }}/mo &middot; ${{ sub_breakdown.total_annual | format_currency }}/yr</div>
+      </div>
+      {% if sub_breakdown.redundancy_waste > 0 %}
+      <div style="padding:10px 14px;margin-bottom:12px;font-size:0.78rem;background:var(--c-warning-light);border:1px solid var(--c-warning-border);border-radius:10px;display:flex;align-items:center;gap:8px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--c-warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span>Multiple phone plans detected -- cancelling duplicates saves ~${{ (sub_breakdown.redundancy_waste * 12) | format_currency }}/yr</span>
+      </div>
+      {% endif %}
+      <table class="table table-zebra table-sm">
+        <thead><tr><th>Service</th><th style="text-align:right">Monthly</th><th style="text-align:right">Annual</th></tr></thead>
+        <tbody>
+          {% for svc in sub_breakdown.services %}
+          <tr>
+            <td style="font-weight:500">{{ svc.name }}{% if svc.redundant %} <span class="badge badge-error badge-xs" style="font-weight:600">duplicate</span>{% endif %}</td>
+            <td style="text-align:right;font-feature-settings:'tnum'">${{ svc.monthly | format_currency }}</td>
+            <td style="text-align:right;color:var(--c-muted);font-feature-settings:'tnum'">${{ svc.annual | format_currency }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Food & Dining Breakdown #}
+  {% if food_breakdown %}
+  <div class="fin-card">
+    <div class="fin-card-body">
+      <div class="section-label">Food & Dining -- Top Restaurants (3 months)</div>
+      <table class="table table-zebra table-sm">
+        <thead><tr><th>Restaurant</th><th style="text-align:center">Visits</th><th style="text-align:right">Avg Ticket</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>
+          {% for r in food_breakdown %}
+          <tr>
+            <td style="font-size:0.8rem;font-weight:500">{{ r.name }}</td>
+            <td style="text-align:center;color:var(--c-muted);font-feature-settings:'tnum'">{{ r.visits }}</td>
+            <td style="text-align:right;color:var(--c-muted);font-feature-settings:'tnum'">${{ r.avg_ticket | format_currency }}</td>
+            <td style="text-align:right;font-weight:700;font-feature-settings:'tnum'">${{ r.total | format_currency }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>

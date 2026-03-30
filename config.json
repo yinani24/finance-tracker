@@ -34,8 +34,15 @@
     "Subscriptions": ["netflix", "spotify", "apple", "amazon prime", "adobe", "hulu", "disney", "youtube", "openai"],
     "Shopping": ["amazon", "target", "walmart", "costco", "best buy", "gap", "zara", "h&m"],
     "Health": ["cvs", "walgreens", "rite aid", "urgent care", "doctor", "dentist", "gym", "planet fitness"],
-    "Income": ["payroll", "direct deposit", "salary", "zelle from", "venmo from"],
+    "Income": ["payroll", "direct deposit", "salary", "zelle from", "venmo from", "interest payment", "deposit mobile ca", "zelle payment from"],
     "Investments": ["robinhood", "fidelity", "vanguard", "schwab"],
+    "Airlines": ["american air", "united air", "delta air", "southwest air", "jetblue", "alaska air", "emirates", "british airways", "lufthansa", "air india", "heinemann duty free"],
+    "Travel": ["expedia", "airbnb", "hotels.com", "booking.com", "marriott", "hyatt", "hilton", "trivago", "kayak", "priceline"],
+    "Housing": ["rent", "lease", "mortgage", "replay 7312024", "park gate residences"],
+    "Dubai": ["dubai"],
+    "Entertainment": ["topgolf", "marcus coral ridge", "cinemark", "ticketmaster", "eventbrite", "bowling", "amc theater"],
+    "Phone & Cell": ["t-mobile", "tmobile", "visible 866", "verizon", "at&t wireless", "straight talk", "simple mobile"],
+    "Insurance": ["lemonade insurance", "geico", "state farm", "allstate", "progressive ins"],
     "Other": []
   }
 }

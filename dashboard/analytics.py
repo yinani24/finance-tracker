@@ -7,7 +7,56 @@ from core.cards import (
     compute_card_annual_value,
     compute_missed_rewards,
     compute_upgrade_recommendations,
+    compute_card_value_per_category,
 )
+
+
+def compute_mom_changes(df: pd.DataFrame, today: date | None = None) -> dict:
+    """Compute month-over-month percentage changes for income, expenses, and savings.
+
+    Args:
+        df: Full transactions DataFrame.
+        today: Reference date for the current month; defaults to today's date.
+
+    Returns:
+        A dict with income_change_pct, expenses_change_pct, saved_change_pct.
+        Each value is a rounded float or None if prior month has no data.
+    """
+    if today is None:
+        today = date.today()
+
+    this_month = today.strftime("%Y-%m")
+    yr = today.year + (today.month - 2) // 12
+    mo = ((today.month - 2) % 12) + 1
+    prior_month = f"{yr:04d}-{mo:02d}"
+
+    result = {"income_change_pct": None, "expenses_change_pct": None, "saved_change_pct": None}
+    if df.empty:
+        return result
+
+    cur_df = df[df["date"].dt.strftime("%Y-%m") == this_month]
+    prev_df = df[df["date"].dt.strftime("%Y-%m") == prior_month]
+
+    if prev_df.empty:
+        return result
+
+    cur_income = float(cur_df[cur_df["amount"] > 0]["amount"].sum())
+    cur_expenses = float(abs(cur_df[cur_df["amount"] < 0]["amount"].sum()))
+    cur_saved = cur_income - cur_expenses
+
+    prev_income = float(prev_df[prev_df["amount"] > 0]["amount"].sum())
+    prev_expenses = float(abs(prev_df[prev_df["amount"] < 0]["amount"].sum()))
+    prev_saved = prev_income - prev_expenses
+
+    def _pct(cur: float, prev: float) -> float | None:
+        if prev == 0:
+            return None
+        return round((cur - prev) / abs(prev) * 100, 1)
+
+    result["income_change_pct"] = _pct(cur_income, prev_income)
+    result["expenses_change_pct"] = _pct(cur_expenses, prev_expenses)
+    result["saved_change_pct"] = _pct(cur_saved, prev_saved)
+    return result
 
 
 def compute_card_intelligence(
@@ -62,6 +111,231 @@ def compute_card_intelligence(
     }
 
 
+def compute_subscription_breakdown(df: pd.DataFrame, today: date | None = None) -> dict:
+    """Return all recurring subscription services with per-service cost and redundancy flags.
+
+    Args:
+        df: Full transactions DataFrame.
+        today: Reference date for the trailing 3-month window; defaults to today's date.
+
+    Returns:
+        Dict with services (list), total_monthly, total_annual, and redundancy_waste.
+    """
+    if today is None:
+        today = date.today()
+    month_list = []
+    for i in range(2, -1, -1):
+        yr = today.year + (today.month - 1 - i) // 12
+        mo = ((today.month - 1 - i) % 12) + 1
+        month_list.append(f"{yr:04d}-{mo:02d}")
+    empty = {"services": [], "total_monthly": 0.0, "total_annual": 0.0, "redundancy_waste": 0.0}
+    if df.empty:
+        return empty
+    sub_df = df[(df["category"] == "Subscriptions") & (df["amount"] < 0)].copy()
+    sub_df["month"] = sub_df["date"].dt.strftime("%Y-%m")
+    sub_df = sub_df[sub_df["month"].isin(month_list)]
+    if sub_df.empty:
+        return empty
+    months_present = sub_df.groupby("merchant")["month"].nunique()
+    grouped = sub_df.groupby("merchant")["amount"].sum()
+    services = []
+    for merchant, total in grouped.items():
+        n = months_present[merchant]
+        monthly = round(abs(total) / n, 2)
+        services.append({"name": merchant, "monthly": monthly, "annual": round(monthly * 12, 2), "redundant": False})
+    PHONE_KW = ["t-mobile", "tmobile", "visible", "verizon", "straight talk"]
+    phone_svcs = [s for s in services if any(kw in s["name"].lower() for kw in PHONE_KW)]
+    redundancy_waste = 0.0
+    if len(phone_svcs) >= 2:
+        for s in phone_svcs:
+            s["redundant"] = True
+        phone_costs = sorted([s["monthly"] for s in phone_svcs], reverse=True)
+        redundancy_waste = round(sum(phone_costs[1:]), 2)
+    services.sort(key=lambda x: x["monthly"], reverse=True)
+    total_monthly = round(sum(s["monthly"] for s in services), 2)
+    return {"services": services, "total_monthly": total_monthly, "total_annual": round(total_monthly * 12, 2), "redundancy_waste": redundancy_waste}
+
+
+def compute_food_breakdown(df: pd.DataFrame, today: date | None = None) -> list:
+    """Return Food & Dining transactions broken down by merchant for the trailing 3 months.
+
+    Args:
+        df: Full transactions DataFrame.
+        today: Reference date for the trailing 3-month window; defaults to today's date.
+
+    Returns:
+        A list of dicts (name, total, visits, avg_ticket) sorted by total descending, top 15.
+    """
+    if today is None:
+        today = date.today()
+    month_list = []
+    for i in range(2, -1, -1):
+        yr = today.year + (today.month - 1 - i) // 12
+        mo = ((today.month - 1 - i) % 12) + 1
+        month_list.append(f"{yr:04d}-{mo:02d}")
+    if df.empty:
+        return []
+    food_df = df[(df["category"] == "Food & Dining") & (df["amount"] < 0)].copy()
+    food_df["month"] = food_df["date"].dt.strftime("%Y-%m")
+    food_df = food_df[food_df["month"].isin(month_list)]
+    if food_df.empty:
+        return []
+    grouped = (
+        food_df.groupby("merchant")
+        .agg(total=("amount", lambda x: round(abs(x.sum()), 2)), visits=("amount", "count"))
+        .reset_index()
+    )
+    grouped["avg_ticket"] = (grouped["total"] / grouped["visits"]).round(2)
+    grouped = grouped.sort_values("total", ascending=False).head(15)
+    return [
+        {"name": r["merchant"], "total": r["total"], "visits": int(r["visits"]), "avg_ticket": r["avg_ticket"]}
+        for _, r in grouped.iterrows()
+    ]
+
+
+def compute_fixed_costs(df: pd.DataFrame, accounts: dict, today: date | None = None) -> dict:
+    """Identify fixed monthly obligations and their ratio to 3-month average income.
+
+    Args:
+        df: Full transactions DataFrame.
+        accounts: Accounts config dict (not used directly, reserved for future use).
+        today: Reference date for the trailing 3-month window; defaults to today's date.
+
+    Returns:
+        Dict with rent, phone, insurance, subscriptions, total, avg_income, pct_of_income.
+    """
+    if today is None:
+        today = date.today()
+    month_list = []
+    for i in range(2, -1, -1):
+        yr = today.year + (today.month - 1 - i) // 12
+        mo = ((today.month - 1 - i) % 12) + 1
+        month_list.append(f"{yr:04d}-{mo:02d}")
+    n = len(month_list)
+
+    def _avg(cat):
+        if df.empty:
+            return 0.0
+        c = df[(df["category"] == cat) & (df["amount"] < 0)].copy()
+        c["month"] = c["date"].dt.strftime("%Y-%m")
+        return round(abs(c[c["month"].isin(month_list)]["amount"].sum()) / n, 2)
+
+    rent = _avg("Housing")
+    phone = _avg("Phone & Cell")
+    insurance = _avg("Insurance")
+    sub = compute_subscription_breakdown(df, today=today)["total_monthly"]
+    total = round(rent + phone + insurance + sub, 2)
+    if df.empty:
+        avg_income = 0.0
+    else:
+        inc = df[df["amount"] > 0].copy()
+        inc["month"] = inc["date"].dt.strftime("%Y-%m")
+        avg_income = round(inc[inc["month"].isin(month_list)]["amount"].sum() / n, 2)
+    pct = round(total / avg_income, 4) if avg_income > 0 else 0.0
+    return {"rent": rent, "phone": phone, "insurance": insurance, "subscriptions": sub, "total": total, "avg_income": avg_income, "pct_of_income": pct}
+
+
+def compute_lifestyle_insights(df: pd.DataFrame, kpis: dict, fixed_costs: dict, sub_breakdown: dict, today: date | None = None) -> list:
+    """Generate 3–5 personalized, actionable insight strings based on spending data.
+
+    Args:
+        df: Full transactions DataFrame.
+        kpis: KPI dict as returned by compute_kpis.
+        fixed_costs: Fixed costs dict as returned by compute_fixed_costs.
+        sub_breakdown: Subscription breakdown dict as returned by compute_subscription_breakdown.
+        today: Reference date for the trailing 3-month window; defaults to today's date.
+
+    Returns:
+        A list of up to 5 insight strings; always returns at least 1.
+    """
+    if today is None:
+        today = date.today()
+    month_list = []
+    for i in range(2, -1, -1):
+        yr = today.year + (today.month - 1 - i) // 12
+        mo = ((today.month - 1 - i) % 12) + 1
+        month_list.append(f"{yr:04d}-{mo:02d}")
+    insights = []
+    phone_waste = sub_breakdown.get("redundancy_waste", 0.0)
+    if phone_waste > 0:
+        insights.append(f"You have multiple active phone plans — cancelling the cheapest saves ~${phone_waste * 12:.0f}/yr")
+    avg_income = fixed_costs.get("avg_income", 0.0)
+    rent = fixed_costs.get("rent", 0.0)
+    if avg_income > 0 and rent > 0:
+        rent_pct = rent / avg_income
+        if rent_pct > 0.33:
+            target = avg_income * 0.30
+            insights.append(f"Rent is {rent_pct*100:.0f}% of avg income — the 30% rule suggests ${target:,.0f}/mo")
+    if not df.empty:
+        dubai = df[(df["category"] == "Dubai") & (df["amount"] < 0)].copy()
+        dubai["month"] = dubai["date"].dt.strftime("%Y-%m")
+        dubai_avg = abs(dubai[dubai["month"].isin(month_list)]["amount"].sum()) / 3
+        if dubai_avg > 300:
+            insights.append(f"International spending averages ${dubai_avg:.0f}/mo — CSP has no FX fee, saving ~${dubai_avg * 0.03 * 12:.0f}/yr vs 3% foreign fee cards")
+        food = df[(df["category"] == "Food & Dining") & (df["amount"] < 0)].copy()
+        food["month"] = food["date"].dt.strftime("%Y-%m")
+        food_avg = abs(food[food["month"].isin(month_list)]["amount"].sum()) / 3
+        if food_avg > 500:
+            insights.append(f"Dining out costs ${food_avg:.0f}/mo — cooking at home 2 extra nights/week could save ~${food_avg * 0.20:.0f}/mo")
+    total_subs = sub_breakdown.get("total_monthly", 0.0)
+    if total_subs > 150:
+        insights.append(f"Subscriptions total ${total_subs:.0f}/mo (${total_subs * 12:.0f}/yr) — review for unused services")
+    if not insights:
+        insights.append("Spending patterns look stable — keep tracking to spot trends")
+    return insights[:5]
+
+
+def compute_card_csp_analysis(df: pd.DataFrame, card: dict, today: date | None = None) -> dict:
+    """Compute a CSP-specific per-category earn rate and annual value breakdown.
+
+    Args:
+        df: Full transactions DataFrame.
+        card: Card config dict for the Chase Sapphire Preferred.
+        today: Reference date for the trailing 3-month window; defaults to today's date.
+
+    Returns:
+        Dict with net_annual_value, gross_rewards, annual_fee, by_category, top_opportunity, fx_note.
+    """
+    if today is None:
+        today = date.today()
+    month_list = []
+    for i in range(2, -1, -1):
+        yr = today.year + (today.month - 1 - i) // 12
+        mo = ((today.month - 1 - i) % 12) + 1
+        month_list.append(f"{yr:04d}-{mo:02d}")
+    annual_fee = card.get("annual_fee", 0)
+    empty = {"net_annual_value": -annual_fee, "gross_rewards": 0.0, "annual_fee": annual_fee, "by_category": [], "top_opportunity": "", "fx_note": "CSP has no foreign transaction fees — always use it for international purchases"}
+    if df.empty:
+        return empty
+    expense_df = df[df["amount"] < 0].copy()
+    expense_df["month"] = expense_df["date"].dt.strftime("%Y-%m")
+    spending = {}
+    for cat in expense_df["category"].unique():
+        cat_df = expense_df[expense_df["category"] == cat]
+        total = float(abs(cat_df[cat_df["month"].isin(month_list)]["amount"].sum()))
+        if total > 0:
+            spending[cat] = round(total / 3 * 12, 2)
+    by_category = []
+    gross = 0.0
+    for cat, annual_spend in sorted(spending.items(), key=lambda x: x[1], reverse=True):
+        earn_rate = card["rewards"].get(cat, card["rewards"].get("Other", 1.0))
+        annual_value = compute_card_value_per_category(card, cat, annual_spend)
+        note = "No FX fee — always use CSP for international purchases" if cat == "Dubai" else ""
+        by_category.append({"category": cat, "monthly_spend": round(annual_spend / 12, 2), "earn_rate": f"{earn_rate:.0f}x", "annual_value": round(annual_value, 2), "note": note})
+        gross += annual_value
+    gross = round(gross, 2)
+    net = round(gross - annual_fee, 2)
+    top_opp = ""
+    airline_annual = spending.get("Airlines", 0)
+    if airline_annual > 0:
+        gain = round(airline_annual * (5.0 - 2.0) * card["points_cpp"], 2)
+        top_opp = f"Book flights through Chase Travel Portal for 5x (vs 2x direct) — worth ~${gain:.0f}/yr on your airline spend"
+    elif any(c["earn_rate"] == "1x" and c["monthly_spend"] > 100 for c in by_category):
+        opp = next(c for c in by_category if c["earn_rate"] == "1x" and c["monthly_spend"] > 100)
+        top_opp = f"{opp['category']} earns only 1x on CSP (${opp['monthly_spend']:.0f}/mo) — consider a card with bonus in this category"
+    return {"net_annual_value": net, "gross_rewards": gross, "annual_fee": annual_fee, "by_category": by_category, "top_opportunity": top_opp, "fx_note": "CSP has no foreign transaction fees — always use it for international purchases"}
+
+
 def build_context(
     df: pd.DataFrame, accounts: dict, goals: dict,
     cards: dict | None = None, today: date | None = None
@@ -85,14 +359,22 @@ def build_context(
     this_month = today.strftime("%Y-%m")
 
     kpis             = compute_kpis(df, accounts, goals, today=today)
+    mom_changes      = compute_mom_changes(df, today=today)
     category_trends  = compute_category_trends(df, months=3, today=today)
-    health           = compute_health_score(kpis, category_trends, goals)
+    sub_breakdown    = compute_subscription_breakdown(df, today=today)
+    food_breakdown   = compute_food_breakdown(df, today=today)
+    fixed_costs      = compute_fixed_costs(df, accounts, today=today)
+    lifestyle_insights = compute_lifestyle_insights(df, kpis, fixed_costs, sub_breakdown, today=today)
+    health           = compute_health_score(kpis, category_trends, goals, accounts, df, today=today)
     cuts             = compute_actionable_cuts(df, category_trends)
     action_plan      = compute_action_plan(cuts, goals, kpis, today=today)
     spending_pct     = compute_spending_pct_of_income(df, kpis["income"], today=today)
     account_balances = compute_account_balances(accounts)
     top_merchants    = compute_top_merchants(df, this_month)
     card_intel       = compute_card_intelligence(df, cards, today=today)
+
+    csp_card = next((c for c in (cards or {}).get("cards", []) if "sapphire" in c["name"].lower()), None)
+    csp_analysis = compute_card_csp_analysis(df, csp_card, today=today) if csp_card else None
 
     # 12-month spending trend
     trend_labels, trend_values = [], []
@@ -121,21 +403,27 @@ def build_context(
         })
 
     return {
-        "kpis":             kpis,
-        "category_trends":  category_trends,
-        "health":           health,
-        "cuts":             cuts,
-        "action_plan":      action_plan,
-        "spending_pct":     spending_pct,
-        "account_balances": account_balances,
-        "top_merchants":    top_merchants,
-        "trend_labels":     trend_labels,
-        "trend_values":     trend_values,
-        "goals_display":    goals_display,
-        "monthly_streak":   goals.get("monthly_streak", {}),
-        "monthly_target":   goals.get("monthly_target", 0.0),
-        "card_intel":       card_intel,
-        "generated_at":     today.strftime("%Y-%m-%d"),
+        "kpis":               kpis,
+        "mom_changes":        mom_changes,
+        "category_trends":    category_trends,
+        "health":             health,
+        "cuts":               cuts,
+        "action_plan":        action_plan,
+        "spending_pct":       spending_pct,
+        "account_balances":   account_balances,
+        "top_merchants":      top_merchants,
+        "trend_labels":       trend_labels,
+        "trend_values":       trend_values,
+        "goals_display":      goals_display,
+        "monthly_streak":     goals.get("monthly_streak", {}),
+        "monthly_target":     goals.get("monthly_target", 0.0),
+        "card_intel":         card_intel,
+        "sub_breakdown":      sub_breakdown,
+        "food_breakdown":     food_breakdown,
+        "fixed_costs":        fixed_costs,
+        "lifestyle_insights": lifestyle_insights,
+        "csp_analysis":       csp_analysis,
+        "generated_at":       today.strftime("%Y-%m-%d"),
     }
 
 
@@ -237,75 +525,124 @@ def compute_category_trends(df: pd.DataFrame, months: int = 3, today: date | Non
     return result
 
 
-def compute_health_score(kpis: dict, category_trends: list, goals: dict, today: date | None = None) -> dict:
-    """Compute a 0–100 financial health score across five weighted dimensions.
+def compute_health_score(kpis: dict, category_trends: list, goals: dict, accounts: dict, df: pd.DataFrame, today: date | None = None) -> dict:
+    """Compute a 0–100 financial health score across six weighted dimensions.
 
     Args:
         kpis: KPI dict as returned by compute_kpis.
         category_trends: Category trend list as returned by compute_category_trends.
         goals: Goals config dict.
-        today: Reference date for goal at-risk calculations; defaults to today's date.
+        accounts: Accounts config dict with an "accounts" list of account objects.
+        df: Full transactions DataFrame.
+        today: Reference date for calculations; defaults to today's date.
 
     Returns:
-        A dict with score (int), grade (str), passing (list[str]), and failing (list[str]).
+        A dict with score (int), grade (str), dimensions (list), passing (list[str]), and failing (list[str]).
     """
-    score   = 0.0
+    if today is None:
+        today = date.today()
+    dimensions = []
+    total = 0.0
     passing = []
     failing = []
 
-    # 1. Savings rate (30 pts, linear)
-    savings_pts = min(kpis["savings_rate"] / 0.20, 1.0) * 30
-    score += savings_pts
-    if savings_pts >= 25:
-        passing.append("Savings rate")
+    income = kpis["income"]
+    expenses = kpis["expenses"]
+
+    # Dim 1: Income coverage (25 pts)
+    if income == 0:
+        d1 = 10; st1 = "warn"; ex1 = "No income recorded this month — check statement coverage"
+    elif expenses <= income:
+        d1 = 25; st1 = "pass"; ex1 = f"Expenses (${expenses:,.0f}) are below income (${income:,.0f}) — positive cash flow"
     else:
-        failing.append("Savings rate")
+        ratio = (expenses - income) / income
+        d1 = max(0, round(25 - ratio * 50)); st1 = "fail" if d1 == 0 else "warn"
+        ex1 = f"Expenses exceeded income by {ratio*100:.0f}% this month"
+    dimensions.append({"label": "Income coverage", "score": d1, "max": 25, "status": st1, "explanation": ex1})
+    total += d1
+    if st1 == "pass": passing.append("Income coverage")
+    elif d1 == 0: failing.append("Income coverage")
 
-    # 2. Spending trend (25 pts, -8 per category up >20% MoM)
-    offending = [t for t in category_trends if t["pct_change"] > 0.20]
-    trend_pts = max(0.0, 25.0 - len(offending) * 8)
-    score += trend_pts
-    for t in offending:
-        failing.append(f"{t['name']} spending")
-    if not offending:
-        passing.append("Spending trends")
-
-    # 3. Goal progress (25 pts, -12 per at-risk goal)
-    at_risk   = _get_at_risk_goals(goals, today=today)
-    goal_pts  = max(0.0, 25.0 - len(at_risk) * 12)
-    score    += goal_pts
-    for g in at_risk:
-        failing.append(f"{g['name']} goal")
-    if not at_risk:
-        passing.append("Goal progress")
-
-    # 4. Subscription ratio (10 pts)
-    income     = kpis["income"]
-    sub_trend  = next((t for t in category_trends if t["name"] == "Subscriptions"), None)
-    sub_amount = sub_trend["current_amount"] if sub_trend else 0.0
-    sub_ratio  = sub_amount / income if income > 0 else 0.0
-    if sub_ratio < 0.08:
-        score += 10
-        passing.append("Subscription ratio")
-    elif sub_ratio <= 0.15:
-        score += 5
+    # Dim 2: Savings rate (20 pts)
+    if income <= 0:
+        d2 = 0; st2 = "fail"; ex2 = "No income this month — savings rate cannot be calculated"
     else:
-        failing.append("Subscriptions")
+        sr = kpis["savings_rate"]
+        d2 = round(min(sr / 0.20, 1.0) * 20) if sr > 0 else 0
+        if d2 >= 18: st2 = "pass"; ex2 = f"Savings rate {sr*100:.1f}% — on track for the 20% target"
+        elif d2 >= 8: st2 = "warn"; ex2 = f"Savings rate {sr*100:.1f}% — aim for 20% to build wealth"
+        else: st2 = "fail"; ex2 = f"Savings rate {sr*100:.1f}% — expenses are consuming most of income"
+    dimensions.append({"label": "Savings rate", "score": d2, "max": 20, "status": st2, "explanation": ex2})
+    total += d2
+    if st2 == "pass": passing.append("Savings rate")
+    elif d2 == 0: failing.append("Savings rate")
 
-    # 5. Emergency fund (10 pts if >50% complete)
-    ef = next((g for g in goals.get("goals", []) if "emergency" in g["name"].lower()), None)
-    if ef:
-        ef_pct = ef["current_amount"] / ef["target_amount"] if ef["target_amount"] > 0 else 0.0
-        if ef_pct >= 0.50:
-            score += 10
-            passing.append("Emergency fund")
-        else:
-            failing.append("Emergency fund")
+    # Dim 3: Debt burden (15 pts)
+    credit_bal = abs(sum(a["balance"] for a in accounts.get("accounts", []) if a["balance"] < 0))
+    liquid = sum(a["balance"] for a in accounts.get("accounts", []) if a.get("type") in ["checking", "savings"] and a["balance"] > 0)
+    if liquid == 0:
+        d3 = 3; st3 = "warn"; ex3 = "No liquid assets tracked — add checking/savings accounts"
     else:
-        score += 5  # no emergency fund goal = partial credit
+        dr = credit_bal / liquid
+        if dr < 0.10: d3 = 15; st3 = "pass"; ex3 = f"Credit balance ${credit_bal:,.0f} is only {dr*100:.0f}% of liquid savings"
+        elif dr < 0.25: d3 = 8; st3 = "warn"; ex3 = f"Credit balance ${credit_bal:,.0f} is {dr*100:.0f}% of liquid savings — aim to pay it down"
+        elif dr < 0.50: d3 = 3; st3 = "warn"; ex3 = f"Credit balance ${credit_bal:,.0f} is {dr*100:.0f}% of liquid savings — high debt burden"
+        else: d3 = 0; st3 = "fail"; ex3 = f"Credit balance ${credit_bal:,.0f} exceeds 50% of liquid savings — prioritize payoff"
+    dimensions.append({"label": "Debt burden", "score": d3, "max": 15, "status": st3, "explanation": ex3})
+    total += d3
+    if st3 == "pass": passing.append("Debt burden")
+    elif d3 == 0: failing.append("Debt burden")
 
-    score = round(min(100.0, score))
-    return {"score": score, "grade": _score_to_grade(score), "passing": passing, "failing": failing}
+    # Dim 4: Fixed cost ratio (15 pts)
+    fixed = compute_fixed_costs(df, accounts, today=today)
+    pct = fixed["pct_of_income"]
+    if fixed["avg_income"] == 0:
+        d4 = 8; st4 = "warn"; ex4 = "Avg income unclear — fixed cost ratio cannot be calculated"
+    elif pct < 0.40:
+        d4 = 15; st4 = "pass"; ex4 = f"Fixed costs (rent, phone, insurance) are {pct*100:.0f}% of income — healthy"
+    elif pct < 0.55:
+        d4 = 8; st4 = "warn"; ex4 = f"Fixed costs are {pct*100:.0f}% of income — leaves little room for savings"
+    else:
+        d4 = 0; st4 = "fail"; ex4 = f"Fixed costs are {pct*100:.0f}% of income — above 55% is a financial stress zone"
+    dimensions.append({"label": "Fixed cost ratio", "score": d4, "max": 15, "status": st4, "explanation": ex4})
+    total += d4
+    if st4 == "pass": passing.append("Fixed cost ratio")
+    elif d4 == 0: failing.append("Fixed cost ratio")
+
+    # Dim 5: Emergency fund (15 pts)
+    if expenses == 0:
+        d5 = 15; st5 = "pass"; ex5 = "No expense data — emergency fund assumed adequate"
+    else:
+        ratio5 = liquid / (expenses * 3)
+        if ratio5 >= 1.0: d5 = 15; st5 = "pass"; ex5 = f"Liquid savings cover {ratio5:.1f}x three months of expenses — excellent buffer"
+        elif ratio5 >= 0.33: d5 = 8; st5 = "warn"; ex5 = f"Liquid savings cover {ratio5*3:.1f} months of expenses — target is 3 months"
+        else: d5 = 0; st5 = "fail"; ex5 = "Liquid savings cover less than 1 month of expenses — build an emergency fund"
+    dimensions.append({"label": "Emergency fund", "score": d5, "max": 15, "status": st5, "explanation": ex5})
+    total += d5
+    if st5 == "pass": passing.append("Emergency fund")
+    elif d5 == 0: failing.append("Emergency fund")
+
+    # Dim 6: Investment rate (10 pts)
+    this_month = today.strftime("%Y-%m")
+    inv_amt = 0.0
+    if not df.empty:
+        inv_df = df[(df["category"] == "Investments") & (df["amount"] < 0) & (df["date"].dt.strftime("%Y-%m") == this_month)]
+        inv_amt = abs(float(inv_df["amount"].sum()))
+    if income <= 0:
+        d6 = 5; st6 = "warn"; ex6 = "No income data — investment rate unknown"
+    elif inv_amt == 0:
+        d6 = 0; st6 = "fail"; ex6 = "No investments recorded this month — consider contributing to a brokerage"
+    else:
+        ir = inv_amt / income
+        if ir >= 0.05: d6 = 10; st6 = "pass"; ex6 = f"Investing {ir*100:.0f}% of income this month — great habit"
+        else: d6 = 5; st6 = "warn"; ex6 = f"Investing {ir*100:.0f}% of income — aim for 5%+ to grow wealth"
+    dimensions.append({"label": "Investment rate", "score": d6, "max": 10, "status": st6, "explanation": ex6})
+    total += d6
+    if st6 == "pass": passing.append("Investment rate")
+    elif d6 == 0: failing.append("Investment rate")
+
+    score = round(min(100.0, total))
+    return {"score": score, "grade": _score_to_grade(score), "dimensions": dimensions, "passing": passing, "failing": failing}
 
 
 def compute_actionable_cuts(df: pd.DataFrame, category_trends: list) -> list:
