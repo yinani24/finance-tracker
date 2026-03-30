@@ -1,6 +1,6 @@
-{# templates/dashboard.html.j2 #}
+{# templates/dashboard.html.j2 — Main shell with DaisyUI themes, sidebar, and tab partials #}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,661 +9,356 @@
 <script>{{ alpine_js }}</script>
 <script>{{ chartjs }}</script>
 <style>
-  * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; box-sizing: border-box; }
-  body { background: #09090b; color: #fafafa; margin: 0; padding: 0; min-height: 100vh; }
-
-  /* Design tokens */
-  :root {
-    --bg:       #09090b;
-    --surface:  #18181b;
-    --surface2: #27272a;
-    --border:   #3f3f46;
-    --muted:    #71717a;
-    --green:    #22c55e;
-    --red:      #ef4444;
-    --blue:     #3b82f6;
-    --purple:   #a855f7;
-    --amber:    #f59e0b;
-    --cyan:     #06b6d4;
+  :root, [data-theme="light"] {
+    --p: 42% 0.1 160;
+    --pf: 38% 0.1 160;
+    --pc: 99% 0 0;
+    --s: 62% 0.12 250;
+    --sf: 55% 0.12 250;
+    --sc: 99% 0 0;
+    --a: 75% 0.15 70;
+    --af: 68% 0.15 70;
+    --ac: 20% 0 0;
+    --n: 20% 0.02 270;
+    --nf: 15% 0.02 270;
+    --nc: 95% 0 0;
+    --b1: 100% 0 0;
+    --b2: 97% 0.005 250;
+    --b3: 91% 0.01 250;
+    --bc: 20% 0.02 270;
+    --su: 42% 0.1 160;
+    --suc: 99% 0 0;
+    --er: 55% 0.18 20;
+    --erc: 99% 0 0;
+    --wa: 75% 0.15 70;
+    --wac: 20% 0 0;
+    --in: 62% 0.12 250;
+    --inc: 99% 0 0;
+    --rounded-box: 1rem;
+    --rounded-btn: 0.625rem;
+    --rounded-badge: 1rem;
+    --c-primary: #1A7A56; --c-secondary: #3B7FD9; --c-accent: #E09420;
+    --c-success: #1A7A56; --c-error: #D14343; --c-warning: #D4911E;
+    --c-text: #0F172A; --c-muted: #64748B; --c-border: #E2E8F0;
+    --c-bg: #F8FAFC; --c-card: #FFFFFF;
+    --c-success-light: #1A7A5612; --c-success-border: #1A7A5630;
+    --c-error-light: #D1434312; --c-error-border: #D1434330;
+    --c-warning-light: #D4911E10; --c-warning-border: #D4911E30;
+    --c-accent-light: #F7EDD8; --c-accent-border: #E4C287;
+    --c-accent-bg: #F2DFC0;
+    --shadow-card: 0 1px 3px rgba(15,23,42,0.04), 0 4px 12px rgba(15,23,42,0.03);
+    --shadow-card-hover: 0 2px 8px rgba(15,23,42,0.06), 0 8px 24px rgba(15,23,42,0.05);
+    --shadow-kpi: 0 1px 2px rgba(15,23,42,0.03);
+  }
+  [data-theme="dark"] {
+    --p: 65% 0.14 160;
+    --pf: 58% 0.14 160;
+    --pc: 15% 0.02 160;
+    --s: 68% 0.12 250;
+    --sf: 60% 0.12 250;
+    --sc: 15% 0.02 250;
+    --a: 75% 0.15 70;
+    --af: 68% 0.15 70;
+    --ac: 20% 0 0;
+    --n: 92% 0.01 250;
+    --nf: 85% 0.01 250;
+    --nc: 15% 0 0;
+    --b1: 17% 0.01 250;
+    --b2: 13% 0.01 250;
+    --b3: 22% 0.01 250;
+    --bc: 92% 0.01 250;
+    --su: 65% 0.14 160;
+    --suc: 15% 0 0;
+    --er: 62% 0.18 20;
+    --erc: 15% 0 0;
+    --wa: 75% 0.15 70;
+    --wac: 20% 0 0;
+    --in: 68% 0.12 250;
+    --inc: 15% 0 0;
+    --rounded-box: 1rem;
+    --rounded-btn: 0.625rem;
+    --rounded-badge: 1rem;
+    --c-primary: #34D399; --c-secondary: #60A5FA; --c-accent: #FBBF24;
+    --c-success: #34D399; --c-error: #F87171; --c-warning: #FBBF24;
+    --c-text: #F1F5F9; --c-muted: #94A3B8; --c-border: #1E293B;
+    --c-bg: #0F172A; --c-card: #1E293B;
+    --c-success-light: #34D39918; --c-success-border: #34D39940;
+    --c-error-light: #F8717118; --c-error-border: #F8717140;
+    --c-warning-light: #FBBF2410; --c-warning-border: #FBBF2430;
+    --c-accent-light: #3F341B; --c-accent-border: #8C6A1F;
+    --c-accent-bg: #4D3D1C;
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.15);
+    --shadow-card-hover: 0 2px 8px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.2);
+    --shadow-kpi: 0 1px 2px rgba(0,0,0,0.15);
   }
 
-  .card { background: var(--surface); border: 1px solid var(--surface2); border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
-  .card:hover { border-color: var(--border); }
-  .card-accent-green  { border-left: 3px solid var(--green)  !important; padding-left: 17px; }
-  .card-accent-red    { border-left: 3px solid var(--red)    !important; padding-left: 17px; }
-  .card-accent-blue   { border-left: 3px solid var(--blue)   !important; padding-left: 17px; }
-  .card-accent-purple { border-left: 3px solid var(--purple) !important; padding-left: 17px; }
+  * { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    box-sizing: border-box; margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  html[data-theme="light"] { color-scheme: light; }
+  html[data-theme="dark"] { color-scheme: dark; }
+  body { min-height: 100dvh; background: var(--c-bg); }
+  [x-cloak] { display: none !important; }
 
-  .kpi-label { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
-  .kpi-value { font-size:1.65rem; font-weight:700; margin:6px 0 4px; letter-spacing:-0.02em; }
-  .kpi-sub   { font-size:0.7rem; color:var(--muted); margin-top:4px; }
+  /* Layout */
+  .dash-layout { display: flex; min-height: 100dvh; }
+  .dash-main { flex: 1; padding: 32px 36px; overflow: auto; max-width: 1400px; }
 
-  .badge { display:inline-flex; align-items:center; font-size:0.68rem; font-weight:600; padding:2px 8px; border-radius:999px; }
-  .badge-up      { background:rgba(239,68,68,0.12);  color:var(--red); }
-  .badge-down    { background:rgba(34,197,94,0.12);  color:var(--green); }
-  .badge-neutral { background:rgba(113,113,122,0.15); color:var(--muted); }
-  .badge-blue    { background:rgba(59,130,246,0.12); color:var(--blue); }
+  /* Sidebar */
+  .sidebar { height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column;
+    border-right: 1px solid var(--c-border); overflow: hidden; transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: var(--c-card); }
+  .sidebar.collapsed { width: 68px; }
+  .sidebar.expanded { width: 230px; }
+  .sidebar-logo { display: flex; align-items: center; padding: 0 18px; height: 60px;
+    border-bottom: 1px solid var(--c-border); }
+  .sidebar-logo svg { flex-shrink: 0; }
+  .sidebar.collapsed .sidebar-logo { justify-content: center; padding: 0; }
+  .sidebar-label { white-space: nowrap; font-size: 0.82rem; font-weight: 500; letter-spacing: -0.01em;
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+  .sidebar.collapsed .sidebar-label { opacity: 0; width: 0; overflow: hidden; }
+  .sidebar.expanded .sidebar-label { opacity: 1; }
+  .sidebar-nav { flex: 1; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; list-style: none; }
+  .sidebar-nav a { display: flex; align-items: center; gap: 12px; border-radius: 10px;
+    padding: 10px 14px; cursor: pointer; text-decoration: none; color: inherit;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
+  .sidebar-nav a:hover { background: var(--c-bg); }
+  .sidebar-nav a:active { transform: scale(0.98); }
+  .sidebar-nav a svg { flex-shrink: 0; opacity: 0.6; transition: opacity 0.2s; }
+  .sidebar-nav a:hover svg { opacity: 1; }
+  .sidebar-nav a.bg-primary svg { opacity: 1; }
+  .sidebar-bottom { padding: 10px; border-top: 1px solid var(--c-border);
+    display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-btn { display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+    cursor: pointer; border-radius: 10px; border: none; background: none; color: inherit;
+    width: 100%; text-align: left; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-size: 0.82rem; }
+  .sidebar-btn:hover { background: var(--c-bg); }
+  .sidebar-btn:active { transform: scale(0.98); }
+  .sidebar.collapsed .sidebar-nav a,
+  .sidebar.collapsed .sidebar-btn { justify-content: center; padding-left: 0; padding-right: 0; }
+  .sidebar.collapsed .sidebar-nav a svg,
+  .sidebar.collapsed .sidebar-btn svg { width: 20px; height: 20px; opacity: 0.8; }
 
-  .tab-bar { display:flex; gap:2px; padding:4px; background:var(--surface); border:1px solid var(--surface2); border-radius:10px; width:fit-content; }
-  .tab-btn { padding:7px 18px; border-radius:7px; font-size:0.8rem; font-weight:500; color:var(--muted); cursor:pointer; border:none; background:transparent; transition:all 0.15s; }
-  .tab-btn:hover  { color:#fafafa; background:var(--surface2); }
-  .tab-btn.active { background:var(--surface2); color:#fafafa; font-weight:600; }
+  /* Header */
+  .dash-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+  .dash-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.025em; }
+  .dash-subtitle { font-size: 0.75rem; color: var(--c-muted); margin-top: 4px; letter-spacing: -0.01em; }
+  .dash-header-actions { display: flex; align-items: center; gap: 10px; }
+  .header-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+    border-radius: 10px; border: 1px solid var(--c-border); background: var(--c-card); color: var(--c-muted);
+    cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: var(--shadow-card); }
+  .header-icon-btn:hover { color: var(--c-text); background: var(--c-bg); }
+  .header-icon-btn:active { transform: scale(0.98); }
 
-  .section-label { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:12px; }
+  /* Grids */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
 
-  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  /* Cards */
+  .fin-card { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 1rem;
+    box-shadow: var(--shadow-card); transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .fin-card:hover { box-shadow: var(--shadow-card-hover); }
+  .fin-card-body { padding: 20px; }
+  .fin-card.border-l-green { border-left: 3px solid var(--c-success); }
+  .fin-card.border-l-red { border-left: 3px solid var(--c-error); }
+  .fin-card.border-l-blue { border-left: 3px solid var(--c-secondary); }
 
-  .bar-track { flex:1; background:var(--surface2); border-radius:999px; height:7px; overflow:hidden; }
-  .bar-fill  { height:7px; border-radius:999px; }
+  /* Section labels */
+  .section-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--c-muted); margin-bottom: 14px; }
 
-  .progress-track { background:var(--surface2); border-radius:999px; height:6px; }
-  .progress-fill  { height:6px; border-radius:999px; background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+  /* KPI */
+  .kpi-icon-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .kpi-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--c-muted); }
+  .kpi-value { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em;
+    font-feature-settings: 'tnum'; }
+  .kpi-sub { font-size: 0.7rem; color: var(--c-muted); margin-top: 4px; }
 
-  .insight-card { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; background:var(--surface); border:1px solid var(--surface2); border-radius:10px; }
-  .insight-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
+  /* Colors */
+  .text-success { color: var(--c-success); }
+  .text-error { color: var(--c-error); }
+  .text-secondary { color: var(--c-secondary); }
+  .text-warning { color: var(--c-warning); }
+  .text-accent { color: var(--c-accent); }
+  .text-muted { color: var(--c-muted); }
+  .text-primary { color: var(--c-primary); }
 
-  .data-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
-  .data-table th { font-size:0.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; padding:0 0 10px; text-align:left; border-bottom:1px solid var(--surface2); }
-  .data-table th:last-child { text-align:right; }
-  .data-table td { padding:9px 0; border-bottom:1px solid var(--surface2); color:#e4e4e7; vertical-align:middle; }
-  .data-table tr:last-child td { border-bottom:none; }
-  .data-table td:last-child { text-align:right; font-weight:600; color:var(--red); }
+  /* Table */
+  .table { font-size: 0.8rem; }
+  .table th { font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--c-muted); }
+  .table td { vertical-align: middle; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 700; }
+  .opacity-50 { opacity: 0.5; }
 
-  .spark { display:flex; align-items:flex-end; gap:2px; height:22px; width:50px; }
-  .spark-bar { flex:1; border-radius:2px 2px 0 0; min-width:6px; }
+  /* Flex helpers */
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex-center { display: flex; align-items: center; }
+  .flex-col { display: flex; flex-direction: column; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-3 { margin-bottom: 12px; }
+  .mb-4 { margin-bottom: 16px; }
+  .mt-1 { margin-top: 4px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-3 { margin-top: 12px; }
 
-  .cat-badge { display:inline-block; font-size:0.68rem; font-weight:500; padding:2px 8px; border-radius:4px; }
+  /* Misc */
+  .icon-sm { width: 14px; height: 14px; }
+  .icon-xs { width: 10px; height: 10px; }
 
-  [x-cloak] { display:none !important; }
+  /* General card styling for partials using .card */
+  .card.bg-base-100 { border-radius: 1rem; box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .card.bg-base-100:hover { box-shadow: var(--shadow-card-hover); }
+
+  /* Progress bar refinement */
+  .progress { border-radius: 999px; overflow: hidden; }
+  .progress::-webkit-progress-bar { background: var(--c-border); border-radius: 999px; }
+  .progress::-webkit-progress-value { border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+
+  /* Badge refinement */
+  .badge { font-weight: 600; letter-spacing: -0.01em; font-feature-settings: 'tnum'; }
+
+  /* Alert refinement */
+  .alert { border-radius: 10px; border: 1px solid var(--c-border); }
+
+  /* Tab content transitions */
+  [x-show] { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Scrollbar styling */
+  .dash-main::-webkit-scrollbar { width: 6px; }
+  .dash-main::-webkit-scrollbar-track { background: transparent; }
+  .dash-main::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
+  .dash-main::-webkit-scrollbar-thumb:hover { background: var(--c-muted); }
+
+  /* Number formatting */
+  .kpi-value, .font-mono, td[style*="text-align:right"] { font-feature-settings: 'tnum'; }
 </style>
 </head>
-<body x-data="{ tab: 'overview' }">
+<body x-data="{ tab: 'overview', sidebarOpen: false, theme: 'light' }" class="bg-base-200">
 
-<div style="max-width:1100px;margin:0 auto;padding:28px 24px">
+<div class="dash-layout">
+  {# Sidebar #}
+  {% include "partials/sidebar.html.j2" %}
 
-  {# ── Header ── #}
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
-    <div>
-      <div style="font-size:1.2rem;font-weight:700;letter-spacing:-0.01em">Finance Dashboard</div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">Last updated: {{ generated_at }}</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <div style="font-size:0.75rem;background:var(--surface);border:1px solid var(--surface2);padding:5px 12px;border-radius:7px;color:var(--muted)">
-        {{ kpis.this_month }}
+  {# Main content #}
+  <main class="dash-main">
+    <div class="dash-header">
+      <div>
+        <h1 class="dash-title">Finance Dashboard</h1>
+        <div class="dash-subtitle">Updated {{ generated_at }}</div>
       </div>
-    </div>
-  </div>
-
-  {# ── Tab Bar ── #}
-  <div class="tab-bar" style="margin-bottom:24px">
-    <button class="tab-btn" :class="tab==='overview'  ? 'active' : ''" @click="tab='overview'">Overview</button>
-    <button class="tab-btn" :class="tab==='spending'  ? 'active' : ''" @click="tab='spending'">Spending</button>
-    <button class="tab-btn" :class="tab==='goals'     ? 'active' : ''" @click="tab='goals'">Goals</button>
-    <button class="tab-btn" :class="tab==='insights'  ? 'active' : ''" @click="tab='insights'">Insights</button>
-    <button class="tab-btn" :class="tab==='cards'     ? 'active' : ''" @click="tab='cards'">Cards</button>
-  </div>
-
-  {# ════════════════════════════════════════════
-     OVERVIEW TAB
-  ════════════════════════════════════════════ #}
-  <div x-show="tab==='overview'">
-
-    {# KPI Row #}
-    <div class="grid-4" style="margin-bottom:16px">
-      <div class="card card-accent-green">
-        <div class="kpi-label">Net Worth</div>
-        <div class="kpi-value" style="color:var(--green)">${{ kpis.net_worth | format_currency }}</div>
-        <div class="kpi-sub">All accounts combined</div>
-      </div>
-      <div class="card">
-        <div class="kpi-label">Income</div>
-        <div class="kpi-value">${{ kpis.income | format_currency }}</div>
-        <div class="kpi-sub">{{ kpis.this_month }}</div>
-      </div>
-      <div class="card card-accent-red">
-        <div class="kpi-label">Expenses</div>
-        <div class="kpi-value" style="color:var(--red)">${{ kpis.expenses | format_currency }}</div>
-        <div class="kpi-sub">{{ kpis.this_month }}</div>
-      </div>
-      <div class="card card-accent-blue">
-        <div class="kpi-label">Saved</div>
-        <div class="kpi-value" style="color:var(--blue)">${{ kpis.saved | format_currency }}</div>
-        {% if kpis.monthly_target > 0 %}
-        <div class="kpi-sub">
-          <span class="badge {% if kpis.saved >= kpis.monthly_target %}badge-down{% else %}badge-up{% endif %}">
-            {% if kpis.saved >= kpis.monthly_target %}✓ Goal hit{% else %}${{ (kpis.monthly_target - kpis.saved) | format_currency }} behind{% endif %}
-          </span>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-
-    {# Charts row #}
-    <div class="grid-2" style="margin-bottom:16px">
-      <div class="card">
-        <div class="section-label">Monthly Spending — 12 Months</div>
-        <canvas id="trendChart" style="max-height:160px"></canvas>
-      </div>
-      <div class="card">
-        <div class="section-label">Account Balances</div>
-        {% for a in account_balances %}
-        <div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-            <span style="font-size:0.78rem">{{ a.name }}</span>
-            <span style="font-size:0.78rem;font-weight:600;color:{% if a.balance >= 0 %}var(--green){% else %}var(--red){% endif %}">
-              {% if a.balance < 0 %}-{% endif %}${{ a.balance | abs | format_currency }}
-            </span>
-          </div>
-          <div class="progress-track">
-            <div class="progress-fill" style="width:{{ [a.share_of_total * 100, 100] | min }}%"></div>
-          </div>
-        </div>
-        {% else %}
-        <div style="font-size:0.8rem;color:var(--muted)">No accounts configured.</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    {# Top Merchants #}
-    {% if top_merchants %}
-    <div class="card">
-      <div class="section-label">Top Merchants — {{ kpis.this_month }}</div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th style="width:32px">#</th>
-            <th>Merchant</th>
-            <th>Category</th>
-            <th style="text-align:center">Txns</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for m in top_merchants %}
-          <tr>
-            <td style="color:var(--muted)">{{ loop.index }}</td>
-            <td style="font-weight:500">{{ m.name }}</td>
-            <td>
-              <span class="cat-badge" style="background:rgba(59,130,246,0.1);color:var(--blue)">{{ m.category }}</span>
-            </td>
-            <td style="text-align:center;color:var(--muted)">{{ m.tx_count }}×</td>
-            <td>${{ m.amount | format_currency }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-  </div>
-
-  {# ════════════════════════════════════════════
-     SPENDING TAB
-  ════════════════════════════════════════════ #}
-  <div x-show="tab==='spending'" x-cloak>
-
-    {# Period selector (UI only) #}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-size:0.88rem;font-weight:600">Spending Breakdown</div>
-      <div style="display:flex;gap:4px">
-        {% for period in ['This Month', '3 Months', '6 Months', 'Year'] %}
-        <button style="padding:4px 12px;border-radius:6px;font-size:0.72rem;border:1px solid var(--surface2);cursor:pointer;
-          {% if loop.first %}background:var(--surface2);color:#fafafa;font-weight:600;{% else %}background:var(--surface);color:var(--muted);{% endif %}">
-          {{ period }}
+      <div class="dash-header-actions">
+        <button class="header-icon-btn" @click="theme = theme === 'light' ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', theme)" aria-label="Toggle theme">
+          <template x-if="theme === 'light'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          </template>
+          <template x-if="theme === 'dark'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </template>
         </button>
-        {% endfor %}
+        <div class="badge badge-ghost" style="font-size:0.72rem;font-weight:600;padding:10px 14px;border-radius:8px;letter-spacing:-0.01em">{{ kpis.this_month }}</div>
       </div>
     </div>
 
-    {# Row 1: Donut + Waterfall #}
-    <div class="grid-2" style="margin-bottom:12px">
+    {% include "partials/overview.html.j2" %}
+    {% include "partials/spending.html.j2" %}
+    {% include "partials/goals.html.j2" %}
+    {% include "partials/insights.html.j2" %}
+    {% include "partials/cards.html.j2" %}
 
-      {# Category donut #}
-      <div class="card">
-        <div class="section-label">Where It Went</div>
-        <div style="display:flex;align-items:center;gap:20px">
-          <div style="flex-shrink:0;position:relative">
-            <canvas id="donutChart" style="width:110px;height:110px"></canvas>
-          </div>
-          <div style="flex:1">
-            {% for item in spending_pct %}
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <span style="font-size:0.76rem;color:#a1a1aa">{{ item.name }}</span>
-              <span style="font-size:0.76rem;font-weight:600">${{ item.amount | format_currency }}</span>
-            </div>
-            {% else %}
-            <div style="font-size:0.8rem;color:var(--muted)">No expense data.</div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      {# Income vs Expenses bar #}
-      <div class="card">
-        <div class="section-label">Income vs Expenses</div>
-        <canvas id="incomeChart" style="max-height:140px"></canvas>
-        {% if kpis.income > 0 %}
-        <div style="margin-top:12px;padding:10px 14px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-size:0.72rem;color:var(--blue)">
-          Savings rate <strong>{{ "%.1f" | format(kpis.savings_rate * 100) }}%</strong>
-          {% if kpis.monthly_target > 0 %} — need <strong>{{ "%.1f" | format(kpis.monthly_target / kpis.income * 100) }}%</strong> to hit goal{% endif %}
-        </div>
-        {% endif %}
-      </div>
-    </div>
-
-    {# Row 2: Per-category sparkline trends #}
-    {% if category_trends %}
-    <div class="card" style="margin-bottom:12px">
-      <div class="section-label">Category Trend — Last 3 Months</div>
-      {% for trend in category_trends %}
-      <div style="display:flex;align-items:center;gap:14px;{% if not loop.last %}margin-bottom:14px{% endif %}">
-        <div style="width:120px;font-size:0.78rem;color:#e4e4e7;font-weight:500;flex-shrink:0">{{ trend.name }}</div>
-        <div class="spark">
-          {% set all_amounts = trend.prior_amounts + [trend.current_amount] %}
-          {% set max_amt = all_amounts | max %}
-          {% for amt in all_amounts %}
-          <div class="spark-bar" style="
-            height:{{ [((amt / max_amt * 100) if max_amt > 0 else 0) | int, 4] | max }}%;
-            background:{% if loop.last %}{% if trend.direction == 'up' %}var(--red){% elif trend.direction == 'down' %}var(--green){% else %}var(--blue){% endif %}{% else %}var(--surface2){% endif %};
-            opacity:{% if loop.last %}1{% else %}0.5{% endif %}">
-          </div>
-          {% endfor %}
-        </div>
-        <div style="font-size:0.76rem;font-weight:600;color:#e4e4e7;width:70px;flex-shrink:0">${{ trend.current_amount | format_currency }}</div>
-        <span class="badge {% if trend.direction == 'up' %}badge-up{% elif trend.direction == 'down' %}badge-down{% else %}badge-neutral {% endif %}">
-          {% if trend.direction == 'up' %}↑{% elif trend.direction == 'down' %}↓{% else %}→{% endif %}
-          {{ "%.0f" | format((trend.pct_change * 100) | abs) }}%
-        </span>
-        {% if trend.prior_amounts %}
-        <div style="font-size:0.68rem;color:var(--muted);flex:1">
-          {% for amt in trend.prior_amounts %}${{ amt | format_currency }}{% if not loop.last %} → {% endif %}{% endfor %} → ${{ trend.current_amount | format_currency }}
-        </div>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    {# Row 3: % of income #}
-    {% if spending_pct %}
-    <div class="card">
-      <div class="section-label">Where Did My Money Go — % of Income</div>
-      {% for item in spending_pct %}
-      <div style="display:flex;align-items:center;gap:10px;{% if not loop.last %}margin-bottom:10px{% endif %}">
-        <div style="width:120px;font-size:0.78rem;color:#a1a1aa;flex-shrink:0">{{ item.name }}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:{{ [item.pct_of_income, 100] | min }}%;background:var(--blue)"></div></div>
-        <div style="width:65px;text-align:right;font-size:0.72rem;font-weight:600;color:var(--blue);flex-shrink:0">{{ item.pct_of_income }}%</div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
-
-  {# ════════════════════════════════════════════
-     GOALS TAB
-  ════════════════════════════════════════════ #}
-  <div x-show="tab==='goals'" x-cloak>
-    <div class="grid-2" style="margin-bottom:12px">
-
-      {# Monthly streak #}
-      <div class="card">
-        <div class="section-label">Monthly Savings Streak</div>
-        {% set streak = monthly_streak %}
-        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px">
-          <span style="font-size:2.2rem;font-weight:700;color:var(--amber)">{{ streak.get('current', 0) }}</span>
-          <span style="font-size:0.85rem;color:var(--muted)">months in a row · Best: {{ streak.get('best', 0) }}</span>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          {% for month_key, hit in streak.get('history', {}).items() %}
-          <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:600;
-            {% if hit %}background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green)
-            {% else %}background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:var(--red){% endif %}">
-            {{ month_key[-2:] }}
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-
-      {# Monthly target #}
-      <div class="card">
-        <div class="section-label">Monthly Target</div>
-        {% if monthly_target > 0 %}
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-          <span style="font-size:1.5rem;font-weight:700;color:var(--blue)">${{ kpis.saved | format_currency }}</span>
-          <span style="font-size:0.8rem;color:var(--muted)">of ${{ monthly_target | format_currency }} goal</span>
-        </div>
-        <div class="progress-track" style="margin-bottom:8px">
-          <div class="progress-fill" style="width:{{ [kpis.saved / monthly_target * 100, 100] | min }}%"></div>
-        </div>
-        <div style="font-size:0.72rem;color:var(--muted)">
-          {% if kpis.saved >= monthly_target %}On track ✓{% else %}${{ (monthly_target - kpis.saved) | format_currency }} behind target{% endif %}
-        </div>
-        {% else %}
-        <div style="font-size:0.8rem;color:var(--muted)">No monthly target set. Run: <code>finance goal set monthly --amount 1500</code></div>
-        {% endif %}
-      </div>
-    </div>
-
-    {# Named goals #}
-    {% if goals_display %}
-    <div class="card">
-      <div class="section-label">Named Goals</div>
-      {% for g in goals_display %}
-      <div style="{% if not loop.last %}margin-bottom:20px{% endif %}">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-          <div style="font-size:0.85rem;font-weight:600">{{ g.name }}</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <span style="font-size:0.72rem;color:var(--muted)">${{ g.current | format_currency }} / ${{ g.target | format_currency }}</span>
-            <span class="badge badge-blue">{{ g.pct }}%</span>
-          </div>
-        </div>
-        <div class="progress-track" style="margin-bottom:6px">
-          <div class="progress-fill" style="width:{{ [g.pct, 100] | min }}%"></div>
-        </div>
-        <div style="font-size:0.7rem;color:var(--muted)">Deadline: {{ g.deadline }}</div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="card" style="text-align:center;padding:32px 24px">
-      <div style="font-size:1.5rem;margin-bottom:10px">🎯</div>
-      <div style="font-size:0.85rem;font-weight:600;margin-bottom:6px">No named goals yet</div>
-      <div style="font-size:0.75rem;color:var(--muted)">
-        Run: <code>finance goal set "Emergency Fund" --target 10000 --by 2026-12</code>
-      </div>
-    </div>
-    {% endif %}
-  </div>
-
-  {# ════════════════════════════════════════════
-     INSIGHTS TAB
-  ════════════════════════════════════════════ #}
-  <div x-show="tab==='insights'" x-cloak>
-
-    {# Health Score #}
-    <div class="card" style="display:flex;align-items:center;gap:24px;margin-bottom:12px">
-      <div style="position:relative;flex-shrink:0">
-        <canvas id="healthChart" style="width:90px;height:90px"></canvas>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-          <div style="font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;color:{% if health.score >= 80 %}var(--green){% elif health.score >= 60 %}var(--amber){% else %}var(--red){% endif %}">{{ health.grade }}</div>
-        </div>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:1rem;font-weight:700;margin-bottom:4px">
-          Financial Health Score: <span style="color:{% if health.score >= 80 %}var(--green){% elif health.score >= 60 %}var(--amber){% else %}var(--red){% endif %}">{{ health.score }} / 100</span>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-          {% for area in health.passing %}
-          <span style="padding:3px 10px;border-radius:6px;background:rgba(34,197,94,0.1);color:var(--green);font-size:0.68rem;font-weight:600">✓ {{ area }}</span>
-          {% endfor %}
-          {% for area in health.failing %}
-          <span style="padding:3px 10px;border-radius:6px;background:rgba(239,68,68,0.1);color:var(--red);font-size:0.68rem;font-weight:600">✗ {{ area }}</span>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-
-    {# Actionable Cuts #}
-    {% if cuts %}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="section-label" style="margin-bottom:0">Actionable Cuts</div>
-      <div style="font-size:0.72rem;color:var(--green);font-weight:600">
-        Potential: ${{ cuts | sum(attribute='potential_saving') | format_currency }}/mo
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-      {% for cut in cuts %}
-      <div class="insight-card">
-        <div class="insight-icon" style="background:rgba(239,68,68,0.1)">{{ cut.icon }}</div>
-        <div style="flex:1">
-          <div style="font-size:0.82rem;font-weight:600;margin-bottom:3px">{{ cut.description }}</div>
-          <div style="font-size:0.74rem;color:var(--muted)">{{ cut.detail }}</div>
-        </div>
-        <div style="font-size:0.82rem;font-weight:700;color:var(--green);flex-shrink:0;white-space:nowrap">
-          +${{ cut.potential_saving | format_currency }}/mo
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <div style="height:1px;background:var(--surface2);margin:16px 0"></div>
-
-    {# Action Plan #}
-    {% if action_plan %}
-    <div class="card">
-      <div class="section-label">Your Action Plan</div>
-      {% for step in action_plan %}
-      <div style="display:flex;gap:12px;align-items:flex-start;{% if not loop.last %}margin-bottom:14px{% endif %}">
-        <div style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;
-          {% if loop.index == 1 %}background:rgba(239,68,68,0.15);border:1px solid var(--red);color:var(--red)
-          {% elif loop.index == 2 %}background:rgba(245,158,11,0.15);border:1px solid var(--amber);color:var(--amber)
-          {% else %}background:rgba(34,197,94,0.15);border:1px solid var(--green);color:var(--green){% endif %}">
-          {{ step.step }}
-        </div>
-        <div>
-          <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px">{{ step.month_label }} — {{ step.action }}</div>
-          <div style="font-size:0.74rem;color:var(--muted)">{{ step.description }}</div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="card" style="font-size:0.8rem;color:var(--muted)">
-      No actionable cuts found — your spending looks well-controlled.
-    </div>
-    {% endif %}
-
-  </div>{# end insights #}
-
-  {# ════════════════════════════════════════════
-     CARDS TAB
-  ════════════════════════════════════════════ #}
-  <div x-show="tab==='cards'" x-cloak>
-
-    {% if card_intel.has_cards %}
-
-      {# ── Card Portfolio ── #}
-      <div class="card" style="margin-bottom:12px">
-        <div class="section-label">Card Portfolio</div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Card</th>
-              <th style="text-align:right">Gross Rewards/yr</th>
-              <th style="text-align:right">Annual Fee</th>
-              <th style="text-align:right">Net Value/yr</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for cv in card_intel.card_values %}
-            <tr>
-              <td style="font-weight:500">{{ cv.name }}</td>
-              <td style="text-align:right;color:var(--green);font-weight:600">${{ cv.gross_rewards | format_currency }}</td>
-              <td style="text-align:right;color:var(--muted)">${{ cv.annual_fee | format_currency }}</td>
-              <td style="text-align:right;font-weight:700;color:{% if cv.net_value >= 0 %}var(--green){% else %}var(--red){% endif %}">${{ cv.net_value | format_currency }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      {# ── Missed Rewards Callout ── #}
-      {% if card_intel.missed_rewards_annual > 0 %}
-      <div class="insight-card" style="margin-bottom:12px;border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05)">
-        <div class="insight-icon" style="background:rgba(245,158,11,0.15)">💡</div>
-        <div style="flex:1">
-          <div style="font-size:0.82rem;font-weight:600;margin-bottom:3px">Missed Rewards Opportunity</div>
-          <div style="font-size:0.74rem;color:var(--muted)">You could earn up to <strong style="color:var(--amber)">${{ card_intel.missed_rewards_annual | format_currency }}/yr</strong> more by using the best card for each category.</div>
-        </div>
-      </div>
-      {% endif %}
-
-      {# ── Category Optimizer ── #}
-      {% if card_intel.optimal_per_category %}
-      <div class="card" style="margin-bottom:12px">
-        <div class="section-label">Category Optimizer — Best Card Per Spend</div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Best Card</th>
-              <th style="text-align:right">Effective %</th>
-              <th style="text-align:right">Annual Gain</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in card_intel.optimal_per_category %}
-            <tr>
-              <td>
-                <span class="cat-badge" style="background:rgba(59,130,246,0.1);color:var(--blue)">{{ row.category }}</span>
-              </td>
-              <td style="font-weight:500">{{ row.best_card }}</td>
-              <td style="text-align:right;color:var(--muted)">{{ "%.1f" | format(row.effective_pct) }}%</td>
-              <td style="text-align:right;font-weight:700;color:var(--green)">${{ row.annual_gain | format_currency }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
-
-      {# ── Upgrade Recommendations ── #}
-      {% if card_intel.upgrade_recommendations %}
-      <div class="card">
-        <div class="section-label">Upgrade Picks</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          {% for rec in card_intel.upgrade_recommendations %}
-          <div class="insight-card" style="border-color:rgba(168,85,247,0.25);background:rgba(168,85,247,0.04)">
-            <div class="insight-icon" style="background:rgba(168,85,247,0.15)">✦</div>
-            <div style="flex:1">
-              <div style="font-size:0.82rem;font-weight:600;margin-bottom:3px">{{ rec.name }}
-                <span style="font-size:0.7rem;color:var(--muted);font-weight:400">— ${{ rec.annual_fee | format_currency }}/yr fee</span>
-              </div>
-              <div style="font-size:0.74rem;color:var(--muted)">{{ rec.why }}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-size:0.82rem;font-weight:700;color:var(--purple)">+${{ rec.gain_over_best | format_currency }}/yr</div>
-              <div style="font-size:0.68rem;color:var(--muted)">vs your best card</div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-    {% else %}
-
-      {# ── Empty State ── #}
-      <div class="card" style="text-align:center;padding:48px 24px">
-        <div style="font-size:2rem;margin-bottom:12px">💳</div>
-        <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No Cards Configured</div>
-        <div style="font-size:0.8rem;color:var(--muted);max-width:400px;margin:0 auto;line-height:1.6">
-          Add your credit cards to unlock reward optimization, category analysis, and upgrade recommendations.
-        </div>
-        <div style="margin-top:16px;padding:10px 16px;background:var(--surface2);border-radius:8px;font-size:0.72rem;color:var(--muted);display:inline-block;text-align:left">
-          Copy <code>data/cards.example.json</code> → <code>data/cards.json</code> and fill in your cards.
-        </div>
-      </div>
-
-    {% endif %}
-  </div>{# end cards #}
-
-  <div style="font-size:0.68rem;color:var(--muted);text-align:right;margin-top:20px">Generated: {{ generated_at }}</div>
-</div>{# end container #}
+    <div style="font-size:0.68rem;color:var(--c-muted);text-align:right;margin-top:32px;padding-top:16px;border-top:1px solid var(--c-border);letter-spacing:-0.01em">Generated {{ generated_at }}</div>
+  </main>
+</div>
 
 <script>
-// Trend bar chart (Overview)
+function chartColors() {
+  var s = getComputedStyle(document.documentElement);
+  return {
+    primary: s.getPropertyValue('--c-primary').trim(),
+    secondary: s.getPropertyValue('--c-secondary').trim(),
+    accent: s.getPropertyValue('--c-accent').trim(),
+    success: s.getPropertyValue('--c-success').trim(),
+    error: s.getPropertyValue('--c-error').trim(),
+    warning: s.getPropertyValue('--c-warning').trim(),
+    muted: s.getPropertyValue('--c-muted').trim(),
+    border: s.getPropertyValue('--c-border').trim(),
+  };
+}
+
 (function() {
-  const el = document.getElementById('trendChart');
+  var el = document.getElementById('trendChart');
   if (!el) return;
+  var c = chartColors(), labels = {{ trend_labels | tojson }};
   new Chart(el, {
     type: 'bar',
-    data: {
-      labels: {{ trend_labels | tojson }},
-      datasets: [{
-        data: {{ trend_values | tojson }},
-        backgroundColor: {{ trend_labels | tojson }}.map((_, i, arr) =>
-          i === arr.length - 1 ? 'rgba(239,68,68,0.8)' : 'rgba(63,63,70,0.6)'
-        ),
-        borderRadius: 3,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
+    data: { labels: labels, datasets: [{ data: {{ trend_values | tojson }},
+      backgroundColor: labels.map(function(_, i, a) { return i === a.length - 1 ? c.error : c.border; }),
+      borderRadius: 6, borderSkipped: false }] },
+    options: { responsive: true, plugins: { legend: { display: false },
+        tooltip: { backgroundColor: '#0F172A', titleColor: '#F1F5F9', bodyColor: '#F1F5F9', padding: 10, cornerRadius: 8,
+          titleFont: { weight: '600', size: 11 }, bodyFont: { size: 12 },
+          callbacks: { label: function(ctx) { return ' $' + ctx.parsed.y.toLocaleString(); } } } },
       scales: {
-        x: { ticks: { color: '#71717a', font: { size: 10 } }, grid: { color: '#27272a' } },
-        y: { ticks: { color: '#71717a', font: { size: 10 }, callback: v => '$' + v.toLocaleString() }, grid: { color: '#27272a' } }
-      }
-    }
+        x: { ticks: { color: c.muted, font: { size: 10, weight: '500' } }, grid: { display: false }, border: { display: false } },
+        y: { ticks: { color: c.muted, font: { size: 10 }, callback: function(v) { return '$' + v.toLocaleString(); } }, grid: { color: c.border, drawBorder: false }, border: { display: false } }
+      } }
   });
 })();
 
-// Category donut (Spending)
 (function() {
-  const el = document.getElementById('donutChart');
+  var el = document.getElementById('donutChart');
   if (!el) return;
-  const labels = {{ spending_pct | map(attribute='name') | list | tojson }};
-  const data   = {{ spending_pct | map(attribute='amount') | list | tojson }};
+  var labels = {{ spending_pct | map(attribute='name') | list | tojson }};
+  var data = {{ spending_pct | map(attribute='amount') | list | tojson }};
   if (!data.length) return;
+  var c = chartColors();
   new Chart(el, {
     type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{ data, backgroundColor: ['#ef4444','#3b82f6','#a855f7','#f59e0b','#22c55e','#06b6d4','#ec4899'], borderWidth: 0, hoverOffset: 4 }]
-    },
-    options: {
-      responsive: false, cutout: '70%',
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.toLocaleString('en-US',{minimumFractionDigits:2})}` } } }
-    }
+    data: { labels: labels, datasets: [{ data: data,
+      backgroundColor: [c.error, c.secondary, c.accent, c.primary, c.success, '#8B5CF6', '#EC7F41'],
+      borderWidth: 0, hoverOffset: 6, spacing: 2, borderRadius: 4 }] },
+    options: { responsive: false, cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0F172A', titleColor: '#F1F5F9', bodyColor: '#F1F5F9', padding: 10, cornerRadius: 8,
+        callbacks: { label: function(ctx) { return ' $' + ctx.parsed.toLocaleString('en-US', {minimumFractionDigits: 2}); } } } } }
   });
 })();
 
-// Income vs Expenses bar (Spending)
 (function() {
-  const el = document.getElementById('incomeChart');
+  var el = document.getElementById('incomeChart');
   if (!el) return;
+  var c = chartColors();
   new Chart(el, {
     type: 'bar',
-    data: {
-      labels: ['Income', 'Expenses', 'Saved'],
-      datasets: [{
-        data: [{{ kpis.income }}, {{ kpis.expenses }}, {{ kpis.saved }}],
-        backgroundColor: ['rgba(34,197,94,0.7)', 'rgba(239,68,68,0.7)', 'rgba(59,130,246,0.7)'],
-        borderRadius: 5,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
+    data: { labels: ['Income', 'Expenses', 'Saved'], datasets: [{ data: [{{ kpis.income }}, {{ kpis.expenses }}, {{ kpis.saved }}],
+      backgroundColor: [c.success, c.error, c.secondary], borderRadius: 8, borderSkipped: false }] },
+    options: { responsive: true, plugins: { legend: { display: false },
+        tooltip: { backgroundColor: '#0F172A', titleColor: '#F1F5F9', bodyColor: '#F1F5F9', padding: 10, cornerRadius: 8,
+          bodyFont: { size: 12 }, callbacks: { label: function(ctx) { return ' $' + ctx.parsed.y.toLocaleString(); } } } },
       scales: {
-        x: { ticks: { color: '#71717a' }, grid: { color: '#27272a' } },
-        y: { ticks: { color: '#71717a', callback: v => '$' + v.toLocaleString() }, grid: { color: '#27272a' } }
-      }
-    }
+        x: { ticks: { color: c.muted, font: { weight: '500' } }, grid: { display: false }, border: { display: false } },
+        y: { ticks: { color: c.muted, callback: function(v) { return '$' + v.toLocaleString(); } }, grid: { color: c.border, drawBorder: false }, border: { display: false } }
+      } }
   });
 })();
 
-// Health score ring (Insights)
 (function() {
-  const el = document.getElementById('healthChart');
+  var el = document.getElementById('healthChart');
   if (!el) return;
-  const score = {{ health.score }};
-  const color = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#ef4444';
+  var score = {{ health.score }}, c = chartColors();
+  var fg = score >= 80 ? c.success : score >= 60 ? c.warning : c.error;
   new Chart(el, {
     type: 'doughnut',
-    data: {
-      datasets: [{
-        data: [score, 100 - score],
-        backgroundColor: [color, '#27272a'],
-        borderWidth: 0,
-      }]
-    },
-    options: {
-      responsive: false, cutout: '72%',
-      plugins: { legend: { display: false }, tooltip: { enabled: false } }
-    }
+    data: { datasets: [{ data: [score, 100 - score], backgroundColor: [fg, c.border], borderWidth: 0 }] },
+    options: { responsive: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
   });
 })();
 </script>
