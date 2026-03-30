@@ -11,7 +11,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "points",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 4.0, "Transport": 1.0, "Shopping": 4.0,
-                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0},
+                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0,
+                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
+                    "Entertainment": 1.0, "Phone & Cell": 1.0, "Insurance": 1.0, "Housing": 1.0},
     },
     {
         "name": "Chase Freedom Unlimited",
@@ -20,7 +22,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "cashback",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 3.0, "Transport": 1.5, "Shopping": 1.5,
-                    "Subscriptions": 1.5, "Health": 1.5, "Other": 1.5},
+                    "Subscriptions": 1.5, "Health": 1.5, "Other": 1.5,
+                    "Airlines": 1.5, "Travel": 1.5, "Dubai": 1.5,
+                    "Entertainment": 1.5, "Phone & Cell": 1.5, "Insurance": 1.5, "Housing": 1.5},
     },
     {
         "name": "Citi Double Cash",
@@ -29,7 +33,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "cashback",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 2.0, "Transport": 2.0, "Shopping": 2.0,
-                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0},
+                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0,
+                    "Airlines": 2.0, "Travel": 2.0, "Dubai": 2.0,
+                    "Entertainment": 2.0, "Phone & Cell": 2.0, "Insurance": 2.0, "Housing": 2.0},
     },
     {
         "name": "Capital One Venture X",
@@ -38,7 +44,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "miles",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 2.0, "Transport": 10.0, "Shopping": 2.0,
-                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0},
+                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0,
+                    "Airlines": 5.0, "Travel": 5.0, "Dubai": 2.0,
+                    "Entertainment": 2.0, "Phone & Cell": 2.0, "Insurance": 2.0, "Housing": 2.0},
     },
     {
         "name": "Chase Freedom Flex",
@@ -47,7 +55,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "cashback",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 3.0, "Transport": 1.0, "Shopping": 5.0,
-                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0},
+                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0,
+                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
+                    "Entertainment": 1.0, "Phone & Cell": 1.0, "Insurance": 1.0, "Housing": 1.0},
     },
     {
         "name": "Amex Blue Cash Preferred",
@@ -56,7 +66,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "cashback",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 3.0, "Transport": 3.0, "Shopping": 6.0,
-                    "Subscriptions": 6.0, "Health": 1.0, "Other": 1.0},
+                    "Subscriptions": 6.0, "Health": 1.0, "Other": 1.0,
+                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
+                    "Entertainment": 1.0, "Phone & Cell": 6.0, "Insurance": 1.0, "Housing": 1.0},
     },
     {
         "name": "Wells Fargo Active Cash",
@@ -65,7 +77,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "cashback",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 2.0, "Transport": 2.0, "Shopping": 2.0,
-                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0},
+                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0,
+                    "Airlines": 2.0, "Travel": 2.0, "Dubai": 2.0,
+                    "Entertainment": 2.0, "Phone & Cell": 2.0, "Insurance": 2.0, "Housing": 2.0},
     },
     {
         "name": "Discover it",
@@ -74,7 +88,9 @@ CURATED_CARDS: list[dict] = [
         "reward_type": "cashback",
         "points_cpp": 0.01,
         "rewards": {"Food & Dining": 5.0, "Transport": 1.0, "Shopping": 5.0,
-                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0},
+                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0,
+                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
+                    "Entertainment": 1.0, "Phone & Cell": 1.0, "Insurance": 1.0, "Housing": 1.0},
     },
 ]
 
