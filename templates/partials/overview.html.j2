@@ -1,0 +1,149 @@
+{# Overview tab: KPI stats, trend chart, account balances, top merchants #}
+<div x-show="tab==='overview'">
+
+  <div class="grid-4">
+    <div class="fin-card" style="overflow:hidden">
+      <div class="fin-card-body">
+        <div class="kpi-icon-row">
+          <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--c-success-light)">
+            <svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--c-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2.5"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+          </div>
+        </div>
+        <div class="kpi-label" style="margin-bottom:2px">Net Worth</div>
+        <div class="kpi-value">${{ kpis.net_worth | format_currency }}</div>
+        <div class="kpi-sub">All accounts combined</div>
+      </div>
+    </div>
+
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="kpi-icon-row">
+          <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--c-success-light)">
+            <svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--c-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          </div>
+        </div>
+        <div class="kpi-label" style="margin-bottom:2px">Income</div>
+        <div class="kpi-value">${{ kpis.income | format_currency }}</div>
+        <div class="mt-1">
+          {% if mom_changes.income_change_pct is not none %}
+          <span class="badge badge-sm {% if mom_changes.income_change_pct >= 0 %}badge-success{% else %}badge-error{% endif %}" style="gap:3px">
+            {% if mom_changes.income_change_pct >= 0 %}
+            <svg class="icon-xs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            {% else %}
+            <svg class="icon-xs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+            {% endif %}
+            {{ mom_changes.income_change_pct }}%
+          </span>
+          {% else %}
+          <span class="kpi-sub">{{ kpis.this_month }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="kpi-icon-row">
+          <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--c-error-light)">
+            <svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--c-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+          </div>
+        </div>
+        <div class="kpi-label" style="margin-bottom:2px">Expenses</div>
+        <div class="kpi-value text-error">${{ kpis.expenses | format_currency }}</div>
+        <div class="mt-1">
+          {% if mom_changes.expenses_change_pct is not none %}
+          <span class="badge badge-sm {% if mom_changes.expenses_change_pct <= 0 %}badge-success{% else %}badge-error{% endif %}" style="gap:3px">
+            {% if mom_changes.expenses_change_pct > 0 %}
+            <svg class="icon-xs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            {% else %}
+            <svg class="icon-xs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+            {% endif %}
+            {{ mom_changes.expenses_change_pct | abs }}%
+          </span>
+          {% else %}
+          <span class="kpi-sub">{{ kpis.this_month }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="kpi-icon-row">
+          <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(59,127,217,0.1)">
+            <svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--c-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-0.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2"/><path d="M2 9.1C1.1 9.1 1 10 1 10"/></svg>
+          </div>
+        </div>
+        <div class="kpi-label" style="margin-bottom:2px">Saved</div>
+        <div class="kpi-value text-secondary">${{ kpis.saved | format_currency }}</div>
+        <div class="mt-1">
+          {% if kpis.monthly_target > 0 %}
+          <span class="badge badge-sm {% if kpis.saved >= kpis.monthly_target %}badge-success{% else %}badge-error{% endif %}" style="gap:3px">
+            {% if kpis.saved >= kpis.monthly_target %}
+            <svg class="icon-xs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Goal hit
+            {% else %}
+            ${{ (kpis.monthly_target - kpis.saved) | format_currency }} behind
+            {% endif %}
+          </span>
+          {% elif mom_changes.saved_change_pct is not none %}
+          <span class="badge badge-sm {% if mom_changes.saved_change_pct >= 0 %}badge-success{% else %}badge-error{% endif %}" style="gap:3px">
+            {{ mom_changes.saved_change_pct }}%
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="section-label">Monthly Spending -- 12 Months</div>
+        <canvas id="trendChart" style="max-height:180px"></canvas>
+      </div>
+    </div>
+    <div class="fin-card">
+      <div class="fin-card-body">
+        <div class="section-label">Account Balances</div>
+        {% for a in account_balances %}
+        <div style="{% if not loop.last %}margin-bottom:14px{% endif %}">
+          <div class="flex-between" style="margin-bottom:6px">
+            <span style="font-size:0.8rem;font-weight:500;letter-spacing:-0.01em">{{ a.name }}</span>
+            <span class="font-semibold {% if a.balance >= 0 %}text-success{% else %}text-error{% endif %}" style="font-size:0.8rem;font-feature-settings:'tnum'">
+              {% if a.balance < 0 %}-{% endif %}${{ a.balance | abs | format_currency }}
+            </span>
+          </div>
+          <div style="height:4px;border-radius:999px;background:var(--c-border);overflow:hidden">
+            <div style="height:100%;border-radius:999px;background:var(--c-primary);width:{{ [a.share_of_total * 100, 100] | min }}%;transition:width 0.6s cubic-bezier(0.16, 1, 0.3, 1)"></div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted" style="font-size:0.8rem">No accounts configured.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if top_merchants %}
+  <div class="fin-card">
+    <div class="fin-card-body">
+      <div class="section-label">Top Merchants -- {{ kpis.this_month }}</div>
+      <table class="table table-zebra table-sm">
+        <thead><tr><th style="width:32px">#</th><th>Merchant</th><th>Category</th><th class="text-center">Txns</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+          {% for m in top_merchants %}
+          <tr>
+            <td style="opacity:0.35;font-size:0.72rem;font-weight:600">{{ loop.index }}</td>
+            <td class="font-semibold" style="letter-spacing:-0.01em">{{ m.name }}</td>
+            <td><span class="badge badge-outline badge-sm" style="font-weight:500">{{ m.category }}</span></td>
+            <td class="text-center" style="opacity:0.45;font-feature-settings:'tnum'">{{ m.tx_count }}x</td>
+            <td class="text-right font-semibold text-error" style="font-feature-settings:'tnum'">${{ m.amount | format_currency }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
