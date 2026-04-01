@@ -9,6 +9,7 @@ reports/*
 # Bank statements — contain real financial data, never commit
 statements/
 
+.venv/
 __pycache__/
 *.pyc
 .pytest_cache/

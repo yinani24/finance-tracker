@@ -6,18 +6,27 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.config import settings
 from app.database import Base, get_db
 from app.main import create_app
 
-TEST_DATABASE_URL = "sqlite:///:memory:"
+TEST_DATABASE_URL = settings.test_database_url
+
+
+@pytest.fixture(autouse=True)
+def _setup_db():
+    """Create all tables before tests, drop after."""
+    engine = create_engine(TEST_DATABASE_URL)
+    Base.metadata.create_all(engine)
+    yield
+    Base.metadata.drop_all(engine)
+    engine.dispose()
 
 
 @pytest.fixture()
 def db_engine():
-    engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-    Base.metadata.create_all(engine)
+    engine = create_engine(TEST_DATABASE_URL)
     yield engine
-    Base.metadata.drop_all(engine)
     engine.dispose()
 
 
@@ -28,6 +37,7 @@ def db_session(db_engine) -> Generator[Session, None, None]:
     try:
         yield session
     finally:
+        session.rollback()
         session.close()
 
 
