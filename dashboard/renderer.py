@@ -1,12 +1,16 @@
 """Thin orchestrator that loads data files and renders the Jinja2 dashboard template."""
+
 import json
 import os
+
 import pandas as pd
-from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
+
 from dashboard.analytics import build_context
 
-_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates")
+_TEMPLATES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates"
+)
 
 
 def _load_files(data_dir: str) -> tuple[pd.DataFrame, dict, dict, dict]:
@@ -18,10 +22,10 @@ def _load_files(data_dir: str) -> tuple[pd.DataFrame, dict, dict, dict]:
     Returns:
         A 4-tuple of (transactions DataFrame, accounts dict, goals dict, cards dict).
     """
-    store_path    = f"{data_dir}/transactions.csv"
+    store_path = f"{data_dir}/transactions.csv"
     accounts_path = f"{data_dir}/accounts.json"
-    goals_path    = f"{data_dir}/goals.json"
-    cards_path    = f"{data_dir}/cards.json"
+    goals_path = f"{data_dir}/goals.json"
+    cards_path = f"{data_dir}/cards.json"
 
     try:
         df = pd.read_csv(store_path)

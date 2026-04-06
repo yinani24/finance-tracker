@@ -1,11 +1,17 @@
 """Tests for scripts/check_changelog.py changelog reminder logic."""
-import sys
-import os
-from unittest.mock import patch, MagicMock
-import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
-from check_changelog import is_nontrivial_file, changelog_is_staged, should_warn, get_staged_files, main
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+from check_changelog import (
+    changelog_is_staged,
+    get_staged_files,
+    is_nontrivial_file,
+    main,
+    should_warn,
+)
 
 
 def test_py_file_is_nontrivial():

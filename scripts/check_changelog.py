@@ -4,9 +4,10 @@ Pre-commit hook: warns when CHANGELOG.md is not updated alongside code changes.
 Warning only — always exits 0 (does not block the commit).
 Run via .git/hooks/pre-commit — see scripts/install_hooks.sh.
 """
+
+import os
 import subprocess
 import sys
-import os
 
 _NONTRIVIAL_EXTENSIONS = frozenset([".py", ".html", ".j2", ".json"])
 
@@ -42,7 +43,8 @@ def get_staged_files() -> list:
     """Return list of staged file paths from git."""
     result = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-        capture_output=True, text=True
+        capture_output=True,
+        text=True,
     )
     return [f for f in result.stdout.strip().splitlines() if f]
 
