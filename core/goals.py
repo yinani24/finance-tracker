@@ -7,7 +7,7 @@ from datetime import date
 DEFAULT_GOALS = {
     "monthly_target": 0.0,
     "goals": [],
-    "monthly_streak": {"current": 0, "best": 0, "history": {}}
+    "monthly_streak": {"current": 0, "best": 0, "history": {}},
 }
 
 
@@ -65,13 +65,15 @@ def add_named_goal(name: str, target: float, deadline: str, data_dir: str = "dat
         data_dir: Path to the data directory containing goals.json.
     """
     goals = load_goals(data_dir)
-    goals["goals"].append({
-        "name": name,
-        "target_amount": target,
-        "current_amount": 0.0,
-        "deadline": deadline,
-        "created": date.today().isoformat()
-    })
+    goals["goals"].append(
+        {
+            "name": name,
+            "target_amount": target,
+            "current_amount": 0.0,
+            "deadline": deadline,
+            "created": date.today().isoformat(),
+        }
+    )
     save_goals(goals, data_dir)
 
 

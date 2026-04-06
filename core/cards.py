@@ -1,5 +1,7 @@
 """Credit card intelligence engine: optimizer, value computation, and upgrade recommendations."""
+
 from __future__ import annotations
+
 import json
 import os
 
@@ -10,10 +12,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 250,
         "reward_type": "points",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 4.0, "Transport": 1.0, "Shopping": 4.0,
-                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0,
-                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
-                    "Entertainment": 1.0, "Phone & Cell": 1.0, "Insurance": 1.0, "Housing": 1.0},
+        "rewards": {
+            "Food & Dining": 4.0,
+            "Transport": 1.0,
+            "Shopping": 4.0,
+            "Subscriptions": 1.0,
+            "Health": 1.0,
+            "Other": 1.0,
+            "Airlines": 1.0,
+            "Travel": 1.0,
+            "Dubai": 1.0,
+            "Entertainment": 1.0,
+            "Phone & Cell": 1.0,
+            "Insurance": 1.0,
+            "Housing": 1.0,
+        },
     },
     {
         "name": "Chase Freedom Unlimited",
@@ -21,10 +34,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 0,
         "reward_type": "cashback",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 3.0, "Transport": 1.5, "Shopping": 1.5,
-                    "Subscriptions": 1.5, "Health": 1.5, "Other": 1.5,
-                    "Airlines": 1.5, "Travel": 1.5, "Dubai": 1.5,
-                    "Entertainment": 1.5, "Phone & Cell": 1.5, "Insurance": 1.5, "Housing": 1.5},
+        "rewards": {
+            "Food & Dining": 3.0,
+            "Transport": 1.5,
+            "Shopping": 1.5,
+            "Subscriptions": 1.5,
+            "Health": 1.5,
+            "Other": 1.5,
+            "Airlines": 1.5,
+            "Travel": 1.5,
+            "Dubai": 1.5,
+            "Entertainment": 1.5,
+            "Phone & Cell": 1.5,
+            "Insurance": 1.5,
+            "Housing": 1.5,
+        },
     },
     {
         "name": "Citi Double Cash",
@@ -32,10 +56,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 0,
         "reward_type": "cashback",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 2.0, "Transport": 2.0, "Shopping": 2.0,
-                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0,
-                    "Airlines": 2.0, "Travel": 2.0, "Dubai": 2.0,
-                    "Entertainment": 2.0, "Phone & Cell": 2.0, "Insurance": 2.0, "Housing": 2.0},
+        "rewards": {
+            "Food & Dining": 2.0,
+            "Transport": 2.0,
+            "Shopping": 2.0,
+            "Subscriptions": 2.0,
+            "Health": 2.0,
+            "Other": 2.0,
+            "Airlines": 2.0,
+            "Travel": 2.0,
+            "Dubai": 2.0,
+            "Entertainment": 2.0,
+            "Phone & Cell": 2.0,
+            "Insurance": 2.0,
+            "Housing": 2.0,
+        },
     },
     {
         "name": "Capital One Venture X",
@@ -43,10 +78,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 395,
         "reward_type": "miles",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 2.0, "Transport": 10.0, "Shopping": 2.0,
-                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0,
-                    "Airlines": 5.0, "Travel": 5.0, "Dubai": 2.0,
-                    "Entertainment": 2.0, "Phone & Cell": 2.0, "Insurance": 2.0, "Housing": 2.0},
+        "rewards": {
+            "Food & Dining": 2.0,
+            "Transport": 10.0,
+            "Shopping": 2.0,
+            "Subscriptions": 2.0,
+            "Health": 2.0,
+            "Other": 2.0,
+            "Airlines": 5.0,
+            "Travel": 5.0,
+            "Dubai": 2.0,
+            "Entertainment": 2.0,
+            "Phone & Cell": 2.0,
+            "Insurance": 2.0,
+            "Housing": 2.0,
+        },
     },
     {
         "name": "Chase Freedom Flex",
@@ -54,10 +100,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 0,
         "reward_type": "cashback",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 3.0, "Transport": 1.0, "Shopping": 5.0,
-                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0,
-                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
-                    "Entertainment": 1.0, "Phone & Cell": 1.0, "Insurance": 1.0, "Housing": 1.0},
+        "rewards": {
+            "Food & Dining": 3.0,
+            "Transport": 1.0,
+            "Shopping": 5.0,
+            "Subscriptions": 1.0,
+            "Health": 1.0,
+            "Other": 1.0,
+            "Airlines": 1.0,
+            "Travel": 1.0,
+            "Dubai": 1.0,
+            "Entertainment": 1.0,
+            "Phone & Cell": 1.0,
+            "Insurance": 1.0,
+            "Housing": 1.0,
+        },
     },
     {
         "name": "Amex Blue Cash Preferred",
@@ -65,10 +122,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 95,
         "reward_type": "cashback",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 3.0, "Transport": 3.0, "Shopping": 6.0,
-                    "Subscriptions": 6.0, "Health": 1.0, "Other": 1.0,
-                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
-                    "Entertainment": 1.0, "Phone & Cell": 6.0, "Insurance": 1.0, "Housing": 1.0},
+        "rewards": {
+            "Food & Dining": 3.0,
+            "Transport": 3.0,
+            "Shopping": 6.0,
+            "Subscriptions": 6.0,
+            "Health": 1.0,
+            "Other": 1.0,
+            "Airlines": 1.0,
+            "Travel": 1.0,
+            "Dubai": 1.0,
+            "Entertainment": 1.0,
+            "Phone & Cell": 6.0,
+            "Insurance": 1.0,
+            "Housing": 1.0,
+        },
     },
     {
         "name": "Wells Fargo Active Cash",
@@ -76,10 +144,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 0,
         "reward_type": "cashback",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 2.0, "Transport": 2.0, "Shopping": 2.0,
-                    "Subscriptions": 2.0, "Health": 2.0, "Other": 2.0,
-                    "Airlines": 2.0, "Travel": 2.0, "Dubai": 2.0,
-                    "Entertainment": 2.0, "Phone & Cell": 2.0, "Insurance": 2.0, "Housing": 2.0},
+        "rewards": {
+            "Food & Dining": 2.0,
+            "Transport": 2.0,
+            "Shopping": 2.0,
+            "Subscriptions": 2.0,
+            "Health": 2.0,
+            "Other": 2.0,
+            "Airlines": 2.0,
+            "Travel": 2.0,
+            "Dubai": 2.0,
+            "Entertainment": 2.0,
+            "Phone & Cell": 2.0,
+            "Insurance": 2.0,
+            "Housing": 2.0,
+        },
     },
     {
         "name": "Discover it",
@@ -87,10 +166,21 @@ CURATED_CARDS: list[dict] = [
         "annual_fee": 0,
         "reward_type": "cashback",
         "points_cpp": 0.01,
-        "rewards": {"Food & Dining": 5.0, "Transport": 1.0, "Shopping": 5.0,
-                    "Subscriptions": 1.0, "Health": 1.0, "Other": 1.0,
-                    "Airlines": 1.0, "Travel": 1.0, "Dubai": 1.0,
-                    "Entertainment": 1.0, "Phone & Cell": 1.0, "Insurance": 1.0, "Housing": 1.0},
+        "rewards": {
+            "Food & Dining": 5.0,
+            "Transport": 1.0,
+            "Shopping": 5.0,
+            "Subscriptions": 1.0,
+            "Health": 1.0,
+            "Other": 1.0,
+            "Airlines": 1.0,
+            "Travel": 1.0,
+            "Dubai": 1.0,
+            "Entertainment": 1.0,
+            "Phone & Cell": 1.0,
+            "Insurance": 1.0,
+            "Housing": 1.0,
+        },
     },
 ]
 
@@ -128,12 +218,14 @@ def compute_optimal_card_per_category(cards: list, spending_by_category: dict) -
         best_value = compute_card_value_per_category(best, cat, annual_spend)
         default_value = compute_card_value_per_category(default_card, cat, annual_spend)
         rate = best["rewards"].get(cat, best["rewards"].get("Other", 0.0))
-        result.append({
-            "category": cat,
-            "best_card": best["name"],
-            "annual_gain": round(best_value - default_value, 2),
-            "effective_pct": round(rate * best["points_cpp"] * 100, 2),
-        })
+        result.append(
+            {
+                "category": cat,
+                "best_card": best["name"],
+                "annual_gain": round(best_value - default_value, 2),
+                "effective_pct": round(rate * best["points_cpp"] * 100, 2),
+            }
+        )
     return sorted(result, key=lambda x: x["annual_gain"], reverse=True)
 
 
@@ -143,8 +235,10 @@ def compute_card_annual_value(card: dict, spending_by_category: dict) -> dict:
     Returns {"name": str, "gross_rewards": float, "annual_fee": float, "net_value": float}.
     """
     gross = round(
-        sum(compute_card_value_per_category(card, cat, spend)
-            for cat, spend in spending_by_category.items()),
+        sum(
+            compute_card_value_per_category(card, cat, spend)
+            for cat, spend in spending_by_category.items()
+        ),
         2,
     )
     fee = card.get("annual_fee", 0)
@@ -196,13 +290,15 @@ def compute_upgrade_recommendations(spending_by_category: dict, user_cards: list
             top_cat, top_annual = sorted_cats[0]
             rate = curated["rewards"].get(top_cat, curated["rewards"].get("Other", 0.0))
             why = f"{rate:g}x on {top_cat} — your #1 category at ${top_annual / 12:.0f}/mo"
-        recs.append({
-            "name": curated["name"],
-            "annual_fee": curated["annual_fee"],
-            "net_value": round(net, 2),
-            "gain_over_best": gain,
-            "why": why,
-        })
+        recs.append(
+            {
+                "name": curated["name"],
+                "annual_fee": curated["annual_fee"],
+                "net_value": round(net, 2),
+                "gain_over_best": gain,
+                "why": why,
+            }
+        )
 
     recs.sort(key=lambda x: x["gain_over_best"], reverse=True)
     return recs[:2]

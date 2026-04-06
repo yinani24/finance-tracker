@@ -1,6 +1,9 @@
 """Parses CSV bank export files into a normalised list of transaction dicts."""
+
 import json
+
 import pandas as pd
+
 from core.categorizer import Categorizer, normalize_merchant
 from core.data_store import generate_id
 
@@ -53,7 +56,7 @@ class CSVParser:
                 "source": "csv",
                 "is_income": False,
                 "is_savings": False,
-                "notes": ""
+                "notes": "",
             }
             transactions.append(tx)
         return transactions

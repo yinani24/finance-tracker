@@ -1,14 +1,17 @@
 """Tests for core/cards.py credit card intelligence engine."""
-import pytest
+
 import json
+
+import pytest
+
 from core.cards import (
-    load_cards,
-    compute_card_value_per_category,
-    compute_optimal_card_per_category,
-    compute_card_annual_value,
-    compute_missed_rewards,
-    compute_upgrade_recommendations,
     CURATED_CARDS,
+    compute_card_annual_value,
+    compute_card_value_per_category,
+    compute_missed_rewards,
+    compute_optimal_card_per_category,
+    compute_upgrade_recommendations,
+    load_cards,
 )
 
 
@@ -136,11 +139,15 @@ class TestComputeMissedRewards:
 
     def test_detects_missed_value(self):
         default_card = {
-            "name": "Default", "annual_fee": 0, "points_cpp": 0.01,
+            "name": "Default",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
             "rewards": {"Food & Dining": 1.0, "Transport": 1.0, "Other": 1.0},
         }
         better_card = {
-            "name": "Better", "annual_fee": 0, "points_cpp": 0.01,
+            "name": "Better",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
             "rewards": {"Food & Dining": 3.0, "Transport": 1.0, "Other": 1.0},
         }
         spending = {"Food & Dining": 1200.0, "Transport": 600.0}
@@ -155,35 +162,54 @@ class TestComputeUpgradeRecommendations:
         assert compute_upgrade_recommendations({"Food & Dining": 5000.0}, []) == []
 
     def test_returns_at_most_two(self):
-        basic = {"name": "Basic", "annual_fee": 0, "points_cpp": 0.01,
-                 "rewards": {"Food & Dining": 1.0, "Other": 1.0}}
+        basic = {
+            "name": "Basic",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
+            "rewards": {"Food & Dining": 1.0, "Other": 1.0},
+        }
         result = compute_upgrade_recommendations({"Food & Dining": 5000.0}, [basic])
         assert len(result) <= 2
 
     def test_sorted_by_gain_over_best_descending(self):
-        basic = {"name": "Basic", "annual_fee": 0, "points_cpp": 0.01,
-                 "rewards": {"Food & Dining": 1.0, "Other": 1.0}}
+        basic = {
+            "name": "Basic",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
+            "rewards": {"Food & Dining": 1.0, "Other": 1.0},
+        }
         recs = compute_upgrade_recommendations({"Food & Dining": 5000.0}, [basic])
         gains = [r["gain_over_best"] for r in recs]
         assert gains == sorted(gains, reverse=True)
 
     def test_excludes_owned_cards(self):
-        cfu = {"name": "Chase Freedom Unlimited", "annual_fee": 0, "points_cpp": 0.01,
-               "rewards": {"Food & Dining": 3.0, "Other": 1.5}}
-        basic = {"name": "Basic", "annual_fee": 0, "points_cpp": 0.01,
-                 "rewards": {"Other": 1.0}}
+        cfu = {
+            "name": "Chase Freedom Unlimited",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
+            "rewards": {"Food & Dining": 3.0, "Other": 1.5},
+        }
+        basic = {"name": "Basic", "annual_fee": 0, "points_cpp": 0.01, "rewards": {"Other": 1.0}}
         recs = compute_upgrade_recommendations({"Food & Dining": 5000.0}, [basic, cfu])
         assert all(r["name"].lower() != "chase freedom unlimited" for r in recs)
 
     def test_no_gain_returns_empty(self):
-        super_card = {"name": "Super Card", "annual_fee": 0, "points_cpp": 0.01,
-                      "rewards": {"Food & Dining": 10.0, "Other": 10.0}}
+        super_card = {
+            "name": "Super Card",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
+            "rewards": {"Food & Dining": 10.0, "Other": 10.0},
+        }
         recs = compute_upgrade_recommendations({"Food & Dining": 100.0}, [super_card])
         assert recs == []
 
     def test_why_field_is_non_empty_string(self):
-        basic = {"name": "Basic", "annual_fee": 0, "points_cpp": 0.01,
-                 "rewards": {"Food & Dining": 1.0, "Other": 1.0}}
+        basic = {
+            "name": "Basic",
+            "annual_fee": 0,
+            "points_cpp": 0.01,
+            "rewards": {"Food & Dining": 1.0, "Other": 1.0},
+        }
         recs = compute_upgrade_recommendations({"Food & Dining": 5000.0}, [basic])
         for r in recs:
             assert isinstance(r["why"], str) and len(r["why"]) > 0

@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `pre-commit` framework with `.pre-commit-config.yaml` — replaces manual hook scripts
+- Hooks: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-merge-conflict, detect-private-key, no-commit-to-branch (main)
+- `ruff` linter + formatter (replaces flake8/isort/black)
+- `mypy` static type checking hook
+- `bandit` security linter hook
+- `pyproject.toml` with ruff, mypy, and bandit configuration
+
 ### Changed
 - Reorganized codebase: `core/` (data_store, categorizer, goals), `dashboard/` (renderer, analytics), `importers/real_data.py` — `main.py` is now the sole root-level entry point
+- `scripts/install_hooks.sh` now uses `pre-commit install` instead of manual hook copy
+- Applied ruff formatting and import sorting across all source files
 
 ## [0.4.0] - 2026-03-26
 ### Added

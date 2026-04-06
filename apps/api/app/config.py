@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     debug: bool = False
     supabase_jwt_secret: str = ""
     auth_disabled: bool = False
+    plaid_client_id: str = ""
+    plaid_secret: str = ""
+    plaid_env: str = "sandbox"
 
     model_config = {"env_prefix": "FT_"}
 

@@ -4,14 +4,14 @@ Pre-commit hook: scans staged files for sensitive data patterns.
 Blocks the commit (exit code 1) if any violation is found.
 Run via .git/hooks/pre-commit — see scripts/install_hooks.sh.
 """
+
 import re
 import subprocess
 import sys
 
-
 # Patterns that indicate sensitive data
-_CARD_RE = re.compile(r'\b\d{4}[-\s]\d{4}\b|\b\d{12,16}\b|-\d{4}\b')
-_STATEMENTS_RE = re.compile(r'\bstatements/')
+_CARD_RE = re.compile(r"\b\d{4}[-\s]\d{4}\b|\b\d{12,16}\b|-\d{4}\b")
+_STATEMENTS_RE = re.compile(r"\bstatements/")
 _DATA_FILES = frozenset(["transactions.csv", "accounts.json", "goals.json"])
 
 
@@ -27,8 +27,9 @@ def contains_statements_path(text: str) -> bool:
 
 def contains_data_file(filepath: str) -> bool:
     """Return True if filepath is one of the sensitive data files under data/."""
-    return any(filepath.endswith(f"data/{name}") or filepath == f"data/{name}"
-               for name in _DATA_FILES)
+    return any(
+        filepath.endswith(f"data/{name}") or filepath == f"data/{name}" for name in _DATA_FILES
+    )
 
 
 def check_content(content: str, filepath: str) -> list[str]:
@@ -44,9 +45,7 @@ def check_content(content: str, filepath: str) -> list[str]:
     """
     violations: list[str] = []
     if contains_card_pattern(content):
-        violations.append(
-            f"  {filepath}: contains card-number-like digit pattern (e.g. XXXX-XXXX)"
-        )
+        violations.append(f"  {filepath}: contains card-number-like digit pattern (e.g. XXXX-XXXX)")
     if contains_statements_path(content):
         violations.append(
             f"  {filepath}: references statements/ directory — use statements_manifest.json instead"
@@ -58,7 +57,8 @@ def get_staged_files() -> list[str]:
     """Return list of staged file paths from git."""
     result = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-        capture_output=True, text=True
+        capture_output=True,
+        text=True,
     )
     return [f for f in result.stdout.strip().splitlines() if f]
 
@@ -76,9 +76,7 @@ def scan_staged_files() -> list[str]:
     for filepath in staged:
         # Block data files outright
         if contains_data_file(filepath):
-            all_violations.append(
-                f"  {filepath}: sensitive data file — must not be committed"
-            )
+            all_violations.append(f"  {filepath}: sensitive data file — must not be committed")
             continue
 
         # Skip binary files and non-text

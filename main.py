@@ -3,7 +3,7 @@
 import json
 import os
 import webbrowser
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 
 import click
@@ -46,14 +46,18 @@ def cli() -> None:
     """Personal finance tracker."""
     pass
 
+
 # ── import ────────────────────────────────────────────────────────────────────
+
 
 @cli.group()
 def import_cmd() -> None:
     """Import transactions from a file."""
     pass
 
+
 cli.add_command(import_cmd, name="import")
+
 
 @import_cmd.command("csv")
 @click.argument("filepath")
@@ -66,7 +70,10 @@ def import_csv(filepath: str, account: str, bank: str, data_dir: str) -> None:
     parser = CSVParser()
     transactions = parser.parse(filepath, bank=bank, account=account)
     added, skipped = _run_store_import(store, transactions)
-    console.print(f"[green]Imported {added} new transactions[/green] ({skipped} skipped as duplicates)")
+    console.print(
+        f"[green]Imported {added} new transactions[/green] ({skipped} skipped as duplicates)"
+    )
+
 
 @import_cmd.command("pdf")
 @click.argument("filepath")
@@ -79,9 +86,13 @@ def import_pdf(filepath: str, account: str, bank: str, data_dir: str) -> None:
     parser = PDFParser()
     transactions = parser.parse(filepath, bank=bank, account=account)
     added, skipped = _run_store_import(store, transactions)
-    console.print(f"[green]Imported {added} new transactions[/green] ({skipped} skipped as duplicates)")
+    console.print(
+        f"[green]Imported {added} new transactions[/green] ({skipped} skipped as duplicates)"
+    )
+
 
 # ── add ───────────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.option("--amount", required=True, type=float, help="Amount (negative = expense)")
@@ -92,7 +103,16 @@ def import_pdf(filepath: str, account: str, bank: str, data_dir: str) -> None:
 @click.option("--income", is_flag=True)
 @click.option("--savings", is_flag=True)
 @click.option("--data-dir", default="data", hidden=True)
-def add(amount: float, merchant: str, account: str, category: Optional[str], notes: str, income: bool, savings: bool, data_dir: str) -> None:
+def add(
+    amount: float,
+    merchant: str,
+    account: str,
+    category: Optional[str],
+    notes: str,
+    income: bool,
+    savings: bool,
+    data_dir: str,
+) -> None:
     """Manually add a transaction."""
     cat = Categorizer() if category is None else None
     date_str = date.today().isoformat()
@@ -107,7 +127,7 @@ def add(amount: float, merchant: str, account: str, category: Optional[str], not
         "source": "manual",
         "is_income": income,
         "is_savings": savings,
-        "notes": notes
+        "notes": notes,
     }
     store = DataStore(transactions_path=f"{data_dir}/transactions.csv")
     if store.is_duplicate(tx):
@@ -116,7 +136,9 @@ def add(amount: float, merchant: str, account: str, category: Optional[str], not
         store.add(tx)
         console.print(f"[green]Added:[/green] {merchant} {amount:+.2f} → {resolved_category}")
 
+
 # ── summary ───────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.option("--month", default=None, help="YYYY-MM (defaults to current month)")
@@ -142,7 +164,9 @@ def summary(month: Optional[str], data_dir: str) -> None:
     t.add_row("Saved", f"[cyan]${saved:.2f}[/cyan]")
     console.print(t)
 
+
 # ── top-categories ────────────────────────────────────────────────────────────
+
 
 @cli.command("top-categories")
 @click.option("--last", default="1month", help="e.g. 1month, 3months")
@@ -166,7 +190,9 @@ def top_categories(last: str, data_dir: str) -> None:
         t.add_row(cat, f"${total:,.2f}")
     console.print(t)
 
+
 # ── spending ─────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.option("--category", required=True)
@@ -192,12 +218,16 @@ def spending(category: str, year: Optional[str], data_dir: str) -> None:
     t.add_column("Merchant")
     t.add_column("Amount", justify="right")
     for _, row in subset.iterrows():
-        t.add_row(str(row["date"].date()), row["merchant"], f"[red]${abs(row['amount']):,.2f}[/red]")
+        t.add_row(
+            str(row["date"].date()), row["merchant"], f"[red]${abs(row['amount']):,.2f}[/red]"
+        )
     total = subset["amount"].sum()
     t.add_row("", "[bold]TOTAL[/bold]", f"[bold red]${abs(total):,.2f}[/bold red]")
     console.print(t)
 
+
 # ── networth ──────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.option("--data-dir", default="data", hidden=True)
@@ -205,7 +235,9 @@ def networth(data_dir: str) -> None:
     """Show net worth across all accounts."""
     accounts_path = f"{data_dir}/accounts.json"
     if not os.path.exists(accounts_path):
-        console.print("[yellow]No accounts.json found. Run: finance account update <name> --balance <n>[/yellow]")
+        console.print(
+            "[yellow]No accounts.json found. Run: finance account update <name> --balance <n>[/yellow]"
+        )
         return
     with open(accounts_path) as f:
         data = json.load(f)
@@ -220,18 +252,25 @@ def networth(data_dir: str) -> None:
     t.add_row("", "[bold]TOTAL[/bold]", f"[bold green]${total:.2f}[/bold green]")
     console.print(t)
 
+
 # ── account ───────────────────────────────────────────────────────────────────
+
 
 @cli.group()
 def account() -> None:
     """Manage accounts."""
     pass
 
+
 @account.command("update")
 @click.argument("name")
 @click.option("--balance", required=True, type=float)
-@click.option("--type", "account_type", default="checking",
-              type=click.Choice(["checking", "savings", "credit", "investment"]))
+@click.option(
+    "--type",
+    "account_type",
+    default="checking",
+    type=click.Choice(["checking", "savings", "credit", "investment"]),
+)
 @click.option("--data-dir", default="data", hidden=True)
 def account_update(name: str, balance: float, account_type: str, data_dir: str) -> None:
     """Update or create an account balance."""
@@ -247,13 +286,23 @@ def account_update(name: str, balance: float, account_type: str, data_dir: str) 
         existing["balance"] = balance
         existing["last_updated"] = date.today().isoformat()
     else:
-        accounts.append({"name": name, "type": account_type, "institution": name.split("-")[0],
-                          "balance": balance, "currency": "USD", "last_updated": date.today().isoformat()})
+        accounts.append(
+            {
+                "name": name,
+                "type": account_type,
+                "institution": name.split("-")[0],
+                "balance": balance,
+                "currency": "USD",
+                "last_updated": date.today().isoformat(),
+            }
+        )
     with open(accounts_path, "w") as f:
         json.dump(data, f, indent=2)
     console.print(f"[green]Updated {name}: ${balance:,.2f}[/green]")
 
+
 # ── tag ───────────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.argument("transaction_id")
@@ -274,20 +323,31 @@ def tag(transaction_id: str, income: bool, savings: bool, data_dir: str) -> None
     store.update(transaction_id, fields)
     console.print(f"[green]Tagged transaction {transaction_id[:8]}...[/green]")
 
+
 # ── goal ──────────────────────────────────────────────────────────────────────
+
 
 @cli.group()
 def goal() -> None:
     """Manage savings goals."""
     pass
 
+
 @goal.command("set")
 @click.argument("name")
-@click.option("--amount", type=float, default=None, help="Monthly savings target (use with 'monthly')")
+@click.option(
+    "--amount", type=float, default=None, help="Monthly savings target (use with 'monthly')"
+)
 @click.option("--target", type=float, default=None, help="Named goal target amount")
 @click.option("--by", "deadline", default=None, help="Deadline YYYY-MM for named goal")
 @click.option("--data-dir", default="data", hidden=True)
-def goal_set(name: str, amount: Optional[float], target: Optional[float], deadline: Optional[str], data_dir: str) -> None:
+def goal_set(
+    name: str,
+    amount: Optional[float],
+    target: Optional[float],
+    deadline: Optional[str],
+    data_dir: str,
+) -> None:
     """Set a monthly savings target or a named goal."""
     if name == "monthly":
         if amount is None:
@@ -302,6 +362,7 @@ def goal_set(name: str, amount: Optional[float], target: Optional[float], deadli
         add_named_goal(name, target, deadline, data_dir)
         console.print(f"[green]Goal '{name}' set: ${target:,.2f} by {deadline}[/green]")
 
+
 @goal.command("status")
 @click.option("--data-dir", default="data", hidden=True)
 def goal_status(data_dir: str) -> None:
@@ -309,10 +370,14 @@ def goal_status(data_dir: str) -> None:
     data = get_goal_progress(data_dir)
     monthly = data.get("monthly_target", 0)
     streak = data.get("monthly_streak", {})
-    console.print(f"\n[bold]Monthly target:[/bold] ${monthly:,.2f}/month  |  Streak: {streak.get('current', 0)} months\n")
+    console.print(
+        f"\n[bold]Monthly target:[/bold] ${monthly:,.2f}/month  |  Streak: {streak.get('current', 0)} months\n"
+    )
     goals = data.get("goals", [])
     if not goals:
-        console.print("[yellow]No named goals set. Use: finance goal set \"Goal Name\" --target 5000 --by 2025-06[/yellow]")
+        console.print(
+            '[yellow]No named goals set. Use: finance goal set "Goal Name" --target 5000 --by 2025-06[/yellow]'
+        )
         return
     t = Table(title="Savings Goals", show_header=True)
     t.add_column("Goal")
@@ -322,11 +387,18 @@ def goal_status(data_dir: str) -> None:
     t.add_column("Deadline")
     for g in goals:
         pct = (g["current_amount"] / g["target_amount"] * 100) if g["target_amount"] > 0 else 0
-        t.add_row(g["name"], f"${g['current_amount']:,.2f}",
-                  f"${g['target_amount']:,.2f}", f"{pct:.0f}%", g["deadline"])
+        t.add_row(
+            g["name"],
+            f"${g['current_amount']:,.2f}",
+            f"${g['target_amount']:,.2f}",
+            f"{pct:.0f}%",
+            g["deadline"],
+        )
     console.print(t)
 
+
 # ── dashboard ─────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.option("--output", default="reports/dashboard.html")
@@ -335,12 +407,15 @@ def goal_status(data_dir: str) -> None:
 def dashboard(output: str, data_dir: str, no_open: bool) -> None:
     """Generate and open the HTML dashboard."""
     from dashboard import build_dashboard
+
     path = build_dashboard(data_dir=data_dir, output_path=output)
     console.print(f"[green]Dashboard generated:[/green] {path}")
     if not no_open:
         webbrowser.open(f"file://{os.path.abspath(path)}")
 
+
 # ── cards ──────────────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.option("--data-dir", default="data", hidden=True)
@@ -351,7 +426,9 @@ def cards(data_dir: str) -> None:
 
     card_data = load_cards(f"{data_dir}/cards.json")
     if not card_data.get("cards"):
-        console.print("[yellow]No cards configured. Copy data/cards.example.json to data/cards.json and edit.[/yellow]")
+        console.print(
+            "[yellow]No cards configured. Copy data/cards.example.json to data/cards.json and edit.[/yellow]"
+        )
         return
 
     store = DataStore(transactions_path=f"{data_dir}/transactions.csv")
@@ -392,7 +469,9 @@ def cards(data_dir: str) -> None:
         t2.add_column("Use This Card")
         t2.add_column("Annual Gain", justify="right")
         for item in top_opts:
-            t2.add_row(item["category"], item["best_card"], f"[green]+${item['annual_gain']:.2f}[/green]")
+            t2.add_row(
+                item["category"], item["best_card"], f"[green]+${item['annual_gain']:.2f}[/green]"
+            )
         console.print(t2)
 
     # Top upgrade recommendation

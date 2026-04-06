@@ -1,8 +1,16 @@
 #!/bin/sh
-# Installs the pre-commit hook. Run once after cloning:
+# Installs pre-commit hooks. Run once after cloning:
 #   sh scripts/install_hooks.sh
+#
+# Requires: pip install pre-commit (included in requirements.txt)
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-cp "$REPO_ROOT/scripts/pre-commit" "$REPO_ROOT/.git/hooks/pre-commit"
-chmod +x "$REPO_ROOT/.git/hooks/pre-commit"
-echo "Pre-commit hook installed successfully."
+set -e
+
+if ! command -v pre-commit >/dev/null 2>&1; then
+  echo "Installing pre-commit..."
+  pip3 install pre-commit
+fi
+
+pre-commit install
+echo "Pre-commit hooks installed successfully."
+echo "Run 'pre-commit run --all-files' to check the entire repo."

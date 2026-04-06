@@ -1,5 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from importers.pdf_parser import PDFParser
 
 
@@ -86,7 +88,7 @@ def test_parse_table_skips_empty_row(parser, tmp_path):
     fake.write_bytes(b"%PDF")
     table = [
         ["Transaction Date", "Description", "Amount"],
-        None,        # None row → skip
+        None,  # None row → skip
         ["", "", ""],  # all empty → skip
         ["01/15/2026", "CHIPOTLE", "-45.20"],
     ]

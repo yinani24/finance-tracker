@@ -13,6 +13,14 @@ pytest
 # Run without coverage enforcement (faster)
 pytest -p no:cov
 
+# Lint and format
+ruff check .          # lint (add --fix to auto-fix)
+ruff format .         # format
+
+# Pre-commit hooks
+pre-commit install          # install hooks (one-time)
+pre-commit run --all-files  # run all hooks on entire repo
+
 # Run a single test file
 pytest tests/test_data_store.py -v
 
@@ -109,10 +117,24 @@ reports/
 
 ### Pre-commit Hooks
 
-Install once: `bash scripts/install_hooks.sh`
+Uses the [pre-commit](https://pre-commit.com) framework. Install once: `sh scripts/install_hooks.sh`
 
-- `check_secrets.py` — **blocks** commits containing account numbers (4×4 digit groups), card numbers, SSN patterns (`XXX-XX-XXXX`), or hardcoded paths to Downloads/Desktop
-- `check_changelog.py` — **warns** (non-blocking) when no `[Unreleased]` section is found in CHANGELOG.md
+| Hook | What it does |
+|------|-------------|
+| `trailing-whitespace` | Strips trailing whitespace |
+| `end-of-file-fixer` | Ensures files end with a newline |
+| `check-yaml` / `check-json` | Validates YAML/JSON syntax |
+| `check-merge-conflict` | Blocks unresolved merge conflict markers |
+| `detect-private-key` | Blocks private key files |
+| `no-commit-to-branch` | Prevents direct commits to `main` |
+| `ruff` | Lints Python (auto-fixes with `--fix`) |
+| `ruff-format` | Formats Python |
+| `mypy` | Static type checking |
+| `bandit` | Security-focused static analysis |
+| `check-secrets` (local) | **Blocks** account numbers, card numbers, SSN patterns |
+| `check-changelog` (local) | **Warns** when no `[Unreleased]` section in CHANGELOG.md |
+
+Configuration: `pyproject.toml` (ruff, mypy, bandit), `.pre-commit-config.yaml` (hook versions/args).
 
 Never commit real account numbers, card numbers, SSNs, or file paths pointing to real statement files.
 

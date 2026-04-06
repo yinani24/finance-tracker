@@ -1,3 +1,3 @@
-from dashboard.renderer import build_dashboard, _load_files
+from dashboard.renderer import _load_files, build_dashboard
 
-__all__ = ["build_dashboard", "_load_files"]
+__all__ = ["_load_files", "build_dashboard"]

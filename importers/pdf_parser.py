@@ -1,8 +1,12 @@
 """Generic table-based PDF parser that extracts transactions from bank statement PDFs."""
+
 from __future__ import annotations
+
 import re
-import pdfplumber
+
 import pandas as pd
+import pdfplumber
+
 from core.categorizer import Categorizer, normalize_merchant
 from core.data_store import generate_id
 
@@ -77,7 +81,7 @@ class PDFParser:
             (MM/DD/YYYY   MERCHANT NAME   AMOUNT) across all pages.
         """
         # Amex line format: MM/DD/YYYY   MERCHANT NAME   AMOUNT
-        pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+([\d,]+\.\d{2})')
+        pattern = re.compile(r"(\d{2}/\d{2}/\d{4})\s+(.+?)\s+([\d,]+\.\d{2})")
         transactions = []
         with pdfplumber.open(filepath) as pdf:
             for page in pdf.pages:
@@ -97,7 +101,7 @@ class PDFParser:
                         "source": "pdf",
                         "is_income": False,
                         "is_savings": False,
-                        "notes": ""
+                        "notes": "",
                     }
                     transactions.append(tx)
         return transactions
@@ -138,7 +142,7 @@ class PDFParser:
                 "source": source,
                 "is_income": False,
                 "is_savings": False,
-                "notes": ""
+                "notes": "",
             }
         except Exception:
             return None

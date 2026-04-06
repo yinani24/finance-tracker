@@ -3,10 +3,11 @@
 Usage:
     python tests/fixtures/make_pdf_fixtures.py
 """
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 
 
 def make_chase_pdf(path: str) -> None:

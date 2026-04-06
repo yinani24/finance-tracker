@@ -10,6 +10,7 @@ Statement file paths are loaded from statements_manifest.json (gitignored).
 Run from the repo root:
     python3 -m importers.real_data
 """
+
 import csv
 import json
 import os
@@ -24,8 +25,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.categorizer import Categorizer
 from core.data_store import DataStore, generate_id
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _load_config(config_path: str = "config.json") -> dict[str, Any]:
     """Load and return config.json as a dict."""
@@ -50,9 +51,9 @@ def normalize_merchant(name: str) -> str:
         Lowercase, branch-stripped, whitespace-collapsed string.
     """
     name = name.lower()
-    name = re.sub(r'#\d+', '', name)
-    name = re.sub(r'\*', ' ', name)
-    name = re.sub(r'\s+', ' ', name)
+    name = re.sub(r"#\d+", "", name)
+    name = re.sub(r"\*", " ", name)
+    name = re.sub(r"\s+", " ", name)
     return name.strip()
 
 
@@ -143,7 +144,7 @@ def parse_chase_bank_pdf(
         (added, skipped) counts.
     """
     tx_re = re.compile(
-        r'^(\d{2}/\d{2})(?:\s+\d{2}/\d{2})?\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$'
+        r"^(\d{2}/\d{2})(?:\s+\d{2}/\d{2})?\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$"
     )
     added, skipped = 0, 0
     current_account = None
@@ -184,7 +185,12 @@ def parse_chase_bank_pdf(
                     amount = float(amount_str.replace(",", ""))
                     is_income = bool(re.search(r"payroll|direct deposit", desc, re.I))
                     a, s = _add_tx(
-                        store, cat, date_str, amount, desc, current_account,
+                        store,
+                        cat,
+                        date_str,
+                        amount,
+                        desc,
+                        current_account,
                         is_income=is_income,
                     )
                     added += a
@@ -196,6 +202,7 @@ def parse_chase_bank_pdf(
 
 
 # ── Amex High Yield Savings ───────────────────────────────────────────────────
+
 
 def parse_amex_hysa_pdf(
     store: DataStore,
@@ -217,9 +224,7 @@ def parse_amex_hysa_pdf(
     Returns:
         (added, skipped) counts.
     """
-    tx_re = re.compile(
-        r'^(\d{2}/\d{2}/\d{4})\s+(.+?)\s+\$([\d,]+\.\d{2})\s+\$([\d,]+\.\d{2})\s*$'
-    )
+    tx_re = re.compile(r"^(\d{2}/\d{2}/\d{4})\s+(.+?)\s+\$([\d,]+\.\d{2})\s+\$([\d,]+\.\d{2})\s*$")
     added, skipped = 0, 0
 
     try:
@@ -238,14 +243,17 @@ def parse_amex_hysa_pdf(
                 if not m:
                     continue
                 try:
-                    date_str_raw, desc, amount_str = (
-                        m.group(1), m.group(2).strip(), m.group(3)
-                    )
+                    date_str_raw, desc, amount_str = (m.group(1), m.group(2).strip(), m.group(3))
                     date_str = datetime.strptime(date_str_raw, "%m/%d/%Y").strftime("%Y-%m-%d")
                     amount = float(amount_str.replace(",", ""))
                     is_income = bool(re.search(r"interest|dividend", desc, re.I))
                     a, s = _add_tx(
-                        store, cat, date_str, amount, desc, account,
+                        store,
+                        cat,
+                        date_str,
+                        amount,
+                        desc,
+                        account,
                         is_income=is_income,
                     )
                     added += a
@@ -257,6 +265,7 @@ def parse_amex_hysa_pdf(
 
 
 # ── Chase Credit Card ─────────────────────────────────────────────────────────
+
 
 def infer_year(tx_month: int, closing_year: int, closing_month: int) -> int:
     """
@@ -300,14 +309,14 @@ def parse_chase_pdf(
     Returns:
         (added, skipped) counts.
     """
-    tx_re = re.compile(r'^(\d{2}/\d{2})\s+(.+?)\s{2,}(-?[\d,]+\.\d{2})\s*$')
-    tx_re2 = re.compile(r'^(\d{2}/\d{2})\s+(.+?)\s+(-?[\d,]+\.\d{2})\s*$')
+    tx_re = re.compile(r"^(\d{2}/\d{2})\s+(.+?)\s{2,}(-?[\d,]+\.\d{2})\s*$")
+    tx_re2 = re.compile(r"^(\d{2}/\d{2})\s+(.+?)\s+(-?[\d,]+\.\d{2})\s*$")
     skip_re = re.compile(
-        r'(EXCHG RATE|X 0\.\d+|^TOTAL|^PAYMENT|^PURCHASE$|^Interest|'
-        r'^INTEREST|Date of|Merchant Name|ACCOUNT ACTIVITY|CONTINUED|'
-        r'^2026 Totals|^Total f|^Total i|Your Annual|Minimum Payment|'
-        r'Paying only|Balance on this|SCENARIO|New Balance|MMaannaaggee|'
-        r'^www\.|^1-800|^P\.O\. Box|^Wilmington|^Carol Stream)',
+        r"(EXCHG RATE|X 0\.\d+|^TOTAL|^PAYMENT|^PURCHASE$|^Interest|"
+        r"^INTEREST|Date of|Merchant Name|ACCOUNT ACTIVITY|CONTINUED|"
+        r"^2026 Totals|^Total f|^Total i|Your Annual|Minimum Payment|"
+        r"Paying only|Balance on this|SCENARIO|New Balance|MMaannaaggee|"
+        r"^www\.|^1-800|^P\.O\. Box|^Wilmington|^Carol Stream)",
         re.IGNORECASE,
     )
     payment_section = False
@@ -337,7 +346,7 @@ def parse_chase_pdf(
                 if not m:
                     continue
                 date_part, merchant_raw, amount_str = m.group(1), m.group(2), m.group(3)
-                if re.search(r'\bX\s+0\.\d+|\(EXCHG', merchant_raw):
+                if re.search(r"\bX\s+0\.\d+|\(EXCHG", merchant_raw):
                     continue
                 if payment_section:
                     continue
@@ -360,6 +369,7 @@ def parse_chase_pdf(
 
 # ── BofA Visa Credit ──────────────────────────────────────────────────────────
 
+
 def parse_bofa_credit_pdf(
     store: DataStore,
     cat: Categorizer,
@@ -381,12 +391,12 @@ def parse_bofa_credit_pdf(
         (added, skipped) counts.
     """
     tx_re = re.compile(
-        r'^(\d{2}/\d{2})\s+\d{2}/\d{2}\s+(.+?)\s+\d{4}\s+\d{4}\s+(-?[\d,]+\.\d{2})\s*$'
+        r"^(\d{2}/\d{2})\s+\d{2}/\d{2}\s+(.+?)\s+\d{4}\s+\d{4}\s+(-?[\d,]+\.\d{2})\s*$"
     )
     skip_re = re.compile(
-        r'(TOTAL PAYMENTS|TOTAL PURCHASES|TOTAL INTEREST|Interest Charged|'
-        r'^2026 Totals|^Total fees|^Total interest|INTEREST CHARGED ON|'
-        r'Transaction.*Date.*Description|Account Summary|^Transactions$)',
+        r"(TOTAL PAYMENTS|TOTAL PURCHASES|TOTAL INTEREST|Interest Charged|"
+        r"^2026 Totals|^Total fees|^Total interest|INTEREST CHARGED ON|"
+        r"Transaction.*Date.*Description|Account Summary|^Transactions$)",
         re.IGNORECASE,
     )
     purchase_section = False
@@ -489,27 +499,33 @@ def parse_bofa_checking_pdf(
                 if not m:
                     continue
                 try:
-                    date_part, desc, amount_str = (
-                        m.group(1), m.group(2).strip(), m.group(3)
-                    )
+                    date_part, desc, amount_str = (m.group(1), m.group(2).strip(), m.group(3))
                     dt = datetime.strptime(date_part, "%m/%d/%y")
                     date_str = dt.strftime("%Y-%m-%d")
                     amount = float(amount_str.replace(",", ""))
                     is_income = bool(
-                        re.search(r"CENTAVO|PAYROLL|BKOFAMERICA.*DEPOSIT|Zelle payment from",
-                                  desc, re.I)
+                        re.search(
+                            r"CENTAVO|PAYROLL|BKOFAMERICA.*DEPOSIT|Zelle payment from", desc, re.I
+                        )
                     )
                     is_savings = bool(re.search(r"ROBINHOOD", desc, re.I))
                     if re.search(
                         r"JPMorgan Chase.*Ext Trnsfr|Online Banking.*to CHK|"
                         r"Online Banking.*from SAV|Online Banking.*to SAV|"
                         r"Online Banking.*from CHK|Online Banking.*payment to CRD",
-                        desc, re.I,
+                        desc,
+                        re.I,
                     ):
                         continue
                     a, s = _add_tx(
-                        store, cat, date_str, amount, desc, current_account,
-                        is_income=is_income, is_savings=is_savings,
+                        store,
+                        cat,
+                        date_str,
+                        amount,
+                        desc,
+                        current_account,
+                        is_income=is_income,
+                        is_savings=is_savings,
                     )
                     added += a
                     skipped += s
@@ -520,6 +536,7 @@ def parse_bofa_checking_pdf(
 
 
 # ── Robinhood CSV ─────────────────────────────────────────────────────────────
+
 
 def parse_robinhood_csv(
     store: DataStore,
@@ -553,8 +570,15 @@ def parse_robinhood_csv(
                 amount = float(row[2].strip())
                 datetime.strptime(date_str, "%Y-%m-%d")
                 a, s = _add_tx(
-                    store, cat, date_str, amount, desc, account,
-                    source="csv", is_income=True, notes="Robinhood interest",
+                    store,
+                    cat,
+                    date_str,
+                    amount,
+                    desc,
+                    account,
+                    source="csv",
+                    is_income=True,
+                    notes="Robinhood interest",
                 )
                 added += a
                 skipped += s
@@ -564,6 +588,7 @@ def parse_robinhood_csv(
 
 
 # ── Robinhood Brokerage PDF ───────────────────────────────────────────────────
+
 
 def parse_robinhood_pdf(
     store: DataStore,
@@ -612,48 +637,72 @@ def parse_robinhood_pdf(
                 date_str = datetime.strptime(date_m.group(1), "%m/%d/%Y").strftime("%Y-%m-%d")
                 if re.search(r"ACH Deposit", line, re.I):
                     continue
-                if re.search(r"\bBuy\b|\bSell\b|\bSLIP\b|\bCDIV\b|Dividend Reinvest|Collateral",
-                             line, re.I):
+                if re.search(
+                    r"\bBuy\b|\bSell\b|\bSLIP\b|\bCDIV\b|Dividend Reinvest|Collateral", line, re.I
+                ):
                     continue
                 try:
                     if re.search(r"Crypto Money Movement", line, re.I):
                         amt_m = re.findall(r"\$([\d,.]+)", line)
                         if amt_m:
                             a, s = _add_tx(
-                                store, cat, date_str, -float(amt_m[-1].replace(",", "")),
-                                "Crypto Transfer", account, notes="Crypto money movement",
+                                store,
+                                cat,
+                                date_str,
+                                -float(amt_m[-1].replace(",", "")),
+                                "Crypto Transfer",
+                                account,
+                                notes="Crypto money movement",
                             )
-                            added += a; skipped += s
+                            added += a
+                            skipped += s
                         continue
                     if re.search(r"Gold Subscription", line, re.I):
                         amt_m = re.findall(r"\$([\d,.]+)", line)
                         if amt_m:
                             a, s = _add_tx(
-                                store, cat, date_str, -float(amt_m[-1].replace(",", "")),
-                                "Robinhood Gold Subscription", account,
+                                store,
+                                cat,
+                                date_str,
+                                -float(amt_m[-1].replace(",", "")),
+                                "Robinhood Gold Subscription",
+                                account,
                                 notes="Robinhood Gold fee",
                             )
-                            added += a; skipped += s
+                            added += a
+                            skipped += s
                         continue
                     if re.search(r"Interest Payment|Brokerage-held Cash Interest", line, re.I):
                         amt_m = re.findall(r"\$([\d,.]+)", line)
                         if amt_m:
                             a, s = _add_tx(
-                                store, cat, date_str, float(amt_m[-1].replace(",", "")),
-                                "Robinhood Interest", account,
-                                is_income=True, notes="Robinhood interest",
+                                store,
+                                cat,
+                                date_str,
+                                float(amt_m[-1].replace(",", "")),
+                                "Robinhood Interest",
+                                account,
+                                is_income=True,
+                                notes="Robinhood interest",
                             )
-                            added += a; skipped += s
+                            added += a
+                            skipped += s
                         continue
                     if re.search(r"\bCDIV\b|Cash Div", line, re.I):
                         amt_m = re.findall(r"\$([\d,.]+)", line)
                         if amt_m:
                             a, s = _add_tx(
-                                store, cat, date_str, float(amt_m[-1].replace(",", "")),
-                                "Dividend", account,
-                                is_income=True, notes="Robinhood dividend",
+                                store,
+                                cat,
+                                date_str,
+                                float(amt_m[-1].replace(",", "")),
+                                "Dividend",
+                                account,
+                                is_income=True,
+                                notes="Robinhood dividend",
                             )
-                            added += a; skipped += s
+                            added += a
+                            skipped += s
                         continue
                 except Exception:
                     continue
@@ -662,6 +711,7 @@ def parse_robinhood_pdf(
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
+
 
 def run_import(
     config_path: str = "config.json",
@@ -688,59 +738,80 @@ def run_import(
 
     for entry in manifest.get("chase_credit", []):
         a, s = parse_chase_pdf(
-            store, cat, entry["path"],
+            store,
+            cat,
+            entry["path"],
             accounts.get("chase_credit", "Chase-CreditCard"),
-            entry["closing_year"], entry["closing_month"],
+            entry["closing_year"],
+            entry["closing_month"],
         )
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  Chase {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("chase_bank", []):
         a, s = parse_chase_bank_pdf(
-            store, cat, entry["path"],
+            store,
+            cat,
+            entry["path"],
             accounts.get("chase_bank_checking", "Chase-Checking"),
             accounts.get("chase_bank_savings", "Chase-Savings"),
-            entry["closing_year"], entry["closing_month"],
+            entry["closing_year"],
+            entry["closing_month"],
         )
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  Chase Bank {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("amex_hysa", []):
         a, s = parse_amex_hysa_pdf(
-            store, cat, entry["path"],
+            store,
+            cat,
+            entry["path"],
             accounts.get("amex_hysa", "Amex-HYSA"),
         )
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  Amex HYSA {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("bofa_visa", []):
         a, s = parse_bofa_credit_pdf(
-            store, cat, entry["path"],
+            store,
+            cat,
+            entry["path"],
             accounts.get("bofa_visa", "BofA-Visa"),
             entry["year"],
         )
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  BofA Visa {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("bofa_checking", []):
         a, s = parse_bofa_checking_pdf(store, cat, entry["path"])
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  BofA Checking {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("robinhood_csv", []):
         a, s = parse_robinhood_csv(
-            store, cat, entry["path"],
+            store,
+            cat,
+            entry["path"],
             accounts.get("robinhood", "Robinhood"),
         )
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  Robinhood CSV {entry['path']}: {a} added, {s} skipped")
 
     for entry in manifest.get("robinhood_pdf", []):
         a, s = parse_robinhood_pdf(
-            store, cat, entry["path"],
+            store,
+            cat,
+            entry["path"],
             accounts.get("robinhood", "Robinhood"),
         )
-        added += a; skipped += s
+        added += a
+        skipped += s
         print(f"  Robinhood PDF {entry['path']}: {a} added, {s} skipped")
 
     return added, skipped

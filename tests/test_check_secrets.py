@@ -1,19 +1,18 @@
 """Tests for scripts/check_secrets.py secret detection logic."""
-import sys
-import os
-import subprocess
-from unittest.mock import patch, MagicMock
-import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from check_secrets import (
-    contains_card_pattern,
-    contains_statements_path,
-    contains_data_file,
     check_content,
+    contains_card_pattern,
+    contains_data_file,
+    contains_statements_path,
     get_staged_files,
-    scan_staged_files,
     main,
+    scan_staged_files,
 )
 
 

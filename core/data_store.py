@@ -2,10 +2,21 @@
 
 import hashlib
 import os
+
 import pandas as pd
 
-COLUMNS = ["id", "date", "amount", "merchant", "category", "account",
-           "source", "is_income", "is_savings", "notes"]
+COLUMNS = [
+    "id",
+    "date",
+    "amount",
+    "merchant",
+    "category",
+    "account",
+    "source",
+    "is_income",
+    "is_savings",
+    "notes",
+]
 
 
 def generate_id(date: str, amount: float, merchant: str, account: str) -> str:

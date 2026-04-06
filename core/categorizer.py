@@ -1,7 +1,7 @@
 """Assigns spending categories to transactions using keyword-based matching."""
 
-import re
 import json
+import re
 
 
 def normalize_merchant(name: str) -> str:
@@ -17,9 +17,9 @@ def normalize_merchant(name: str) -> str:
         Cleaned, lowercase merchant string.
     """
     name = name.lower()
-    name = re.sub(r'#\d+', '', name)      # strip branch numbers
-    name = re.sub(r'\*', ' ', name)        # replace * with space
-    name = re.sub(r'\s+', ' ', name)       # collapse whitespace
+    name = re.sub(r"#\d+", "", name)  # strip branch numbers
+    name = re.sub(r"\*", " ", name)  # replace * with space
+    name = re.sub(r"\s+", " ", name)  # collapse whitespace
     return name.strip()
 
 
