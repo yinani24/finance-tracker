@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import plaid
 from plaid.api import plaid_api
@@ -84,7 +84,7 @@ def _find_or_create_account(
     account = db.scalars(stmt).first()
     if account:
         account.balance = plaid_account.get("balances", {}).get("current", 0.0) or 0.0
-        account.last_synced_at = datetime.now(UTC)
+        account.last_synced_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(account)
         return account
@@ -103,7 +103,7 @@ def _find_or_create_account(
         institution_name=plaid_item.institution_name,
         external_account_id=account_id,
         balance=plaid_account.get("balances", {}).get("current", 0.0) or 0.0,
-        last_synced_at=datetime.now(UTC),
+        last_synced_at=datetime.now(timezone.utc),
     )
     db.add(account)
     db.commit()

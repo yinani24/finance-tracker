@@ -1,3 +1,4 @@
+import time
 from typing import Any, Optional
 
 import jwt
@@ -8,10 +9,22 @@ from app.config import settings
 from app.database import get_db
 from app.repositories.user import UserRepository
 
+MAX_TOKEN_AGE_SECONDS = 3600  # 1 hour
+
 
 def decode_supabase_jwt(token: str, secret: str) -> Optional[dict[str, Any]]:
     try:
-        return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+        payload = jwt.decode(
+            token,
+            secret,
+            algorithms=["HS256"],
+            options={"verify_aud": False, "verify_exp": True, "require": ["exp", "iat"]},
+        )
+        # Enforce 1-hour max age from token issuance
+        issued_at = payload.get("iat", 0)
+        if time.time() - issued_at > MAX_TOKEN_AGE_SECONDS:
+            return None
+        return payload
     except jwt.PyJWTError:
         return None
 

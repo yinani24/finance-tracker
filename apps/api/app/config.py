@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     plaid_client_id: str = ""
     plaid_secret: str = ""
     plaid_env: str = "sandbox"
+    anthropic_api_key: str = ""
 
     model_config = {"env_prefix": "FT_"}
 
