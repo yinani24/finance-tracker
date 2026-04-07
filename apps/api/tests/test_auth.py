@@ -1,18 +1,35 @@
+from __future__ import annotations
+
+import time
+
 import jwt
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.auth import decode_supabase_jwt, get_current_user
+from app.auth import MAX_TOKEN_AGE_SECONDS, decode_supabase_jwt, get_current_user
 from app.database import get_db
 from app.models.user import User
 
 TEST_JWT_SECRET = "test-secret-that-is-long-enough-for-hs256-signing-key"
 
 
-def _make_token(sub: str, email: str, secret: str = TEST_JWT_SECRET) -> str:
-    return jwt.encode({"sub": sub, "email": email}, secret, algorithm="HS256")
+def _make_token(
+    sub: str,
+    email: str,
+    secret: str = TEST_JWT_SECRET,
+    iat: float | None = None,
+    exp: float | None = None,
+) -> str:
+    now = time.time()
+    payload = {
+        "sub": sub,
+        "email": email,
+        "iat": iat if iat is not None else now,
+        "exp": exp if exp is not None else now + MAX_TOKEN_AGE_SECONDS,
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
 
 
 class TestDecodeJWT:
@@ -28,6 +45,37 @@ class TestDecodeJWT:
 
     def test_wrong_secret(self):
         token = _make_token("user-123", "a@b.com", secret="wrong-secret-padding-for-length-xxxxx")
+        payload = decode_supabase_jwt(token, TEST_JWT_SECRET)
+        assert payload is None
+
+    def test_expired_token(self):
+        now = time.time()
+        token = _make_token("user-123", "a@b.com", iat=now - 7200, exp=now - 3600)
+        payload = decode_supabase_jwt(token, TEST_JWT_SECRET)
+        assert payload is None
+
+    def test_token_older_than_max_age(self):
+        now = time.time()
+        # Token issued 2 hours ago but exp set far in the future — should still be rejected
+        token = _make_token("user-123", "a@b.com", iat=now - 7200, exp=now + 3600)
+        payload = decode_supabase_jwt(token, TEST_JWT_SECRET)
+        assert payload is None
+
+    def test_token_missing_iat_rejected(self):
+        token = jwt.encode(
+            {"sub": "user-123", "email": "a@b.com", "exp": time.time() + 3600},
+            TEST_JWT_SECRET,
+            algorithm="HS256",
+        )
+        payload = decode_supabase_jwt(token, TEST_JWT_SECRET)
+        assert payload is None
+
+    def test_token_missing_exp_rejected(self):
+        token = jwt.encode(
+            {"sub": "user-123", "email": "a@b.com", "iat": time.time()},
+            TEST_JWT_SECRET,
+            algorithm="HS256",
+        )
         payload = decode_supabase_jwt(token, TEST_JWT_SECRET)
         assert payload is None
 
