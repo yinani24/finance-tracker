@@ -9,6 +9,7 @@ class CardCreate(BaseModel):
     network: str
     annual_fee: float = 0.0
     rewards_config_json: str = "{}"
+    issuer: Optional[str] = None
 
 
 class CardUpdate(BaseModel):
@@ -16,6 +17,7 @@ class CardUpdate(BaseModel):
     network: Optional[str] = None
     annual_fee: Optional[float] = None
     rewards_config_json: Optional[str] = None
+    issuer: Optional[str] = None
 
 
 class CardRead(BaseModel):
@@ -25,6 +27,7 @@ class CardRead(BaseModel):
     network: str
     annual_fee: float
     rewards_config_json: str
+    issuer: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
