@@ -6,6 +6,8 @@ from app.models.account import Account
 from app.models.card import Card
 from app.models.goal import Goal
 from app.models.import_record import Import, ImportFile
+from app.models.recommendation_snapshot import RecommendationSnapshot
+from app.models.spending_profile import SpendingProfile
 from app.models.transaction import Transaction
 from app.models.user import User, UserPreference
 
@@ -147,3 +149,79 @@ def test_create_import_with_file(db_session: Session):
     db_session.refresh(imp_file)
     assert imp_file.import_id == imp.id
     assert imp.status == "queued"
+
+
+def test_create_spending_profile(db_session: Session):
+    user = _make_user(db_session)
+    profile = SpendingProfile(
+        user_id=user.id,
+        period_start=date(2026, 1, 1),
+        period_end=date(2026, 3, 31),
+        avg_monthly_spend=2500.00,
+        category_breakdown_json='{"food": 800, "travel": 300}',
+        top_merchants_json='["Whole Foods", "Delta", "Amazon"]',
+    )
+    db_session.add(profile)
+    db_session.commit()
+    db_session.refresh(profile)
+    assert profile.id is not None
+    assert profile.user_id == user.id
+    assert profile.period_start == date(2026, 1, 1)
+    assert profile.period_end == date(2026, 3, 31)
+    assert profile.avg_monthly_spend == 2500.00
+    assert profile.category_breakdown_json == '{"food": 800, "travel": 300}'
+    assert profile.top_merchants_json == '["Whole Foods", "Delta", "Amazon"]'
+    assert profile.computed_at is not None
+
+
+def test_create_recommendation_snapshot(db_session: Session):
+    user = _make_user(db_session)
+    snapshot = RecommendationSnapshot(
+        user_id=user.id,
+        type="upgrade",
+        results_json='[{"card_id": 1, "score": 95}]',
+        inputs_hash="a" * 64,
+    )
+    db_session.add(snapshot)
+    db_session.commit()
+    db_session.refresh(snapshot)
+    assert snapshot.id is not None
+    assert snapshot.user_id == user.id
+    assert snapshot.type == "upgrade"
+    assert snapshot.results_json == '[{"card_id": 1, "score": 95}]'
+    assert snapshot.inputs_hash == "a" * 64
+    assert snapshot.computed_at is not None
+
+
+def test_create_card_with_issuer(db_session: Session):
+    user = _make_user(db_session)
+    card = Card(
+        user_id=user.id,
+        name="Chase Sapphire Reserve",
+        network="visa",
+        issuer="Chase",
+        annual_fee=550,
+        rewards_config_json='{"travel": 3, "dining": 3, "other": 1}',
+    )
+    db_session.add(card)
+    db_session.commit()
+    db_session.refresh(card)
+    assert card.id is not None
+    assert card.issuer == "Chase"
+    assert card.annual_fee == 550
+
+
+def test_create_card_without_issuer(db_session: Session):
+    user = _make_user(db_session)
+    card = Card(
+        user_id=user.id,
+        name="Generic Rewards Card",
+        network="mastercard",
+        annual_fee=0,
+        rewards_config_json='{"other": 1}',
+    )
+    db_session.add(card)
+    db_session.commit()
+    db_session.refresh(card)
+    assert card.id is not None
+    assert card.issuer is None
