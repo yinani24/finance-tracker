@@ -3,6 +3,8 @@ from app.models.card import Card
 from app.models.goal import Goal
 from app.models.import_record import Import, ImportFile
 from app.models.plaid_item import PlaidItem
+from app.models.recommendation_snapshot import RecommendationSnapshot
+from app.models.spending_profile import SpendingProfile
 from app.models.transaction import Transaction
 from app.models.user import User, UserPreference
 
@@ -16,4 +18,6 @@ __all__ = [
     "Import",
     "ImportFile",
     "PlaidItem",
+    "SpendingProfile",
+    "RecommendationSnapshot",
 ]
