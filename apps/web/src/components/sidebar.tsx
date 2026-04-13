@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   Target,
   CreditCard,
+  Lightbulb,
   Settings,
   LogOut,
   PanelLeftClose,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { useQuery } from "@tanstack/react-query";
+import { getMe } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -31,6 +34,7 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/cards", label: "Cards", icon: CreditCard },
+  { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -54,6 +58,12 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
+  const { data: appUser } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+    enabled: !!user,
+  });
+
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved === "true") setCollapsed(true);
@@ -66,7 +76,7 @@ export function Sidebar() {
     });
   }
 
-  const displayName = user ? getDisplayName(user) : "";
+  const displayName = appUser?.full_name || (user ? getDisplayName(user) : "");
   const initials = user ? getInitials(displayName) : "";
 
   return (
