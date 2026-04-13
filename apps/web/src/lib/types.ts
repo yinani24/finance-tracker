@@ -1,6 +1,7 @@
 export interface User {
   id: number;
   email: string;
+  full_name: string | null;
   auth_provider: string | null;
   created_at: string;
   updated_at: string;
@@ -94,4 +95,93 @@ export interface SyncResult {
 export interface LinkTokenResponse {
   link_token: string;
   expiration: string;
+}
+
+export interface CardBonusOffer {
+  spend: number;
+  amount: { amount: number; currency?: string }[];
+  days: number;
+  credits: { description: string; value: number; weight: number; currency: string }[];
+  expiration?: string;
+  url?: string;
+}
+
+export interface CardBonus {
+  cardId: string;
+  name: string;
+  issuer: string;
+  network: string;
+  currency: string;
+  isBusiness: boolean;
+  annualFee: number;
+  isAnnualFeeWaived: boolean;
+  universalCashbackPercent: number;
+  url: string;
+  imageUrl: string;
+  credits: { description: string; value: number; weight: number; currency: string }[];
+  offers: CardBonusOffer[];
+  discontinued: boolean;
+}
+
+export interface CardBonusSearchResult {
+  total: number;
+  limit: number;
+  offset: number;
+  cards: CardBonus[];
+}
+
+// Recommendations
+export interface CategorySpend {
+  category: string;
+  monthly_avg: number;
+}
+
+export interface TopMerchant {
+  merchant: string;
+  monthly_avg: number;
+}
+
+export interface SpendingProfile {
+  user_id: number;
+  period_start: string;
+  period_end: string;
+  avg_monthly_spend: number;
+  categories: CategorySpend[];
+  top_merchants: TopMerchant[];
+  computed_at: string;
+}
+
+export interface NextCardRecommendation {
+  card: CardBonus;
+  score: number;
+  bonus_value: number;
+  months_to_hit: number;
+  achievable: boolean;
+  explanation: string;
+}
+
+export interface NextCardResponse {
+  recommendations: NextCardRecommendation[];
+  spending_profile: SpendingProfile;
+}
+
+export interface AlternativeCard {
+  card: CardBonus;
+  net_value: number;
+  explanation: string;
+}
+
+export interface CardAnalysis {
+  user_card: Record<string, unknown>;
+  matched_card: CardBonus | null;
+  estimated_annual_value: number;
+  net_value: number;
+  status: "good" | "underperforming" | "costing_money";
+  explanation: string;
+  alternatives: AlternativeCard[];
+}
+
+export interface PortfolioResponse {
+  cards: CardAnalysis[];
+  spending_profile: SpendingProfile;
 }

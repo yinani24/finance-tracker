@@ -1,9 +1,13 @@
 import type {
   Account,
   Card,
+  CardBonusSearchResult,
   Goal,
   LinkTokenResponse,
+  NextCardResponse,
   PlaidItem,
+  PortfolioResponse,
+  SpendingProfile,
   SyncResult,
   Transaction,
   User,
@@ -14,27 +18,57 @@ import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
+// Global callback for session expiry — set by AuthProvider
+let onSessionExpired: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: () => void) {
+  onSessionExpired = handler;
+}
+
+async function getAccessToken(
+  forceRefresh = false
+): Promise<string | null> {
   const supabase = createClient();
+  if (forceRefresh) {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error || !data.session) return null;
+    return data.session.access_token;
+  }
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    return { Authorization: `Bearer ${session.access_token}` };
-  }
-  return {};
+  return session?.access_token ?? null;
+}
+
+async function fetchWithAuth<T>(
+  path: string,
+  token: string | null,
+  options?: RequestInit
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...options?.headers as Record<string, string>,
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const authHeaders = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders,
-      ...options?.headers,
-    },
-    ...options,
-  });
+  const token = await getAccessToken();
+  let res = await fetchWithAuth<T>(path, token, options);
+
+  if (res.status === 401) {
+    // Token might be stale — try refreshing once
+    const freshToken = await getAccessToken(true);
+    if (freshToken) {
+      res = await fetchWithAuth<T>(path, freshToken, options);
+    }
+    if (res.status === 401) {
+      onSessionExpired?.();
+      throw new Error("Session expired");
+    }
+  }
+
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`API ${res.status}: ${body}`);
@@ -45,6 +79,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // User
 export const getMe = () => request<User>("/me");
+export const updateMe = (data: { full_name?: string }) =>
+  request<User>("/me", { method: "PATCH", body: JSON.stringify(data) });
 export const getPreferences = () => request<UserPreference>("/me/preferences");
 export const updatePreferences = (data: Partial<UserPreference>) =>
   request<UserPreference>("/me/preferences", {
@@ -97,6 +133,34 @@ export const updateGoal = (id: number, data: Partial<Goal>) =>
 export const getCards = () => request<Card[]>("/cards");
 export const createCard = (data: Partial<Card>) =>
   request<Card>("/cards", { method: "POST", body: JSON.stringify(data) });
+export const deleteCard = (id: number) =>
+  request<void>(`/cards/${id}`, { method: "DELETE" });
+
+// Card Bonuses (public — no auth needed)
+export const searchCardBonuses = (params?: {
+  q?: string;
+  issuer?: string;
+  network?: string;
+  is_business?: boolean;
+  max_annual_fee?: number;
+  limit?: number;
+  offset?: number;
+}) => {
+  const search = new URLSearchParams();
+  if (params?.q) search.set("q", params.q);
+  if (params?.issuer) search.set("issuer", params.issuer);
+  if (params?.network) search.set("network", params.network);
+  if (params?.is_business !== undefined)
+    search.set("is_business", String(params.is_business));
+  if (params?.max_annual_fee !== undefined)
+    search.set("max_annual_fee", String(params.max_annual_fee));
+  if (params?.limit) search.set("limit", String(params.limit));
+  if (params?.offset) search.set("offset", String(params.offset));
+  const qs = search.toString();
+  return request<CardBonusSearchResult>(
+    `/card-bonuses${qs ? `?${qs}` : ""}`
+  );
+};
 
 // Plaid
 export const getPlaidItems = () => request<PlaidItem[]>("/plaid/items");
@@ -115,3 +179,13 @@ export const syncPlaidItem = (itemId: number) =>
   request<SyncResult>(`/plaid/items/${itemId}/sync`, { method: "POST" });
 export const deletePlaidItem = (itemId: number) =>
   request<void>(`/plaid/items/${itemId}`, { method: "DELETE" });
+
+// Recommendations
+export const getNextCardRecommendations = () =>
+  request<NextCardResponse>("/recommendations/next-card");
+export const getPortfolioAnalysis = () =>
+  request<PortfolioResponse>("/recommendations/portfolio");
+export const getSpendingProfile = () =>
+  request<SpendingProfile>("/recommendations/spending-profile");
+export const refreshRecommendations = () =>
+  request<{ status: string }>("/recommendations/refresh", { method: "POST" });
