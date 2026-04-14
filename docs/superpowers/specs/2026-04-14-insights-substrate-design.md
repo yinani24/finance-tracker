@@ -151,7 +151,7 @@ class InsightDispatcher:
 
 `wake_snoozed` is a lightweight query that flips any `snoozed` rows whose `snoozed_until <= today` back to `active`. It is called at the top of every `/insights` read endpoint. No cron required.
 
-`fire_all` triggers every registered engine regardless of event — used by the `POST /insights/refresh` escape hatch and for first-time users.
+`fire_all` triggers every registered engine regardless of event — used by the `POST /insights/refresh` escape hatch. First-time users get their initial insights via the `USER_ONBOARDED` event, not via `fire_all`.
 
 ### Failure isolation
 
