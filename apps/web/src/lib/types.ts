@@ -185,3 +185,29 @@ export interface PortfolioResponse {
   cards: CardAnalysis[];
   spending_profile: SpendingProfile;
 }
+
+export interface Insight {
+  id: number;
+  engine: string;
+  kind: string;
+  title: string;
+  body: string;
+  impact_one_time_cents: number;
+  impact_annual_cents: number;
+  effort: string;
+  evidence_json: string;
+  action_json: string | null;
+  related_goal_id: number | null;
+  status: string;
+  snoozed_until: string | null;
+  seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsightSummary {
+  total_active: number;
+  total_annual_impact_cents: number;
+  unread_count: number;
+  by_engine: Record<string, number>;
+}
