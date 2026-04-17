@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated .gitignore, README.md, CLAUDE.md for new apps/ structure
 
 ### Added
+- Insights substrate: unified `Insight` model + scoring/ranking framework with pluggable engines
+- `InsightDispatcher` with dismiss-sticky resurface logic (90 day / 25% impact threshold)
+- `/insights` API endpoints (list, summary, history, get, dismiss, snooze, acted-on, mark-seen, refresh)
+- `CardInsightEngine` adapter migrating card recommendations onto the substrate
+- Event fires for insights on transaction, goal, card, and Plaid sync mutations
+- `/insights` page with engine tabs, expandable detail panels, and lifecycle actions
+- Dashboard insights widget showing top 3 active insights
+- Sidebar nav entry for Insights
 - Credit card recommendation engine with sign-up bonus achievability scoring
 - Portfolio analysis to flag underperforming cards and suggest alternatives
 - Spending profile aggregation service with caching and staleness detection

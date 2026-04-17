@@ -13,6 +13,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { Chat } from "@/components/chat";
+import { InsightsWidget } from "@/components/insights-widget";
 import Link from "next/link";
 
 function StatCard({
@@ -107,6 +108,8 @@ export default function DashboardPage() {
           icon={Target}
         />
       </div>
+
+      <InsightsWidget />
 
       {recommendations?.recommendations && recommendations.recommendations.length > 0 && (
         <div className="bg-card rounded-xl border border-border p-6 mb-8">
