@@ -3,6 +3,8 @@ import type {
   Card,
   CardBonusSearchResult,
   Goal,
+  Insight,
+  InsightSummary,
   LinkTokenResponse,
   NextCardResponse,
   PlaidItem,
@@ -189,3 +191,27 @@ export const getSpendingProfile = () =>
   request<SpendingProfile>("/recommendations/spending-profile");
 export const refreshRecommendations = () =>
   request<{ status: string }>("/recommendations/refresh", { method: "POST" });
+
+// Insights
+export const getInsights = (params?: { engine?: string; effort?: string; limit?: number; offset?: number }) => {
+  const search = new URLSearchParams();
+  if (params?.engine) search.set("engine", params.engine);
+  if (params?.effort) search.set("effort", params.effort);
+  if (params?.limit) search.set("limit", String(params.limit));
+  if (params?.offset) search.set("offset", String(params.offset));
+  const qs = search.toString();
+  return request<Insight[]>(`/insights${qs ? `?${qs}` : ""}`);
+};
+export const getInsightsSummary = () => request<InsightSummary>("/insights/summary");
+export const getInsight = (id: number) => request<Insight>(`/insights/${id}`);
+export const dismissInsight = (id: number, reason?: string) =>
+  request<Insight>(`/insights/${id}/dismiss`, { method: "POST", body: JSON.stringify({ reason }) });
+export const snoozeInsight = (id: number, until: string) =>
+  request<Insight>(`/insights/${id}/snooze`, { method: "POST", body: JSON.stringify({ until }) });
+export const markInsightActedOn = (id: number) =>
+  request<Insight>(`/insights/${id}/acted-on`, { method: "POST" });
+export const markInsightsSeen = () =>
+  request<{ marked: number }>("/insights/mark-seen", { method: "POST" });
+export const getInsightsHistory = () => request<Insight[]>("/insights/history");
+export const refreshInsights = () =>
+  request<{ status: string }>("/insights/refresh", { method: "POST" });
