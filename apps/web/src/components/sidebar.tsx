@@ -9,6 +9,7 @@ import {
   Target,
   CreditCard,
   Lightbulb,
+  Sparkles,
   Settings,
   LogOut,
   PanelLeftClose,
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/cards", label: "Cards", icon: CreditCard },
+  { href: "/insights", label: "Insights", icon: Sparkles },
   { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -82,7 +84,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "border-r border-border bg-card flex flex-col h-screen sticky top-0 transition-[width] duration-200 ease-in-out overflow-hidden",
+        "group/sidebar relative border-r border-border bg-card flex flex-col h-screen sticky top-0 transition-[width] duration-200 ease-in-out overflow-hidden",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -92,23 +94,64 @@ export function Sidebar() {
           collapsed ? "p-3 justify-center" : "p-6 justify-between"
         )}
       >
-        {!collapsed && (
-          <h1 className="text-xl font-bold text-card-foreground truncate font-heading">
-            Finance Tracker
-          </h1>
-        )}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={toggle}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
+        <div className={cn("flex items-center", collapsed ? "" : "gap-3")}>
+          <button
+            onClick={collapsed ? toggle : undefined}
+            className={cn(
+              "flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center transition-transform duration-150",
+              collapsed && "cursor-pointer hover:scale-105 active:scale-95"
+            )}
+            title={collapsed ? "Expand sidebar" : undefined}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-primary-foreground"
+            >
+              <path
+                d="M3 4.5C3 3.67 3.67 3 4.5 3H13.5C14.33 3 15 3.67 15 4.5V6H3V4.5Z"
+                fill="currentColor"
+                opacity="0.5"
+              />
+              <path
+                d="M3 6H15V13.5C15 14.33 14.33 15 13.5 15H4.5C3.67 15 3 14.33 3 13.5V6Z"
+                fill="currentColor"
+              />
+              <path
+                d="M6 9.5H10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                className="text-primary"
+              />
+              <path
+                d="M6 12H8.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                className="text-primary"
+              />
+            </svg>
+          </button>
+          {!collapsed && (
+            <h1 className="text-lg font-bold text-card-foreground truncate font-heading">
+              Finance Tracker
+            </h1>
           )}
-        </Button>
+        </div>
+        {!collapsed && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={toggle}
+            title="Collapse sidebar"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       <nav className="flex-1 p-2 space-y-1">
