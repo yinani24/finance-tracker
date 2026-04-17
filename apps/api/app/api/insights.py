@@ -22,8 +22,10 @@ router = APIRouter(prefix="/insights", tags=["insights"])
 
 
 def get_default_dispatcher(db: Session) -> InsightDispatcher:
+    from app.services.card_insight_engine import CardInsightEngine
+
     dispatcher = InsightDispatcher(db)
-    # Engines will be registered here as they are built (Task 7+)
+    dispatcher.register(CardInsightEngine())
     return dispatcher
 
 
