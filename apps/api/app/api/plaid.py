@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
+from app.api.insights import fire_insights_event
 from app.database import get_db
 from app.repositories.plaid_item import PlaidItemRepository
 from app.schemas.plaid import (
@@ -10,6 +11,7 @@ from app.schemas.plaid import (
     PlaidItemRead,
     SyncResult,
 )
+from app.services.insight_types import EngineEvent
 from app.services.plaid_service import (
     create_link_token,
     exchange_public_token,
@@ -75,6 +77,7 @@ def sync_item(
 
     client = get_plaid_client()
     result = sync_transactions(client, db, plaid_item, user_id)
+    fire_insights_event(db, EngineEvent.TRANSACTIONS_SYNCED, user_id)
     return SyncResult(**result)
 
 

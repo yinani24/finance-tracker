@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
+from app.api.insights import fire_insights_event
 from app.database import get_db
 from app.repositories.transaction import TransactionRepository
 from app.schemas.transaction import TransactionCreate, TransactionRead, TransactionUpdate
+from app.services.insight_types import EngineEvent
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -29,7 +31,9 @@ def create_transaction(
     user_id: int = Depends(get_current_user_id),
 ) -> TransactionRead:
     repo = TransactionRepository(db)
-    return repo.create(user_id, data)
+    result = repo.create(user_id, data)
+    fire_insights_event(db, EngineEvent.TRANSACTION_MUTATED, user_id)
+    return result
 
 
 @router.patch("/{transaction_id}", response_model=TransactionRead)
@@ -43,4 +47,6 @@ def update_transaction(
     txn = repo.get(transaction_id, user_id)
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    return repo.update(txn, data)
+    result = repo.update(txn, data)
+    fire_insights_event(db, EngineEvent.TRANSACTION_MUTATED, user_id)
+    return result
