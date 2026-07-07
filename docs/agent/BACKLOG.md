@@ -17,11 +17,14 @@ discovered ones. Note: `feat/backend-foundation` has been **merged into `main`**
       Stage 1 done 2026-07-07: issues **#5** sandbox verification harness (FR1), **#6** Plaid
       error handling → mapped HTTP codes (FR2), **#7** `POST /plaid/webhook` endpoint (FR3),
       **#8** webhook JWT verification (FR3). Suggested order #5 → #6 → #7 → #8 (#8 depends on #7).
-      Stage 2 research + Stage 3 plan posted for #5 (`docs/agent/research/5.md`); next is
-      implementation. Code in `app/api/plaid.py` + `app/services/plaid_service.py` imports and
-      all `test_plaid.py` tests pass against a mocked client, but nothing has run against
-      sandbox Plaid; no webhook endpoint exists; Plaid `ApiException` is unhandled. Live
-      sandbox verification is an owner-local step (real Postgres + Plaid keys).
+      Progress: #5 research+plan (merged, `docs/agent/research/5.md`); #6 & #7 research+plan
+      posted. **#6 IMPLEMENTED → PR #10** (Stage 4 done 2026-07-07: `plaid_errors.py` classifier
+      + `_call` wrapper + `@app.exception_handler`; Plaid `ApiException` now maps to
+      409-relink / 503-retry / 502, secrets never surfaced; 26 plaid tests + 154 full suite
+      green on real Postgres, ruff clean). Suggested next: implement #5 (sandbox harness),
+      then #7 (webhook endpoint) → #8 (webhook JWT, depends on #7). Still nothing run against
+      real sandbox Plaid; no webhook endpoint exists yet. Live sandbox verification is an
+      owner-local step (real Postgres + Plaid keys).
       Owner: 3 low-risk QUESTIONS FOR HUMAN in the PRD (sandbox-only OK? webhook URL ngrok
       vs deployed? JWT-verify default enabled OK?) — proceeding on assumptions unless told.
 
