@@ -16,6 +16,9 @@ branch (the FastAPI + Next.js app), not `main`. Base agent PRs on it.
       exchange → sync works live. See VERIFY LOCALLY notes in the card-bonuses PR.
       Open questions: no webhook endpoint exists for Plaid `SYNC_UPDATES_AVAILABLE`;
       `sync_transactions` is only triggered manually via `POST /items/{id}/sync`.
+      Decomposed into issues #5–#8 (PRD `docs/prd/plaid-integration.md`). Stage 2
+      research posted for #5 (sandbox harness) — `docs/agent/research/5.md`; next
+      step is Stage 3 (plan) then implement.
 - [ ] **Point card data at the sibling repo consistently.**
       `app/services/card_insight_engine.py` (`DATA_URL`) and the sync cache in
       `app/services/recommendation_snapshot.py` fetch card data from
