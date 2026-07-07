@@ -1,21 +1,22 @@
 # Agent Backlog
 
 Prioritized to-do for the overnight agent. Check off done items; add newly
-discovered ones. Note: active development lives on the **`feat/backend-foundation`**
-branch (the FastAPI + Next.js app), not `main`. Base agent PRs on it.
+discovered ones. Note: `feat/backend-foundation` has been **merged into `main`**
+(commit 21d68dd) — `main` is now the trunk. Base all agent PRs on `main`.
 
 ## In progress / recently done
 - [x] Restore missing `app/services/card_bonuses.py` — was breaking the entire app
       import and test suite (2026-07-07).
 
 ## High priority
-- [ ] **Plaid end-to-end.** Code in `apps/api/app/api/plaid.py` +
-      `app/services/plaid_service.py` now imports and all `test_plaid.py` tests pass
-      against a mocked Plaid client. Still unverified against real/sandbox Plaid.
-      Needs the owner's sandbox keys + a Link handshake to confirm link-token →
-      exchange → sync works live. See VERIFY LOCALLY notes in the card-bonuses PR.
-      Open questions: no webhook endpoint exists for Plaid `SYNC_UPDATES_AVAILABLE`;
-      `sync_transactions` is only triggered manually via `POST /items/{id}/sync`.
+- [~] **Plaid end-to-end — PRD written** (`docs/prd/plaid-integration.md`, 2026-07-07).
+      Next: owner glance at its `## QUESTIONS FOR HUMAN` (all low-risk, proceeding on
+      assumptions), then Stage 1 — decompose into the 4 proposed issue slices:
+      (1) sandbox verification harness, (2) Plaid error handling, (3) `POST /plaid/webhook`
+      endpoint, (4) webhook JWT verification. Code in `app/api/plaid.py` +
+      `app/services/plaid_service.py` imports and all `test_plaid.py` tests pass against a
+      mocked client, but nothing has run against sandbox Plaid; no webhook endpoint exists;
+      Plaid `ApiException` is unhandled.
 - [ ] **Point card data at the sibling repo consistently.**
       `app/services/card_insight_engine.py` (`DATA_URL`) and the sync cache in
       `app/services/recommendation_snapshot.py` fetch card data from
