@@ -16,12 +16,26 @@ from app.models.account import Account
 from app.models.plaid_item import PlaidItem
 from app.models.transaction import Transaction
 from app.repositories.plaid_item import PlaidItemRepository
-
+from app.services.plaid_errors import map_plaid_exception
 
 PLAID_ENV_MAP = {
     "sandbox": plaid.Environment.Sandbox,
     "production": plaid.Environment.Production,
 }
+
+
+def _call(fn, *args, **kwargs):
+    """Invoke a Plaid SDK method, translating failures into ``PlaidError``.
+
+    Centralizing the try/except here keeps the three call sites clean and
+    guarantees the sandbox-harness path (which reuses these functions) is
+    protected too. Only ``plaid.ApiException`` is mapped; other exceptions
+    propagate unchanged.
+    """
+    try:
+        return fn(*args, **kwargs)
+    except plaid.ApiException as exc:
+        raise map_plaid_exception(exc) from None
 
 
 def _get_plaid_client() -> plaid_api.PlaidApi:
@@ -48,7 +62,7 @@ def create_link_token(client: plaid_api.PlaidApi, user_id: int) -> dict:
         language="en",
         user=LinkTokenCreateRequestUser(client_user_id=str(user_id)),
     )
-    response = client.link_token_create(request)
+    response = _call(client.link_token_create, request)
     return {
         "link_token": response.link_token,
         "expiration": response.expiration,
@@ -57,7 +71,7 @@ def create_link_token(client: plaid_api.PlaidApi, user_id: int) -> dict:
 
 def exchange_public_token(client: plaid_api.PlaidApi, public_token: str) -> dict:
     request = ItemPublicTokenExchangeRequest(public_token=public_token)
-    response = client.item_public_token_exchange(request)
+    response = _call(client.item_public_token_exchange, request)
     return {
         "access_token": response.access_token,
         "item_id": response.item_id,
@@ -127,7 +141,7 @@ def sync_transactions(
         if cursor:
             request_kwargs["cursor"] = cursor
         request = TransactionsSyncRequest(**request_kwargs)
-        response = client.transactions_sync(request)
+        response = _call(client.transactions_sync, request)
 
         accounts_by_id = {}
         for plaid_acct in response.accounts:
