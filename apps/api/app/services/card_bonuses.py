@@ -91,6 +91,40 @@ async def _fetch_cards(force: bool = False) -> List[Dict[str, Any]]:
     return data
 
 
+def fetch_cards_sync(force: bool = False) -> List[Dict[str, Any]]:
+    """Synchronous fetch/cache of the card dataset — the single source of truth.
+
+    Shares the same process-wide ``_cache`` as the async :func:`_fetch_cards`, so
+    synchronous callers (the insight engine, recommendation snapshots) and async
+    callers (the ``/card-bonuses`` router) all read one dataset from one upstream
+    (the sibling ``credit-card-bonuses-api``). Serves a stale cached copy on an
+    upstream failure; only a cold cache surfaces the error as
+    :class:`CardBonusesError`.
+    """
+    now = time.time()
+    cached = _cache["data"]
+    if not force and cached is not None and now - _cache["fetched_at"] < CACHE_TTL_SECONDS:
+        return cached
+
+    try:
+        resp = httpx.get(_data_url(), timeout=_REQUEST_TIMEOUT_SECONDS)
+        resp.raise_for_status()
+        data = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        if cached is not None:
+            return cached
+        raise CardBonusesError(f"Failed to fetch card bonuses: {exc}") from exc
+
+    if not isinstance(data, list):
+        if cached is not None:
+            return cached
+        raise CardBonusesError("Unexpected card bonuses payload (expected a JSON list)")
+
+    _cache["data"] = data
+    _cache["fetched_at"] = now
+    return data
+
+
 def _matches(
     card: Dict[str, Any],
     *,
