@@ -63,13 +63,20 @@ small until the optimizer is genuinely useful.
 - **Phase 5 — Multi-card portfolio:** recommend the optimal *combination* of cards
   by category as data expands.
 
-## Open questions (need owner — answer under QUESTIONS FOR HUMAN)
+## Decisions (owner-confirmed 2026-07-07 — build to these)
 
-1. **Optimization objective:** maximize cashback value, points value, or first-year
-   value including sign-up bonuses? Or let the user choose?
-2. **Card scope:** only cards the user already holds, all cards on the market, or
-   both ("use your existing cards better" vs "apply for this new one")?
+1. **Optimization objective — DECIDED: total first-year value.** Rank cards by
+   ongoing rewards value PLUS sign-up bonuses over the first year. This is the
+   "what's most useful for you right now" answer.
+2. **Card scope — DECIDED: both existing + new.** Recommend how to use the cards the
+   user already holds better AND surface new cards worth applying for. The engine
+   must distinguish "optimize current wallet" from "apply for this new card."
+
+## Open questions (still need owner — surface under QUESTIONS FOR HUMAN)
+
 3. **Value model:** how do we price points/miles (fixed cents-per-point, or per
-   redemption type)? A simple fixed-rate assumption is fine for MVP if acceptable.
+   redemption type)? A simple fixed cents-per-point assumption is acceptable for
+   MVP — proceed with that and flag the assumption unless the owner says otherwise.
 4. **Starting categories:** which spending categories matter most first
-   (dining/groceries/travel/gas)? Owner mentioned dining specifically.
+   (dining/groceries/travel/gas)? Owner called out **dining** specifically — start
+   there and expand.
