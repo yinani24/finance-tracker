@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     plaid_client_id: str = ""
     plaid_secret: str = ""
     plaid_env: str = "sandbox"
+    plaid_webhook_url: str = ""
     anthropic_api_key: str = ""
     card_bonuses_url: str = ""
 

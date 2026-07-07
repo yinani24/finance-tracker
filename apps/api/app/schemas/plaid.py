@@ -37,3 +37,18 @@ class SyncResult(BaseModel):
     transactions_added: int
     transactions_modified: int
     transactions_removed: int
+
+
+class PlaidWebhookPayload(BaseModel):
+    """A Plaid webhook body.
+
+    All fields are optional and unknown keys are tolerated so that any webhook
+    shape Plaid sends (or a malformed body) parses into a no-op rather than a
+    422 — the handler decides what to act on.
+    """
+
+    webhook_type: Optional[str] = None
+    webhook_code: Optional[str] = None
+    item_id: Optional[str] = None
+
+    model_config = {"extra": "allow"}
