@@ -1,2 +1,0 @@
-[run]
-omit = tests/fixtures/make_pdf_fixtures.py

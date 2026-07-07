@@ -1,19 +1,18 @@
 .env
-data/transactions.csv
-data/accounts.json
-data/goals.json
-data/cards.json
-reports/*
-!reports/.gitkeep
+.env.local
+.env.*.local
 
-# Bank statements — contain real financial data, never commit
-statements/
+node_modules/
+.next/
 
+.venv/
 __pycache__/
 *.pyc
+*.egg-info/
 .pytest_cache/
+.ruff_cache/
+
 .superpowers/
 .DS_Store
 **/.DS_Store
 .worktrees/
-statements_manifest.json
