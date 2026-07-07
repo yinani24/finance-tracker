@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unknown items are accepted with a 200 no-op, and sync failures return 200 (not
   5xx) to avoid Plaid retry storms. Verification is behind a `verify_webhook`
   stub (real Plaid-Verification JWT check lands with #8).
+- `POST /plaid/webhook` now verifies the `Plaid-Verification` JWT (ES256): the
+  signature is checked against the key from `/webhook_verification_key/get`
+  (cached by `kid`, so no per-request fetch), the `alg` is pinned to `ES256`
+  (rejecting `alg=none`/HS256 confusion), the `iat` must be within a 5-minute
+  replay window, and the `request_body_sha256` claim is compared constant-time
+  against the raw request body. Invalid/missing/tampered requests get **401**.
+  Verification defaults on and can be disabled for local/sandbox testing via
+  `FT_PLAID_WEBHOOK_VERIFY=false`.
 - `FT_PLAID_WEBHOOK_URL` config — when set, registered as the `webhook` on
   `LinkTokenCreateRequest` so Plaid knows where to deliver callbacks.
 - `card_bonuses.fetch_cards_sync()` — a synchronous fetch that shares the same
