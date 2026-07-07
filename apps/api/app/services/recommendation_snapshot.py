@@ -2,33 +2,25 @@ from __future__ import annotations
 
 import hashlib
 import json
-import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.card import Card
 from app.repositories.recommendation_snapshot import RecommendationSnapshotRepository
-from app.services.card_bonuses import CACHE_TTL_SECONDS, DATA_URL
+from app.services.card_bonuses import fetch_cards_sync
 from app.services.card_recommendation import CardRecommendationService
 from app.services.spending_profile import get_or_refresh as get_or_refresh_profile
 
-# Sync cache for card data (card_bonuses._fetch_cards is async, we need sync)
-_sync_cache: Dict[str, Any] = {"data": None, "fetched_at": 0.0}
 
+def _fetch_cards() -> List[Dict]:
+    """Return the card dataset from the single ``card_bonuses`` source.
 
-def _fetch_cards() -> List[Dict[str, Any]]:
-    now = time.time()
-    if _sync_cache["data"] is not None and now - _sync_cache["fetched_at"] < CACHE_TTL_SECONDS:
-        return _sync_cache["data"]
-    resp = httpx.get(DATA_URL, timeout=15)
-    resp.raise_for_status()
-    cards = resp.json()
-    _sync_cache["data"] = cards
-    _sync_cache["fetched_at"] = now
-    return cards
+    Delegates to :func:`app.services.card_bonuses.fetch_cards_sync` (one upstream,
+    one shared cache). Kept as a module-level name so tests can patch this seam.
+    """
+    return fetch_cards_sync()
 
 
 def _compute_inputs_hash(profile_json: str, cards_json: str) -> str:
