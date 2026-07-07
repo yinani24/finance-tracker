@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import time
-from typing import Dict, List, Literal
-
-import httpx
+from typing import List, Literal
 
 from app.models.insight import Insight
+from app.services.card_bonuses import fetch_cards_sync
 from app.services.card_recommendation import CardRecommendationService
 from app.services.insight_types import (
     EngineContext,
@@ -15,22 +13,16 @@ from app.services.insight_types import (
     InsightDraft,
 )
 
-DATA_URL = "https://raw.githubusercontent.com/andenacitelli/credit-card-bonuses-api/main/exports/data.json"
-CACHE_TTL_SECONDS = 3600
-
-_cache: Dict[str, object] = {"data": None, "fetched_at": 0.0}
-
 
 def fetch_card_bonuses() -> List[dict]:
-    now = time.time()
-    if _cache["data"] is not None and now - _cache["fetched_at"] < CACHE_TTL_SECONDS:
-        return _cache["data"]
-    resp = httpx.get(DATA_URL, timeout=15)
-    resp.raise_for_status()
-    cards = resp.json()
-    _cache["data"] = cards
-    _cache["fetched_at"] = now
-    return cards
+    """Return the available-card dataset from the single ``card_bonuses`` source.
+
+    Thin wrapper over :func:`app.services.card_bonuses.fetch_cards_sync` so the
+    insight engine shares one upstream (the sibling ``credit-card-bonuses-api``)
+    and one cache with every other card-data consumer. Kept as a module-level
+    name so tests can patch this seam.
+    """
+    return fetch_cards_sync()
 
 
 def _hash_inputs(profile_json: str, cards_json: str, kind: str) -> str:
