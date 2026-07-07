@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the card landscape.
 
 ### Added
+- `POST /plaid/webhook` — event-driven transaction sync. On a
+  `TRANSACTIONS / SYNC_UPDATES_AVAILABLE` webhook it looks up the `PlaidItem` by
+  Plaid's `item_id`, runs `sync_transactions`, and fires the `TRANSACTIONS_SYNCED`
+  insights event (mirroring the manual sync path). Unhandled webhook types and
+  unknown items are accepted with a 200 no-op, and sync failures return 200 (not
+  5xx) to avoid Plaid retry storms. Verification is behind a `verify_webhook`
+  stub (real Plaid-Verification JWT check lands with #8).
+- `FT_PLAID_WEBHOOK_URL` config — when set, registered as the `webhook` on
+  `LinkTokenCreateRequest` so Plaid knows where to deliver callbacks.
 - `card_bonuses.fetch_cards_sync()` — a synchronous fetch that shares the same
   process-wide cache (and `FT_CARD_BONUSES_URL` override) as the async path, giving
   sync consumers a single source of truth for card data.
