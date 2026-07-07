@@ -9,14 +9,16 @@ discovered ones. Note: `feat/backend-foundation` has been **merged into `main`**
       import and test suite (2026-07-07).
 
 ## High priority
-- [~] **Plaid end-to-end — PRD written** (`docs/prd/plaid-integration.md`, 2026-07-07).
-      Next: owner glance at its `## QUESTIONS FOR HUMAN` (all low-risk, proceeding on
-      assumptions), then Stage 1 — decompose into the 4 proposed issue slices:
-      (1) sandbox verification harness, (2) Plaid error handling, (3) `POST /plaid/webhook`
-      endpoint, (4) webhook JWT verification. Code in `app/api/plaid.py` +
+- [~] **Plaid end-to-end — PRD written + decomposed into issues** (`docs/prd/plaid-integration.md`).
+      Stage 1 done 2026-07-07: issues **#5** sandbox verification harness (FR1), **#6** Plaid
+      error handling → mapped HTTP codes (FR2), **#7** `POST /plaid/webhook` endpoint (FR3),
+      **#8** webhook JWT verification (FR3). Next: Stage 2/3 (research/plan) then implement —
+      suggested order #5 → #6 → #7 → #8 (#8 depends on #7). Code in `app/api/plaid.py` +
       `app/services/plaid_service.py` imports and all `test_plaid.py` tests pass against a
       mocked client, but nothing has run against sandbox Plaid; no webhook endpoint exists;
       Plaid `ApiException` is unhandled.
+      Owner: 3 low-risk QUESTIONS FOR HUMAN in the PRD (sandbox-only OK? webhook URL ngrok
+      vs deployed? JWT-verify default enabled OK?) — proceeding on assumptions unless told.
 - [ ] **Point card data at the sibling repo consistently.**
       `app/services/card_insight_engine.py` (`DATA_URL`) and the sync cache in
       `app/services/recommendation_snapshot.py` fetch card data from
