@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     plaid_secret: str = ""
     plaid_env: str = "sandbox"
     anthropic_api_key: str = ""
+    card_bonuses_url: str = ""
 
     model_config = {"env_prefix": "FT_"}
 

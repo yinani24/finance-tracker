@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Restored missing `app/services/card_bonuses.py` service module. Its absence made
+  `app/api/card_bonuses.py` and `app/services/recommendation_snapshot.py` fail to
+  import, which broke `app.main` startup and the entire test suite.
+
+### Added
+- `card_bonuses` service: cached fetch of the sibling credit-card-bonuses-api export
+  with search/filter/pagination, issuer listing, and card lookup by id. Serves stale
+  cache on upstream failure and raises `CardBonusesError` only on a cold cache.
+- `FT_CARD_BONUSES_URL` config override for the card-bonuses data source.
+- Test coverage for the card-bonuses service and `/card-bonuses` API router.
+
 ### Changed
 - Removed legacy CLI app (core/, importers/, dashboard/, scripts/, templates/, tests/, main.py)
 - Removed old config files (pyproject.toml, pytest.ini, .coveragerc, requirements.txt, .pre-commit-config.yaml, config.json)
