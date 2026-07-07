@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -105,6 +106,11 @@ async def plaid_webhook(
     verified request (even when the underlying sync errors) so Plaid does not
     retry-storm; a broken item is surfaced via the re-link path on the next
     user action.
+
+    The sync itself does blocking DB + Plaid HTTP I/O, so it is offloaded to a
+    worker thread via ``run_in_threadpool`` — this handler is ``async`` (it
+    needs ``await request.body()`` for the #8 signature check), and running the
+    blocking sync inline would stall the event loop for every other request.
     """
     body = await request.body()
     if not verify_webhook(request.headers, body):
@@ -128,9 +134,16 @@ async def plaid_webhook(
         return {"status": "ignored", "reason": "unknown_item"}
 
     client = get_plaid_client()
-    try:
-        result = sync_transactions(client, db, plaid_item, plaid_item.user_id)
+
+    def _sync_and_notify() -> dict:
+        # Runs in a worker thread — keeps the sync (blocking) Session on a
+        # single thread and off the event loop.
+        synced = sync_transactions(client, db, plaid_item, plaid_item.user_id)
         fire_insights_event(db, EngineEvent.TRANSACTIONS_SYNCED, plaid_item.user_id)
+        return synced
+
+    try:
+        result = await run_in_threadpool(_sync_and_notify)
     except Exception as exc:  # noqa: BLE001 — must return 2xx to avoid Plaid retry storms
         # Log only the exception type / webhook code — never the access token,
         # request body, or Plaid credentials.
