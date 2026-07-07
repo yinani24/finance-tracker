@@ -55,13 +55,18 @@ def get_plaid_client() -> plaid_api.PlaidApi:
 
 
 def create_link_token(client: plaid_api.PlaidApi, user_id: int) -> dict:
-    request = LinkTokenCreateRequest(
+    request_kwargs = dict(
         products=[Products("transactions")],
         client_name="Finance Tracker",
         country_codes=[CountryCode("US")],
         language="en",
         user=LinkTokenCreateRequestUser(client_user_id=str(user_id)),
     )
+    # Only register a webhook callback when a URL is configured, so local /
+    # sandbox links without a public URL keep working.
+    if settings.plaid_webhook_url:
+        request_kwargs["webhook"] = settings.plaid_webhook_url
+    request = LinkTokenCreateRequest(**request_kwargs)
     response = _call(client.link_token_create, request)
     return {
         "link_token": response.link_token,
