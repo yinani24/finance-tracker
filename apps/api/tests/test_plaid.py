@@ -45,6 +45,47 @@ class TestPlaidLinkToken:
             assert data["link_token"] == "link-sandbox-abc123"
             assert data["expiration"] == "2026-04-06T00:00:00Z"
 
+    def test_redirect_uri_threaded_when_set(self, client, monkeypatch):
+        """OAuth banks (Chase, …) need redirect_uri sent to Plaid."""
+        monkeypatch.setattr(
+            "app.services.plaid_service.settings.plaid_redirect_uri",
+            "https://app.example.com/settings",
+        )
+        mock_response = MagicMock()
+        mock_response.link_token = "link-sandbox-abc123"
+        mock_response.expiration = "2026-04-06T00:00:00Z"
+
+        with patch("app.api.plaid.get_plaid_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.link_token_create.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            resp = client.post("/plaid/link-token")
+            assert resp.status_code == 200
+
+        sent_request = mock_client.link_token_create.call_args[0][0]
+        assert (
+            sent_request.to_dict()["redirect_uri"]
+            == "https://app.example.com/settings"
+        )
+
+    def test_redirect_uri_absent_when_unset(self, client):
+        """No redirect_uri sent when unconfigured — keeps non-OAuth links working."""
+        mock_response = MagicMock()
+        mock_response.link_token = "link-sandbox-abc123"
+        mock_response.expiration = "2026-04-06T00:00:00Z"
+
+        with patch("app.api.plaid.get_plaid_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.link_token_create.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            resp = client.post("/plaid/link-token")
+            assert resp.status_code == 200
+
+        sent_request = mock_client.link_token_create.call_args[0][0]
+        assert "redirect_uri" not in sent_request.to_dict()
+
 
 class TestPlaidExchangeToken:
     def test_exchange_token_creates_item(self, client, db_session):
