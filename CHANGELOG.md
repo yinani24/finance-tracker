@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Added `docs/prd/recommendation-engine.md` (Phases 4–5 PRD). Documents the
+  owner-confirmed "total first-year value" objective and reconciles it against the
+  existing `card_recommendation.py` engine, flagging the gap: ongoing category-aware
+  rewards (half the objective, and the reason we read dining habits) are not yet
+  modeled, and bonus points are summed without a cents-per-point valuation. Includes
+  open questions and a proposed Stage-1 decomposition.
+
 ### Added
 - Plaid API errors are now mapped to meaningful HTTP responses instead of unhandled 500s: re-link conditions (`ITEM_LOGIN_REQUIRED`, `INVALID_ACCESS_TOKEN`, …) → **409** with `{"error_code", "action": "relink"}`; transient/rate-limit conditions → **503** with `action: "retry"`; other Plaid failures → **502**. Access tokens and raw Plaid error internals (`error_message`, `request_id`) are never surfaced in responses or logs.
 
