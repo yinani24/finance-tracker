@@ -1,8 +1,17 @@
+import hashlib
+import json
+import time
 from unittest.mock import MagicMock, patch
 
+import jwt
+import pytest
+from cryptography.hazmat.primitives.asymmetric import ec
+
+from app.config import settings
 from app.models.account import Account
 from app.models.plaid_item import PlaidItem
 from app.models.transaction import Transaction
+from app.services import plaid_webhook
 
 
 def _make_plaid_item(db_session, item_id="item-webhook", user_id=1) -> PlaidItem:
@@ -64,6 +73,12 @@ def _sync_payload(item_id="item-webhook"):
 
 
 class TestPlaidWebhookSync:
+    @pytest.fixture(autouse=True)
+    def _disable_verification(self, monkeypatch):
+        """These functional tests POST unsigned bodies; verification is
+        exercised separately in ``TestWebhookVerification``."""
+        monkeypatch.setattr(settings, "plaid_webhook_verify", False)
+
     def test_sync_updates_available_triggers_sync(self, client, db_session):
         item = _make_plaid_item(db_session)
         mock_resp = _mock_sync_response(
@@ -206,3 +221,167 @@ class TestWebhookUrlThreadedIntoLinkToken:
 
         sent_request = mock_client.link_token_create.call_args[0][0]
         assert "webhook" not in sent_request.to_dict()
+
+
+def _mint_keypair(kid="test_kid"):
+    priv = ec.generate_private_key(ec.SECP256R1())
+    alg = jwt.algorithms.ECAlgorithm(jwt.algorithms.ECAlgorithm.SHA256)
+    pub_jwk = json.loads(alg.to_jwk(priv.public_key()))
+    pub_jwk.update({"kid": kid, "use": "sig", "alg": "ES256"})
+    return priv, pub_jwk
+
+
+def _sign(priv, body: bytes, iat=None, kid="test_kid", alg="ES256"):
+    claims = {
+        "iat": int(iat if iat is not None else time.time()),
+        "request_body_sha256": hashlib.sha256(body).hexdigest(),
+    }
+    return jwt.encode(claims, priv, algorithm=alg, headers={"kid": kid})
+
+
+class TestWebhookVerification:
+    """Exercises the real Plaid-Verification JWT check (flag enabled)."""
+
+    @pytest.fixture(autouse=True)
+    def _enable_and_isolate(self, monkeypatch):
+        monkeypatch.setattr(settings, "plaid_webhook_verify", True)
+        plaid_webhook._KEY_CACHE.clear()
+        yield
+        plaid_webhook._KEY_CACHE.clear()
+
+    @staticmethod
+    def _mock_key_client(pub_jwk):
+        """Patch the key-fetch client used inside verify_webhook."""
+        mock_client = MagicMock()
+        mock_client.webhook_verification_key_get.return_value.key.to_dict.return_value = (
+            pub_jwk
+        )
+        return patch(
+            "app.services.plaid_webhook.get_plaid_client", return_value=mock_client
+        ), mock_client
+
+    def _post(self, client, body, token):
+        headers = {"content-type": "application/json"}
+        if token is not None:
+            headers["Plaid-Verification"] = token
+        return client.post("/plaid/webhook", content=body, headers=headers)
+
+    def test_valid_signature_accepted_and_syncs(self, client, db_session):
+        item = _make_plaid_item(db_session)
+        priv, pub_jwk = _mint_keypair()
+        body = json.dumps(_sync_payload(item.item_id)).encode()
+        token = _sign(priv, body)
+        key_patch, _ = self._mock_key_client(pub_jwk)
+
+        mock_resp = _mock_sync_response(
+            accounts=[_make_plaid_account()], added=[_make_plaid_txn()]
+        )
+        with key_patch, patch("app.api.plaid.get_plaid_client") as mock_get_client, patch(
+            "app.api.plaid.fire_insights_event"
+        ):
+            mock_client = MagicMock()
+            mock_client.transactions_sync.return_value = mock_resp
+            mock_get_client.return_value = mock_client
+
+            resp = self._post(client, body, token)
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "synced"
+
+    def test_missing_header_rejected(self, client, db_session):
+        _make_plaid_item(db_session)
+        body = json.dumps(_sync_payload()).encode()
+        resp = self._post(client, body, token=None)
+        assert resp.status_code == 401
+
+    def test_tampered_body_rejected(self, client, db_session):
+        _make_plaid_item(db_session)
+        priv, pub_jwk = _mint_keypair()
+        signed_body = json.dumps(_sync_payload()).encode()
+        token = _sign(priv, signed_body)
+        key_patch, _ = self._mock_key_client(pub_jwk)
+
+        # Sign one body but send a different one → hash claim mismatch.
+        tampered = signed_body + b" "
+        with key_patch:
+            resp = self._post(client, tampered, token)
+        assert resp.status_code == 401
+
+    def test_bad_signature_rejected(self, client, db_session):
+        _make_plaid_item(db_session)
+        # Sign with one key, verify against a different (unrelated) key.
+        signing_priv, _ = _mint_keypair()
+        _, other_pub_jwk = _mint_keypair()
+        body = json.dumps(_sync_payload()).encode()
+        token = _sign(signing_priv, body)
+        key_patch, _ = self._mock_key_client(other_pub_jwk)
+
+        with key_patch:
+            resp = self._post(client, body, token)
+        assert resp.status_code == 401
+
+    def test_stale_iat_rejected(self, client, db_session):
+        _make_plaid_item(db_session)
+        priv, pub_jwk = _mint_keypair()
+        body = json.dumps(_sync_payload()).encode()
+        token = _sign(priv, body, iat=time.time() - 600)  # 10 min old
+        key_patch, _ = self._mock_key_client(pub_jwk)
+
+        with key_patch:
+            resp = self._post(client, body, token)
+        assert resp.status_code == 401
+
+    def test_wrong_alg_rejected(self, client, db_session):
+        """A token signed with HS256 must be rejected (alg-confusion guard)."""
+        _make_plaid_item(db_session)
+        _, pub_jwk = _mint_keypair()
+        body = json.dumps(_sync_payload()).encode()
+        hs_token = jwt.encode(
+            {
+                "iat": int(time.time()),
+                "request_body_sha256": hashlib.sha256(body).hexdigest(),
+            },
+            "shared-secret",
+            algorithm="HS256",
+            headers={"kid": "test_kid"},
+        )
+        key_patch, _ = self._mock_key_client(pub_jwk)
+
+        with key_patch:
+            resp = self._post(client, body, hs_token)
+        assert resp.status_code == 401
+
+    def test_key_cached_by_kid(self, client, db_session):
+        _make_plaid_item(db_session)
+        priv, pub_jwk = _mint_keypair()
+        key_patch, mock_client = self._mock_key_client(pub_jwk)
+
+        with key_patch, patch("app.api.plaid.get_plaid_client") as mock_get_client, patch(
+            "app.api.plaid.fire_insights_event"
+        ):
+            mock_get_client.return_value.transactions_sync.return_value = (
+                _mock_sync_response()
+            )
+            for _ in range(2):
+                body = json.dumps(_sync_payload()).encode()
+                token = _sign(priv, body)
+                resp = self._post(client, body, token)
+                assert resp.status_code == 200
+
+        # Two webhooks with the same kid → key fetched exactly once.
+        assert mock_client.webhook_verification_key_get.call_count == 1
+
+    def test_disabled_flag_skips_verification(self, client, db_session, monkeypatch):
+        monkeypatch.setattr(settings, "plaid_webhook_verify", False)
+        _make_plaid_item(db_session)
+        body = json.dumps(_sync_payload()).encode()
+        with patch("app.api.plaid.get_plaid_client") as mock_get_client, patch(
+            "app.api.plaid.fire_insights_event"
+        ):
+            mock_get_client.return_value.transactions_sync.return_value = (
+                _mock_sync_response()
+            )
+            # No Plaid-Verification header at all, yet accepted.
+            resp = self._post(client, body, token=None)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "synced"

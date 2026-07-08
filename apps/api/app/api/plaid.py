@@ -98,7 +98,9 @@ async def plaid_webhook(
 
     Unauthenticated at the app layer — Plaid is the caller, not a user, so
     identity is derived from the item, not from a session. Request authenticity
-    is (will be) enforced by ``verify_webhook`` (real JWT check lands in #8).
+    is enforced by ``verify_webhook`` (Plaid-Verification ES256 JWT + body-hash
+    claim), which can be disabled for local testing via
+    ``FT_PLAID_WEBHOOK_VERIFY``.
 
     Only ``TRANSACTIONS / SYNC_UPDATES_AVAILABLE`` is actioned; on the modern
     ``/transactions/sync`` flow that is the sole transactions webhook Plaid

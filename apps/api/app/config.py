@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     plaid_secret: str = ""
     plaid_env: str = "sandbox"
     plaid_webhook_url: str = ""
+    # Verify the Plaid-Verification JWT on inbound webhooks. Defaults on; set
+    # FT_PLAID_WEBHOOK_VERIFY=false only for local/sandbox testing without a
+    # publicly reachable URL (see docs/prd/plaid-integration.md Q3).
+    plaid_webhook_verify: bool = True
     anthropic_api_key: str = ""
     card_bonuses_url: str = ""
 
