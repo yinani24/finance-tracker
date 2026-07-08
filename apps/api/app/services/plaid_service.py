@@ -1,4 +1,5 @@
 import hashlib
+import logging
 from datetime import datetime, timezone
 
 import plaid
@@ -16,7 +17,10 @@ from app.models.account import Account
 from app.models.plaid_item import PlaidItem
 from app.models.transaction import Transaction
 from app.repositories.plaid_item import PlaidItemRepository
+from app.services.enrichment import EnrichmentInput, get_provider
 from app.services.plaid_errors import map_plaid_exception
+
+logger = logging.getLogger(__name__)
 
 PLAID_ENV_MAP = {
     "sandbox": plaid.Environment.Sandbox,
@@ -130,6 +134,40 @@ def _find_or_create_account(
     return account
 
 
+def _apply_enrichment(rows: list[tuple[Transaction, EnrichmentInput]]) -> None:
+    """Enrich a batch of freshly-built transaction rows in place.
+
+    Fail-open by design: if the provider errors or returns a mismatched batch,
+    log and leave the raw Plaid values untouched. Enrichment is an accuracy
+    upgrade, not a correctness dependency — a provider outage must never break
+    transaction ingest. With the default ``noop`` provider this is a no-op.
+    """
+    if not rows:
+        return
+    provider = get_provider()
+    inputs = [inp for _, inp in rows]
+    try:
+        results = provider.enrich(inputs)
+    except Exception:  # noqa: BLE001 - provider is untrusted; never break sync
+        logger.warning(
+            "enrichment provider failed; keeping raw Plaid categories",
+            exc_info=True,
+        )
+        return
+    if len(results) != len(inputs):
+        logger.warning(
+            "enrichment returned %d results for %d inputs; keeping raw categories",
+            len(results),
+            len(inputs),
+        )
+        return
+    for (row, _), result in zip(rows, results):
+        if result.category is not None:
+            row.category = result.category
+        if result.normalized_merchant is not None:
+            row.normalized_merchant = result.normalized_merchant
+
+
 def sync_transactions(
     client: plaid_api.PlaidApi, db: Session, plaid_item: PlaidItem, user_id: int
 ) -> dict:
@@ -154,6 +192,7 @@ def sync_transactions(
             account = _find_or_create_account(db, user_id, acct_dict, plaid_item)
             accounts_by_id[acct_dict["account_id"]] = account
 
+        new_rows: list[tuple[Transaction, EnrichmentInput]] = []
         for txn in response.added:
             txn_dict = txn.to_dict()
             account = accounts_by_id.get(txn_dict.get("account_id"))
@@ -180,23 +219,38 @@ def sync_transactions(
             if isinstance(category_list, dict):
                 category = category_list.get("primary", "").lower().replace("_", " ")
 
-            db.add(
-                Transaction(
-                    user_id=user_id,
-                    account_id=account.id,
-                    external_id=txn_dict.get("transaction_id"),
-                    occurred_on=occurred_on,
-                    amount=stored_amount,
-                    merchant=merchant,
-                    normalized_merchant=merchant.lower().strip(),
-                    category=category or None,
-                    is_income=stored_amount > 0,
-                    is_savings=False,
-                    source="plaid",
-                    dedupe_hash=dedupe_hash,
+            row = Transaction(
+                user_id=user_id,
+                account_id=account.id,
+                external_id=txn_dict.get("transaction_id"),
+                occurred_on=occurred_on,
+                amount=stored_amount,
+                merchant=merchant,
+                normalized_merchant=merchant.lower().strip(),
+                category=category or None,
+                is_income=stored_amount > 0,
+                is_savings=False,
+                source="plaid",
+                dedupe_hash=dedupe_hash,
+            )
+            db.add(row)
+            new_rows.append(
+                (
+                    row,
+                    EnrichmentInput(
+                        external_id=txn_dict.get("transaction_id"),
+                        merchant=merchant,
+                        amount=stored_amount,
+                        plaid_category=category or None,
+                    ),
                 )
             )
             added_count += 1
+
+        # Overwrite category / normalized_merchant from the enrichment provider
+        # (noop by default → no change). Done before commit so the enriched
+        # values persist in the same transaction as the insert.
+        _apply_enrichment(new_rows)
 
         for txn in response.modified:
             txn_dict = txn.to_dict()

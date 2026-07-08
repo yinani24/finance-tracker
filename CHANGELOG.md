@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Provider-swappable **transaction-enrichment layer** (`app/services/enrichment/`)
+  over stored Plaid transactions. `sync_transactions` now runs newly-added rows
+  through the configured `EnrichmentProvider` and overwrites `category` /
+  `normalized_merchant` from the result. The default `noop` provider echoes the
+  raw Plaid values back unchanged, so behavior is identical until a real provider
+  is configured via `FT_ENRICHMENT_PROVIDER`. Enrichment is fail-open — a provider
+  error or mismatched batch is logged and the raw Plaid category is kept, so
+  ingest never breaks. Ships a fixed internal category taxonomy
+  (`dining, groceries, travel, transport, shopping, bills, entertainment, health,
+  income, other`) with a `map_to_internal` mapper for wiring real providers next.
 - Plaid API errors are now mapped to meaningful HTTP responses instead of unhandled 500s: re-link conditions (`ITEM_LOGIN_REQUIRED`, `INVALID_ACCESS_TOKEN`, …) → **409** with `{"error_code", "action": "relink"}`; transient/rate-limit conditions → **503** with `action: "retry"`; other Plaid failures → **502**. Access tokens and raw Plaid error internals (`error_message`, `request_id`) are never surfaced in responses or logs.
 
 ### Fixed
