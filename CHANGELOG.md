@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **First-year fee waiver now honored in the "apply for a new card" recommendation**
+  (`recommend_next_card`). The ranking objective is *total first-year value*, but the
+  score subtracted a card's full listed `annualFee` even when the card waives that fee
+  the first year (`isAnnualFeeWaived`). This understated the first-year value of the 13
+  waived-fee cards in the dataset by $79–$150 each, so they could be ranked below cards
+  that actually cost more in year one. A shared `_first_year_fee(card)` helper now
+  returns `$0` when `isAnnualFeeWaived` is set, and the score/explanation use it (the
+  explanation notes `"$X waived year 1"`). `analyze_portfolio` intentionally keeps the
+  full recurring `annualFee` — it judges whether a *held* card is worth keeping in
+  steady state, where the fee recurs every year. Score for non-waived cards is
+  unchanged. (#41)
+
 ### Added
 - **First-year ongoing-rewards term in the "apply for a new card" recommendation**
   (`recommend_next_card`). The score now models real earn — `bonus + ongoing −
