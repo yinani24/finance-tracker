@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Sign-up-bonus value in the recommendation engine (`recommend_next_card`) is now
+  **dollar-denominated**: cashback (`currency == "USD"`) bonuses count at face value
+  and points/miles convert at a configurable blended `FT_POINTS_VALUE_CENTS`
+  (default 1.0¢). Previously bonuses were summed as raw point counts and mixed with
+  dollar fees/credits, so a large points bonus could outrank a cashback card ~450×
+  purely on point magnitude. `score`, `bonus_value`, and the explanation string are
+  now all in dollars, so points and cashback cards rank on one scale (owner-confirmed
+  "total first-year value" objective). `_best_offer` ranks by the same USD valuation
+  for consistency. Response keys are unchanged (behavioral/valuation only).
+
 ### Fixed
 - **Broken Alembic migration chain on `main`** — migration `72bfe64b241f`
   (spending_profiles / recommendation_snapshots / `cards.issuer`) declared

@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     # the keyless "noop" provider so tests/CI stay hermetic; set to a real
     # provider (e.g. "ntropy", slice 2) once a key is provisioned.
     enrichment_provider: str = "noop"
+    # Blended cents-per-point used to value sign-up-bonus points/miles in
+    # dollars so points cards and cashback cards rank on one scale (the
+    # owner-confirmed "total first-year value" objective; see
+    # docs/prd/recommendation-engine.md). The dataset carries no point-program
+    # identifier, so a single flat rate is the only v1 option. 1.0¢ is a
+    # conservative floor; raise via FT_POINTS_VALUE_CENTS.
+    points_value_cents: float = 1.0
 
     model_config = {"env_prefix": "FT_"}
 

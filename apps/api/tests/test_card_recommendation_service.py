@@ -50,8 +50,11 @@ class TestRecommendNextCard:
         results = service.recommend_next_card(_make_profile(2000.0), [], SAMPLE_CARDS)
 
         assert len(results) > 0
-        # Platinum has highest bonus (150k) so should score highest
+        # Platinum wins on dollar value: 150k pts @ 1.0¢ = $1500, - $695 fee
+        # + $340 credits = $1145, ahead of Sapphire ($700) and Freedom ($250).
         assert results[0]["card"]["cardId"] == "card-platinum"
+        # bonus_value is now dollars, not raw points.
+        assert results[0]["bonus_value"] == 1500.0
 
     def test_filters_unachievable_bonuses(self):
         service = CardRecommendationService()
@@ -75,6 +78,84 @@ class TestRecommendNextCard:
         cards_no_offer = [{**SAMPLE_CARDS[0], "cardId": "card-no-offer", "offers": []}]
         results = service.recommend_next_card(_make_profile(3000.0), [], cards_no_offer)
         assert len(results) == 0
+
+
+class TestBonusValueUsd:
+    """Sign-up-bonus valuation in dollars (issue #24)."""
+
+    def test_usd_bonus_passes_through_at_face_value(self):
+        offer = {"amount": [{"amount": 200, "currency": "USD"}]}
+        assert CardRecommendationService._bonus_value_usd(offer) == 200.0
+
+    def test_points_convert_at_default_rate(self):
+        offer = {"amount": [{"amount": 75000}]}
+        # default 1.0¢/point → $750
+        assert CardRecommendationService._bonus_value_usd(offer) == 750.0
+
+    def test_points_rate_is_configurable(self):
+        offer = {"amount": [{"amount": 75000}]}
+        assert CardRecommendationService._bonus_value_usd(offer, 1.5) == 1125.0
+
+    def test_mixed_offer_sums_dollars_and_converted_points(self):
+        offer = {"amount": [{"amount": 50000}, {"amount": 100, "currency": "USD"}]}
+        # 50000 @ 1.0¢ = $500, + $100 face = $600
+        assert CardRecommendationService._bonus_value_usd(offer) == 600.0
+
+    def test_bonus_points_counts_only_non_usd_entries(self):
+        offer = {"amount": [{"amount": 50000}, {"amount": 100, "currency": "USD"}]}
+        assert CardRecommendationService._bonus_points(offer) == 50000.0
+
+
+class TestCrossTypeRanking:
+    """Points and cashback cards must rank on the same dollar scale (issue #24)."""
+
+    # A big-points card and a strong-cashback card constructed so the OLD
+    # points-magnitude scoring (90,000 > 500) would rank the points card first,
+    # while true dollar value ranks the cashback card first.
+    POINTS_CARD = {
+        "cardId": "card-bigpoints", "name": "Big Points", "issuer": "TESTBANK",
+        "network": "VISA", "annualFee": 600, "universalCashbackPercent": 1,
+        "credits": [],
+        "offers": [{"spend": 4000, "amount": [{"amount": 90000}], "days": 90, "credits": []}],
+        "discontinued": False,
+    }
+    CASHBACK_CARD = {
+        "cardId": "card-cashback", "name": "Cash Back", "issuer": "TESTBANK2",
+        "network": "VISA", "annualFee": 0, "universalCashbackPercent": 2,
+        "credits": [],
+        "offers": [
+            {
+                "spend": 3000,
+                "amount": [{"amount": 500, "currency": "USD"}],
+                "days": 90,
+                "credits": [],
+            }
+        ],
+        "discontinued": False,
+    }
+
+    def test_cashback_outranks_points_when_dollar_value_is_higher(self):
+        service = CardRecommendationService()
+        cards = [self.POINTS_CARD, self.CASHBACK_CARD]
+        results = service.recommend_next_card(_make_profile(2000.0), [], cards)
+
+        by_id = {r["card"]["cardId"]: r for r in results}
+        # Both achievable at $2000/mo ($4k in 90d = 2mo; $3k in 90d = 1.5mo).
+        assert set(by_id) == {"card-bigpoints", "card-cashback"}
+        # New dollar scores: points = $900 - $600 = $300; cashback = $500 - $0 = $500.
+        assert by_id["card-bigpoints"]["score"] == 300.0
+        assert by_id["card-cashback"]["score"] == 500.0
+        # Cashback now ranks first, reversing the old points-magnitude ordering.
+        assert results[0]["card"]["cardId"] == "card-cashback"
+
+    def test_explanation_is_dollar_denominated(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(_make_profile(2000.0), [], [self.POINTS_CARD])
+        explanation = results[0]["explanation"]
+        assert "$" in explanation
+        assert "bonus points" not in explanation
+        # points bonus shows the conversion clause
+        assert "pts @" in explanation
 
 
 class TestAnalyzePortfolio:
