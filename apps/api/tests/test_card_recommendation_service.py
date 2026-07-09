@@ -142,10 +142,12 @@ class TestCrossTypeRanking:
         by_id = {r["card"]["cardId"]: r for r in results}
         # Both achievable at $2000/mo ($4k in 90d = 2mo; $3k in 90d = 1.5mo).
         assert set(by_id) == {"card-bigpoints", "card-cashback"}
-        # New dollar scores: points = $900 - $600 = $300; cashback = $500 - $0 = $500.
-        assert by_id["card-bigpoints"]["score"] == 300.0
-        assert by_id["card-cashback"]["score"] == 500.0
-        # Cashback now ranks first, reversing the old points-magnitude ordering.
+        # Dollar scores now include flat first-year ongoing earn on $24k/yr:
+        #   points   = $900 bonus + $240 (1% × $24k) - $600 fee = $540
+        #   cashback = $500 bonus + $480 (2% × $24k) - $0   fee = $980
+        assert by_id["card-bigpoints"]["score"] == 540.0
+        assert by_id["card-cashback"]["score"] == 980.0
+        # Cashback still ranks first, reversing the old points-magnitude ordering.
         assert results[0]["card"]["cardId"] == "card-cashback"
 
     def test_explanation_is_dollar_denominated(self):
@@ -156,6 +158,105 @@ class TestCrossTypeRanking:
         assert "bonus points" not in explanation
         # points bonus shows the conversion clause
         assert "pts @" in explanation
+
+
+class TestOngoingRewards:
+    """First-year flat-cashback ongoing-rewards term in recommend_next_card (#35)."""
+
+    # The A-vs-B case from the issue, at $3,000/mo ($36k/yr). Both bonuses are
+    # trivially achievable (low spend, 90-day window) so ranking turns purely
+    # on true first-year value.
+    CARD_A = {
+        "cardId": "card-a", "name": "Everyday A", "issuer": "BANKA",
+        "network": "VISA", "annualFee": 0, "universalCashbackPercent": 2,
+        "credits": [],
+        "offers": [
+            {
+                "spend": 500,
+                "amount": [{"amount": 150, "currency": "USD"}],
+                "days": 90,
+                "credits": [],
+            }
+        ],
+        "discontinued": False,
+    }
+    CARD_B = {
+        "cardId": "card-b", "name": "Bonus B", "issuer": "BANKB",
+        "network": "VISA", "annualFee": 95, "universalCashbackPercent": 1,
+        "credits": [],
+        "offers": [
+            {
+                "spend": 500,
+                "amount": [{"amount": 250, "currency": "USD"}],
+                "days": 90,
+                "credits": [],
+            }
+        ],
+        "discontinued": False,
+    }
+
+    def test_ongoing_value_math(self):
+        # $3,000/mo × 12 × 2% = $720
+        assert CardRecommendationService._ongoing_value(2, 3000.0) == 720.0
+        # zero-cashback card earns nothing ongoing
+        assert CardRecommendationService._ongoing_value(0, 3000.0) == 0.0
+
+    def test_score_includes_bonus_and_ongoing(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(_make_profile(3000.0), [], [self.CARD_A])
+        r = results[0]
+        # $150 bonus + $720 ongoing - $0 fee + $0 credits
+        assert r["ongoing_value"] == 720.0
+        assert r["score"] == 870.0
+
+    def test_zero_cashback_card_scores_bonus_only(self):
+        service = CardRecommendationService()
+        zero = {**self.CARD_A, "cardId": "card-zero", "universalCashbackPercent": 0}
+        results = service.recommend_next_card(_make_profile(3000.0), [], [zero])
+        assert results[0]["ongoing_value"] == 0.0
+        assert results[0]["score"] == 150.0  # bonus only
+
+    def test_high_earn_no_fee_card_outranks_bonus_heavy_card(self):
+        """Regression: the exact A-vs-B inversion the issue calls out.
+
+        Old score (bonus - fee): A = 150, B = 155 → B wrongly ranked first.
+        New score adds ongoing earn: A = $870, B = $515 → A correctly first.
+        """
+        service = CardRecommendationService()
+        results = service.recommend_next_card(_make_profile(3000.0), [], [self.CARD_A, self.CARD_B])
+        by_id = {r["card"]["cardId"]: r for r in results}
+        assert by_id["card-a"]["score"] == 870.0   # 150 + 720
+        assert by_id["card-b"]["score"] == 515.0   # 250 + 360 - 95
+        assert results[0]["card"]["cardId"] == "card-a"
+
+    def test_ongoing_respects_achievability(self):
+        """A card whose bonus is unachievable is still skipped, ongoing or not."""
+        service = CardRecommendationService()
+        hard = {
+            **self.CARD_A, "cardId": "card-hard",
+            "offers": [
+                {
+                    "spend": 9000,
+                    "amount": [{"amount": 150, "currency": "USD"}],
+                    "days": 30,
+                    "credits": [],
+                }
+            ],
+        }
+        # $9k in 30 days needs $9k/mo; at $3k/mo it's unachievable → excluded.
+        results = service.recommend_next_card(_make_profile(3000.0), [], [hard])
+        assert results == []
+
+    def test_explanation_shows_all_four_components(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(_make_profile(3000.0), [], [self.CARD_A])
+        explanation = results[0]["explanation"]
+        assert "bonus" in explanation
+        assert "ongoing" in explanation
+        assert "credits" in explanation
+        assert "fee" in explanation
+        # the ongoing clause surfaces the rate and the annual spend it applies to
+        assert "2.0% on $36,000" in explanation
 
 
 class TestAnalyzePortfolio:

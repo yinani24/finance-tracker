@@ -64,6 +64,18 @@ class CardRecommendationService:
         credits: List[dict] = card.get("credits", [])
         return float(sum(c.get("value", 0) * c.get("weight", 1.0) for c in credits))
 
+    @staticmethod
+    def _ongoing_value(cashback_pct: float, avg_monthly_spend: float) -> float:
+        """First-year flat-cashback ongoing rewards, in **dollars**.
+
+        Single source of truth for the earn model shared by
+        ``recommend_next_card`` (apply-for-new) and ``analyze_portfolio``
+        (held cards), so the two modes can't drift. Flat model:
+        ``annual_spend × universalCashbackPercent``. Category-aware earn from
+        ``profile.category_breakdown`` is a future slice — this stays flat.
+        """
+        return avg_monthly_spend * 12 * cashback_pct / 100.0
+
     # ------------------------------------------------------------------ #
     # Public API                                                           #
     # ------------------------------------------------------------------ #
@@ -92,10 +104,12 @@ class CardRecommendationService:
         3. months_to_hit = min_spend / avg_monthly_spend
         4. achievable = months_to_hit <= (bonus_days / 30)
         5. Skip non-achievable
-        6. score = bonus_value - first_year_fee + credit_value
+        6. ongoing_value = avg_monthly_spend * 12 * universalCashbackPercent/100
+           (flat first-year earn, shared with analyze_portfolio)
+        7. score = bonus_value + ongoing_value - first_year_fee + credit_value
            (all dollar-denominated; credits = sum(value * weight))
-        7. Sort by score desc, return top max_results
-        8. Each result includes an explanation string
+        8. Sort by score desc, return top max_results
+        9. Each result includes an explanation string
         """
         avg_monthly_spend: float = profile.get("avg_monthly_spend", 0.0)
 
@@ -138,10 +152,15 @@ class CardRecommendationService:
             if months_to_hit > bonus_days / 30:
                 continue
 
-            # 6. Score
+            # 6. Ongoing rewards (flat first-year earn), shared with
+            #    analyze_portfolio so the two modes can't drift.
+            cashback_pct: float = float(card.get("universalCashbackPercent", 0))
+            ongoing_val = self._ongoing_value(cashback_pct, avg_monthly_spend)
+
+            # 7. Score
             annual_fee: float = float(card.get("annualFee", 0))
             credit_val = self._credit_value(card)
-            score = bonus_val - annual_fee + credit_val
+            score = bonus_val + ongoing_val - annual_fee + credit_val
 
             # 8. Explanation (dollar-denominated; show the points conversion
             #    only when the bonus is actually in points)
@@ -152,11 +171,14 @@ class CardRecommendationService:
                 )
             else:
                 bonus_phrase = f"Earn ~${bonus_val:,.0f} in bonus value"
+            annual_spend = avg_monthly_spend * 12
             explanation = (
                 f"{bonus_phrase} by spending "
                 f"${min_spend:,.0f} in {bonus_days} days. "
                 f"Estimated first-year value: ${score:,.0f} "
-                f"(bonus ${bonus_val:,.0f} - fee ${annual_fee:,.0f} + credits ${credit_val:,.0f})."
+                f"(bonus ${bonus_val:,.0f} + ongoing ${ongoing_val:,.0f} "
+                f"({cashback_pct:,.1f}% on ${annual_spend:,.0f}) "
+                f"- fee ${annual_fee:,.0f} + credits ${credit_val:,.0f})."
             )
 
             results.append(
@@ -164,6 +186,7 @@ class CardRecommendationService:
                     "card": card,
                     "score": score,
                     "bonus_value": bonus_val,
+                    "ongoing_value": ongoing_val,
                     "months_to_hit": months_to_hit,
                     "achievable": True,
                     "explanation": explanation,
@@ -219,8 +242,8 @@ class CardRecommendationService:
 
             # 2. estimated_annual_value
             estimated_annual_value = (
-                avg_monthly_spend * 12 * cashback_pct / 100.0
-            ) + credit_val
+                self._ongoing_value(cashback_pct, avg_monthly_spend) + credit_val
+            )
 
             # 3. net_value
             net_value = estimated_annual_value - annual_fee
@@ -252,7 +275,9 @@ class CardRecommendationService:
                         continue
                     alt_cashback = float(alt.get("universalCashbackPercent", 0))
                     alt_credit = self._credit_value(alt)
-                    alt_annual_value = avg_monthly_spend * 12 * alt_cashback / 100.0 + alt_credit
+                    alt_annual_value = (
+                        self._ongoing_value(alt_cashback, avg_monthly_spend) + alt_credit
+                    )
                     alt_net = alt_annual_value - alt_fee
                     if alt_net > net_value:
                         alternatives.append(
