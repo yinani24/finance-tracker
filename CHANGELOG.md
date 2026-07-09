@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open questions and a proposed Stage-1 decomposition.
 
 ### Added
+- **Per-category transaction-frequency metrics** in the spending profile — the
+  Phase-2 "how many times did I dine out" signal. `compute_profile` now records a
+  per-category transaction **count** (persisted in a new `category_counts_json`
+  column, added by Alembic migration `a1b2c3d4e5f6`), accumulated in the existing
+  single pass over transactions. `GET /recommendations/spending-profile` extends
+  each `categories[]` entry with `count`, `monthly_avg_count`, and `avg_per_txn`
+  (average ticket size), and adds a top-level `dining` rollup (null when absent).
+  Additive and non-breaking — existing response keys are unchanged.
 - Provider-swappable **transaction-enrichment layer** (`app/services/enrichment/`)
   over stored Plaid transactions. `sync_transactions` now runs newly-added rows
   through the configured `EnrichmentProvider` and overwrites `category` /

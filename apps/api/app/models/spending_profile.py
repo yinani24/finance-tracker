@@ -16,5 +16,8 @@ class SpendingProfile(Base):
     period_end: Mapped[date] = mapped_column(Date)
     avg_monthly_spend: Mapped[float] = mapped_column(Float, default=0.0)
     category_breakdown_json: Mapped[str] = mapped_column(Text, default="{}")
+    category_counts_json: Mapped[str] = mapped_column(
+        Text, default="{}", server_default="{}"
+    )
     top_merchants_json: Mapped[str] = mapped_column(Text, default="[]")
     computed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
