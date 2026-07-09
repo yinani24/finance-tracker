@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # identifier, so a single flat rate is the only v1 option. 1.0¢ is a
     # conservative floor; raise via FT_POINTS_VALUE_CENTS.
     points_value_cents: float = 1.0
+    # Local directory where uploaded bank statements are stored (the manual,
+    # Plaid-free import path). Dev default; a later slice swaps this for real
+    # object storage (S3 / Supabase Storage) behind the same file-storage
+    # interface. These are sensitive documents — keep the dir out of any
+    # web-served path. Override with FT_IMPORT_STORAGE_DIR.
+    import_storage_dir: str = "./var/imports"
 
     model_config = {"env_prefix": "FT_"}
 

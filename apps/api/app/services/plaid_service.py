@@ -1,5 +1,3 @@
-import hashlib
-import logging
 from datetime import datetime, timezone
 
 import plaid
@@ -17,10 +15,10 @@ from app.models.account import Account
 from app.models.plaid_item import PlaidItem
 from app.models.transaction import Transaction
 from app.repositories.plaid_item import PlaidItemRepository
-from app.services.enrichment import EnrichmentInput, get_provider
+from app.services.dedupe import generate_dedupe_hash as _generate_dedupe_hash
+from app.services.enrichment import EnrichmentInput
+from app.services.enrichment.apply import apply_enrichment as _apply_enrichment
 from app.services.plaid_errors import map_plaid_exception
-
-logger = logging.getLogger(__name__)
 
 PLAID_ENV_MAP = {
     "sandbox": plaid.Environment.Sandbox,
@@ -93,13 +91,6 @@ def exchange_public_token(client: plaid_api.PlaidApi, public_token: str) -> dict
     }
 
 
-def _generate_dedupe_hash(
-    date: str, amount: float, merchant: str, account_id: int
-) -> str:
-    raw = f"{date}|{amount}|{merchant}|{account_id}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
-
-
 def _find_or_create_account(
     db: Session, user_id: int, plaid_account: dict, plaid_item: PlaidItem
 ) -> Account:
@@ -138,40 +129,6 @@ def _find_or_create_account(
     db.commit()
     db.refresh(account)
     return account
-
-
-def _apply_enrichment(rows: list[tuple[Transaction, EnrichmentInput]]) -> None:
-    """Enrich a batch of freshly-built transaction rows in place.
-
-    Fail-open by design: if the provider errors or returns a mismatched batch,
-    log and leave the raw Plaid values untouched. Enrichment is an accuracy
-    upgrade, not a correctness dependency — a provider outage must never break
-    transaction ingest. With the default ``noop`` provider this is a no-op.
-    """
-    if not rows:
-        return
-    provider = get_provider()
-    inputs = [inp for _, inp in rows]
-    try:
-        results = provider.enrich(inputs)
-    except Exception:  # noqa: BLE001 - provider is untrusted; never break sync
-        logger.warning(
-            "enrichment provider failed; keeping raw Plaid categories",
-            exc_info=True,
-        )
-        return
-    if len(results) != len(inputs):
-        logger.warning(
-            "enrichment returned %d results for %d inputs; keeping raw categories",
-            len(results),
-            len(inputs),
-        )
-        return
-    for (row, _), result in zip(rows, results):
-        if result.category is not None:
-            row.category = result.category
-        if result.normalized_merchant is not None:
-            row.normalized_merchant = result.normalized_merchant
 
 
 def sync_transactions(

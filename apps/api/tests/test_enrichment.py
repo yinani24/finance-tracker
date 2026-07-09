@@ -152,7 +152,7 @@ class TestSyncEnrichmentHook:
     def test_provider_overwrites_category_and_merchant(self, client, db_session):
         self._item_id = self._make_plaid_item(db_session).id
         with patch(
-            "app.services.plaid_service.get_provider", return_value=_FakeProvider()
+            "app.services.enrichment.apply.get_provider", return_value=_FakeProvider()
         ):
             resp = self._run_sync(client)
         assert resp.status_code == 200
@@ -165,7 +165,7 @@ class TestSyncEnrichmentHook:
     def test_fail_open_keeps_raw_category(self, client, db_session):
         self._item_id = self._make_plaid_item(db_session).id
         with patch(
-            "app.services.plaid_service.get_provider", return_value=_BoomProvider()
+            "app.services.enrichment.apply.get_provider", return_value=_BoomProvider()
         ):
             resp = self._run_sync(client)
         # Provider blew up, but ingest must still succeed with raw Plaid values.
