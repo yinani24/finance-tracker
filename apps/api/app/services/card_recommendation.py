@@ -65,6 +65,22 @@ class CardRecommendationService:
         return float(sum(c.get("value", 0) * c.get("weight", 1.0) for c in credits))
 
     @staticmethod
+    def _first_year_fee(card: dict) -> float:
+        """Annual fee actually paid in the **first year**, in dollars.
+
+        The owner-confirmed objective ranks by *first-year* value, so a card
+        whose annual fee is waived the first year (``isAnnualFeeWaived``) costs
+        $0 in year one even though it lists a nonzero ``annualFee``. Applied in
+        ``recommend_next_card`` (the apply-for-new first-year-value ranking).
+        ``analyze_portfolio`` intentionally keeps the full recurring
+        ``annualFee`` — it judges whether a *held* card is worth keeping in
+        steady state, where the fee is paid every year, not just year one.
+        """
+        if card.get("isAnnualFeeWaived"):
+            return 0.0
+        return float(card.get("annualFee", 0))
+
+    @staticmethod
     def _ongoing_value(cashback_pct: float, avg_monthly_spend: float) -> float:
         """First-year flat-cashback ongoing rewards, in **dollars**.
 
@@ -157,10 +173,13 @@ class CardRecommendationService:
             cashback_pct: float = float(card.get("universalCashbackPercent", 0))
             ongoing_val = self._ongoing_value(cashback_pct, avg_monthly_spend)
 
-            # 7. Score
+            # 7. Score. First-year fee is $0 when the card waives its annual
+            #    fee the first year (isAnnualFeeWaived) — the objective is
+            #    first-year value, so a waived fee must not be subtracted.
             annual_fee: float = float(card.get("annualFee", 0))
+            first_year_fee = self._first_year_fee(card)
             credit_val = self._credit_value(card)
-            score = bonus_val + ongoing_val - annual_fee + credit_val
+            score = bonus_val + ongoing_val - first_year_fee + credit_val
 
             # 8. Explanation (dollar-denominated; show the points conversion
             #    only when the bonus is actually in points)
@@ -172,13 +191,17 @@ class CardRecommendationService:
             else:
                 bonus_phrase = f"Earn ~${bonus_val:,.0f} in bonus value"
             annual_spend = avg_monthly_spend * 12
+            if first_year_fee == 0 and annual_fee > 0:
+                fee_clause = f"- fee $0 (${annual_fee:,.0f} waived year 1)"
+            else:
+                fee_clause = f"- fee ${first_year_fee:,.0f}"
             explanation = (
                 f"{bonus_phrase} by spending "
                 f"${min_spend:,.0f} in {bonus_days} days. "
                 f"Estimated first-year value: ${score:,.0f} "
                 f"(bonus ${bonus_val:,.0f} + ongoing ${ongoing_val:,.0f} "
                 f"({cashback_pct:,.1f}% on ${annual_spend:,.0f}) "
-                f"- fee ${annual_fee:,.0f} + credits ${credit_val:,.0f})."
+                f"{fee_clause} + credits ${credit_val:,.0f})."
             )
 
             results.append(
