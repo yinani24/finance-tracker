@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Added `docs/prd/recommendation-engine.md` (Phases 4–5 PRD). Documents the
+  owner-confirmed "total first-year value" objective and reconciles it against the
+  existing `card_recommendation.py` engine, flagging the gap: ongoing category-aware
+  rewards (half the objective, and the reason we read dining habits) are not yet
+  modeled, and bonus points are summed without a cents-per-point valuation. Includes
+  open questions and a proposed Stage-1 decomposition.
+
 ### Added
 - OAuth institution support for Plaid Link (Chase, Bank of America, Wells Fargo,
   Capital One, …). `create_link_token` now sends a `redirect_uri` when
