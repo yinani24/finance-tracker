@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     plaid_webhook_verify: bool = True
     anthropic_api_key: str = ""
     card_bonuses_url: str = ""
+    # Transaction-enrichment provider (see app/services/enrichment). Defaults to
+    # the keyless "noop" provider so tests/CI stay hermetic; set to a real
+    # provider (e.g. "ntropy", slice 2) once a key is provisioned.
+    enrichment_provider: str = "noop"
 
     model_config = {"env_prefix": "FT_"}
 
