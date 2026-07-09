@@ -4,6 +4,7 @@ import hashlib
 import json
 from typing import List, Literal
 
+from app.config import settings
 from app.models.insight import Insight
 from app.services.card_bonuses import fetch_cards_sync
 from app.services.card_recommendation import CardRecommendationService
@@ -67,7 +68,13 @@ class CardInsightEngine:
         profile_json = json.dumps(profile_dict, sort_keys=True)
         cards_json = json.dumps(user_cards, sort_keys=True)
 
-        next_cards = svc.recommend_next_card(profile_dict, user_cards, available_cards, max_results=5)
+        next_cards = svc.recommend_next_card(
+            profile_dict,
+            user_cards,
+            available_cards,
+            max_results=5,
+            points_value_cents=settings.points_value_cents,
+        )
         for rec in next_cards:
             card = rec["card"]
             bonus_val = rec["bonus_value"]
@@ -81,7 +88,7 @@ class CardInsightEngine:
                 evidence={
                     "summary": rec["explanation"],
                     "data_points": [
-                        {"label": "Sign-up bonus", "value": f"{bonus_val:,.0f} pts"},
+                        {"label": "Sign-up bonus value", "value": f"${bonus_val:,.0f}"},
                         {"label": "Score", "value": f"{rec['score']:,.0f}"},
                         {"label": "Months to hit", "value": f"{rec['months_to_hit']:.1f}"},
                     ],

@@ -15,16 +15,49 @@ class CardRecommendationService:
         return f"{name.lower()}|{issuer.upper()}"
 
     @staticmethod
-    def _best_offer(card: dict) -> Optional[dict]:
-        """Return the offer with the highest total bonus amount, or None."""
+    def _best_offer(card: dict, points_value_cents: float = 1.0) -> Optional[dict]:
+        """Return the offer with the highest dollar-valued bonus, or None.
+
+        Ranks by the same USD valuation used for scoring so "best offer" and
+        the final score agree even for a card mixing points and cashback
+        offers (none exist in the current dataset, but this keeps the two
+        code paths consistent).
+        """
         offers: List[dict] = card.get("offers", [])
         if not offers:
             return None
-        return max(offers, key=lambda o: sum(a.get("amount", 0) for a in o.get("amount", [])))
+        return max(
+            offers,
+            key=lambda o: CardRecommendationService._bonus_value_usd(o, points_value_cents),
+        )
 
     @staticmethod
-    def _bonus_value(offer: dict) -> float:
-        return float(sum(a.get("amount", 0) for a in offer.get("amount", [])))
+    def _bonus_value_usd(offer: dict, points_value_cents: float = 1.0) -> float:
+        """Value a sign-up bonus in **dollars**.
+
+        Each entry in ``offer["amount"]`` is either a cashback bonus
+        (``currency == "USD"``, valued at face value) or a points/miles bonus
+        (no ``currency`` field, valued at ``points_value_cents`` per point).
+        """
+        total = 0.0
+        for a in offer.get("amount", []):
+            amount = a.get("amount", 0)
+            if a.get("currency") == "USD":
+                total += float(amount)
+            else:
+                total += float(amount) * points_value_cents / 100.0
+        return total
+
+    @staticmethod
+    def _bonus_points(offer: dict) -> float:
+        """Sum of raw point/mile amounts (non-USD entries) for display."""
+        return float(
+            sum(
+                a.get("amount", 0)
+                for a in offer.get("amount", [])
+                if a.get("currency") != "USD"
+            )
+        )
 
     @staticmethod
     def _credit_value(card: dict) -> float:
@@ -41,6 +74,7 @@ class CardRecommendationService:
         user_cards: List[dict],
         available_cards: List[dict],
         max_results: int = 10,
+        points_value_cents: float = 1.0,
     ) -> List[dict]:
         """
         Rank available cards by sign-up bonus achievability.
@@ -52,12 +86,14 @@ class CardRecommendationService:
         Logic:
         1. Skip discontinued cards, cards with no offers, cards user already owns
            (matched by name.lower() + issuer.upper())
-        2. For best offer on each card: bonus_value = sum of amount fields
+        2. For best offer on each card: bonus_value = dollar value of the
+           bonus (USD entries at face value, points/miles at
+           ``points_value_cents`` per point)
         3. months_to_hit = min_spend / avg_monthly_spend
         4. achievable = months_to_hit <= (bonus_days / 30)
         5. Skip non-achievable
         6. score = bonus_value - first_year_fee + credit_value
-           (credits = sum(value * weight))
+           (all dollar-denominated; credits = sum(value * weight))
         7. Sort by score desc, return top max_results
         8. Each result includes an explanation string
         """
@@ -81,12 +117,13 @@ class CardRecommendationService:
                 continue
 
             # 1c. Skip cards with no offers
-            offer = self._best_offer(card)
+            offer = self._best_offer(card, points_value_cents)
             if offer is None:
                 continue
 
-            # 2. Bonus value
-            bonus_val = self._bonus_value(offer)
+            # 2. Bonus value (in dollars)
+            bonus_val = self._bonus_value_usd(offer, points_value_cents)
+            bonus_points = self._bonus_points(offer)
 
             # 3. months_to_hit
             min_spend: float = float(offer.get("spend", 0))
@@ -106,12 +143,20 @@ class CardRecommendationService:
             credit_val = self._credit_value(card)
             score = bonus_val - annual_fee + credit_val
 
-            # 8. Explanation
+            # 8. Explanation (dollar-denominated; show the points conversion
+            #    only when the bonus is actually in points)
+            if bonus_points > 0:
+                bonus_phrase = (
+                    f"Earn ~${bonus_val:,.0f} in value "
+                    f"({bonus_points:,.0f} pts @ {points_value_cents:.1f}¢)"
+                )
+            else:
+                bonus_phrase = f"Earn ~${bonus_val:,.0f} in bonus value"
             explanation = (
-                f"Earn {bonus_val:,.0f} bonus points by spending "
+                f"{bonus_phrase} by spending "
                 f"${min_spend:,.0f} in {bonus_days} days. "
-                f"Estimated score: {score:,.0f} "
-                f"(bonus {bonus_val:,.0f} - fee {annual_fee:,.0f} + credits {credit_val:,.0f})."
+                f"Estimated first-year value: ${score:,.0f} "
+                f"(bonus ${bonus_val:,.0f} - fee ${annual_fee:,.0f} + credits ${credit_val:,.0f})."
             )
 
             results.append(
