@@ -7,6 +7,7 @@ from typing import Dict, List
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models.card import Card
 from app.repositories.recommendation_snapshot import RecommendationSnapshotRepository
 from app.services.card_bonuses import fetch_cards_sync
@@ -88,7 +89,10 @@ class RecommendationSnapshotService:
 
         if rec_type == "next_card":
             results = self.rec_service.recommend_next_card(
-                profile_dict, user_cards, available_cards
+                profile_dict,
+                user_cards,
+                available_cards,
+                points_value_cents=settings.points_value_cents,
             )
             result_key = "recommendations"
         else:
