@@ -292,6 +292,58 @@ class TestAnalyzePortfolio:
         assert result == []
 
 
+class TestAlternativesExclusions:
+    """analyze_portfolio alternatives must only suggest actionable cards —
+    never discontinued or already-owned ones (parity with recommend_next_card, #44).
+    """
+
+    # A held card that will be flagged non-good: $95 fee, 1% earn at $500/mo
+    # ($60/yr) nets negative, so alternatives are computed.
+    HELD = {"name": "Held Card", "issuer": "HELDBANK", "network": "VISA", "annual_fee": 95}
+    HELD_CARD = {
+        "cardId": "card-held", "name": "Held Card", "issuer": "HELDBANK",
+        "network": "VISA", "annualFee": 95, "isAnnualFeeWaived": False,
+        "universalCashbackPercent": 1, "credits": [], "offers": [],
+        "discontinued": False,
+    }
+    # A strong $0-fee 2% alternative — would be a top alternative if eligible.
+    GOOD_ALT = {
+        "cardId": "card-goodalt", "name": "Good Alt", "issuer": "ALTBANK",
+        "network": "VISA", "annualFee": 0, "isAnnualFeeWaived": False,
+        "universalCashbackPercent": 2, "credits": [], "offers": [],
+        "discontinued": False,
+    }
+
+    def _alt_ids(self, result):
+        return [a["card"]["cardId"] for a in result[0]["alternatives"]]
+
+    def test_discontinued_card_excluded_from_alternatives(self):
+        service = CardRecommendationService()
+        disc_alt = {**self.GOOD_ALT, "cardId": "card-disc", "name": "Disc Alt",
+                    "issuer": "DISCBANK", "discontinued": True}
+        cards = [self.HELD_CARD, disc_alt]
+        result = service.analyze_portfolio(_make_profile(500.0), [self.HELD], cards)
+        assert result[0]["status"] != "good"
+        assert "card-disc" not in self._alt_ids(result)
+
+    def test_already_owned_card_excluded_from_alternatives(self):
+        service = CardRecommendationService()
+        # User owns both the flagged card AND the otherwise-attractive alternative.
+        owned_alt = {"name": "Good Alt", "issuer": "ALTBANK"}
+        cards = [self.HELD_CARD, self.GOOD_ALT]
+        result = service.analyze_portfolio(
+            _make_profile(500.0), [self.HELD, owned_alt], cards
+        )
+        assert "card-goodalt" not in self._alt_ids(result)
+
+    def test_valid_alternative_still_surfaced(self):
+        service = CardRecommendationService()
+        cards = [self.HELD_CARD, self.GOOD_ALT]
+        result = service.analyze_portfolio(_make_profile(500.0), [self.HELD], cards)
+        assert result[0]["status"] != "good"
+        assert "card-goodalt" in self._alt_ids(result)
+
+
 class TestFirstYearFeeWaiver:
     """First-year fee waiver (isAnnualFeeWaived) in recommend_next_card (#41).
 
