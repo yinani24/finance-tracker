@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Added `docs/prd/recommendation-engine.md` (Phases 4–5 PRD). Documents the
+  owner-confirmed "total first-year value" objective and reconciles it against the
+  existing `card_recommendation.py` engine, flagging the gap: ongoing category-aware
+  rewards (half the objective, and the reason we read dining habits) are not yet
+  modeled, and bonus points are summed without a cents-per-point valuation. Includes
+  open questions and a proposed Stage-1 decomposition.
+
 ### Added
 - Provider-swappable **transaction-enrichment layer** (`app/services/enrichment/`)
   over stored Plaid transactions. `sync_transactions` now runs newly-added rows
@@ -18,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ingest never breaks. Ships a fixed internal category taxonomy
   (`dining, groceries, travel, transport, shopping, bills, entertainment, health,
   income, other`) with a `map_to_internal` mapper for wiring real providers next.
+- OAuth institution support for Plaid Link (Chase, Bank of America, Wells Fargo,
+  Capital One, …). `create_link_token` now sends a `redirect_uri` when
+  `FT_PLAID_REDIRECT_URI` is configured, and the web `PlaidLinkButton` completes
+  the OAuth round-trip (persists the link token across the redirect, passes
+  `receivedRedirectUri`, and re-opens Link on return). Without this, selecting an
+  OAuth bank failed in Link with a generic error; non-OAuth sandbox banks are
+  unaffected (no `redirect_uri` sent when the setting is blank). The redirect URI
+  must also be registered in the Plaid Dashboard — see `.env.example`.
 - Plaid API errors are now mapped to meaningful HTTP responses instead of unhandled 500s: re-link conditions (`ITEM_LOGIN_REQUIRED`, `INVALID_ACCESS_TOKEN`, …) → **409** with `{"error_code", "action": "relink"}`; transient/rate-limit conditions → **503** with `action: "retry"`; other Plaid failures → **502**. Access tokens and raw Plaid error internals (`error_message`, `request_id`) are never surfaced in responses or logs.
 
 ### Fixed

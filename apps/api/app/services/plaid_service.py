@@ -70,6 +70,12 @@ def create_link_token(client: plaid_api.PlaidApi, user_id: int) -> dict:
     # sandbox links without a public URL keep working.
     if settings.plaid_webhook_url:
         request_kwargs["webhook"] = settings.plaid_webhook_url
+    # OAuth institutions (Chase, BofA, Wells Fargo, Capital One, …) require a
+    # redirect_uri registered in the Plaid Dashboard; without it Link fails when
+    # the user selects one. Only send it when configured so non-OAuth sandbox
+    # links keep working without any Dashboard setup.
+    if settings.plaid_redirect_uri:
+        request_kwargs["redirect_uri"] = settings.plaid_redirect_uri
     request = LinkTokenCreateRequest(**request_kwargs)
     response = _call(client.link_token_create, request)
     return {
