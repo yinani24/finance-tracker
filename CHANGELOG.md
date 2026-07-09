@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open questions and a proposed Stage-1 decomposition.
 
 ### Added
+- Provider-swappable **transaction-enrichment layer** (`app/services/enrichment/`)
+  over stored Plaid transactions. `sync_transactions` now runs newly-added rows
+  through the configured `EnrichmentProvider` and overwrites `category` /
+  `normalized_merchant` from the result. The default `noop` provider echoes the
+  raw Plaid values back unchanged, so behavior is identical until a real provider
+  is configured via `FT_ENRICHMENT_PROVIDER`. Enrichment is fail-open — a provider
+  error or mismatched batch is logged and the raw Plaid category is kept, so
+  ingest never breaks. Ships a fixed internal category taxonomy
+  (`dining, groceries, travel, transport, shopping, bills, entertainment, health,
+  income, other`) with a `map_to_internal` mapper for wiring real providers next.
 - OAuth institution support for Plaid Link (Chase, Bank of America, Wells Fargo,
   Capital One, …). `create_link_token` now sends a `redirect_uri` when
   `FT_PLAID_REDIRECT_URI` is configured, and the web `PlaidLinkButton` completes
