@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **First-year ongoing-rewards term in the "apply for a new card" recommendation**
+  (`recommend_next_card`). The score now models real earn — `bonus + ongoing −
+  fee + credits` — where `ongoing = avg_monthly_spend × 12 × universalCashbackPercent`
+  (flat cashback). Previously a card was ranked on its sign-up bonus, credits, and
+  fee alone, so a strong everyday-earn no-fee card could lose to a bonus-heavy fee
+  card even when it delivered far more first-year value. Each result now exposes an
+  `ongoing_value` component (additive; existing keys unchanged) and the explanation
+  string surfaces all four value components (bonus / ongoing / credits / fee). The
+  flat-earn calc is now a shared `_ongoing_value` helper used by both
+  `recommend_next_card` and `analyze_portfolio`, so the two modes can't drift.
+  Category-aware earn (per `category_breakdown`) remains a future slice. (#35)
 - **Manual CSV bank-statement import (Plaid-free ingest path)** — `POST /imports`
   accepts a multipart CSV upload plus an `account_id`, stores the file, and parses
   single-signed-amount rows (tolerant date/`$`/comma/parenthesis handling) into
