@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     plaid_secret: str = ""
     plaid_env: str = "sandbox"
     plaid_webhook_url: str = ""
+    # OAuth redirect URI. REQUIRED to link OAuth institutions (Chase, Bank of
+    # America, Wells Fargo, Capital One, …); without it Link errors out when
+    # such a bank is selected. Must EXACTLY match an "Allowed redirect URI"
+    # registered in the Plaid Dashboard and the page hosting Plaid Link. Leave
+    # blank for sandbox non-OAuth test banks. See docs/prd/plaid-integration.md.
+    plaid_redirect_uri: str = ""
     # Verify the Plaid-Verification JWT on inbound webhooks. Defaults on; set
     # FT_PLAID_WEBHOOK_VERIFY=false only for local/sandbox testing without a
     # publicly reachable URL (see docs/prd/plaid-integration.md Q3).
