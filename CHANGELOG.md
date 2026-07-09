@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- OAuth institution support for Plaid Link (Chase, Bank of America, Wells Fargo,
+  Capital One, …). `create_link_token` now sends a `redirect_uri` when
+  `FT_PLAID_REDIRECT_URI` is configured, and the web `PlaidLinkButton` completes
+  the OAuth round-trip (persists the link token across the redirect, passes
+  `receivedRedirectUri`, and re-opens Link on return). Without this, selecting an
+  OAuth bank failed in Link with a generic error; non-OAuth sandbox banks are
+  unaffected (no `redirect_uri` sent when the setting is blank). The redirect URI
+  must also be registered in the Plaid Dashboard — see `.env.example`.
 - Plaid API errors are now mapped to meaningful HTTP responses instead of unhandled 500s: re-link conditions (`ITEM_LOGIN_REQUIRED`, `INVALID_ACCESS_TOKEN`, …) → **409** with `{"error_code", "action": "relink"}`; transient/rate-limit conditions → **503** with `action: "retry"`; other Plaid failures → **502**. Access tokens and raw Plaid error internals (`error_message`, `request_id`) are never surfaced in responses or logs.
 
 ### Fixed
