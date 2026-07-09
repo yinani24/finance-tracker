@@ -290,3 +290,68 @@ class TestAnalyzePortfolio:
         service = CardRecommendationService()
         result = service.analyze_portfolio(_make_profile(2000.0), [], SAMPLE_CARDS)
         assert result == []
+
+
+class TestFirstYearFeeWaiver:
+    """First-year fee waiver (isAnnualFeeWaived) in recommend_next_card (#41).
+
+    The objective is *first-year* value, so a card that waives its annual fee
+    the first year costs $0 in year one — its listed annualFee must not be
+    subtracted from the first-year score.
+    """
+
+    # $95 fee waived the first year; both cards below are otherwise identical
+    # and their bonuses are trivially achievable at $3,000/mo.
+    WAIVED = {
+        "cardId": "card-waived", "name": "Waived W", "issuer": "BANKW",
+        "network": "VISA", "annualFee": 95, "isAnnualFeeWaived": True,
+        "universalCashbackPercent": 1, "credits": [],
+        "offers": [
+            {
+                "spend": 500,
+                "amount": [{"amount": 200, "currency": "USD"}],
+                "days": 90,
+                "credits": [],
+            }
+        ],
+        "discontinued": False,
+    }
+    UNWAIVED = {**WAIVED, "cardId": "card-unwaived", "name": "Unwaived U",
+                "issuer": "BANKU", "isAnnualFeeWaived": False}
+
+    def test_first_year_fee_waived_is_zero(self):
+        assert CardRecommendationService._first_year_fee(
+            {"annualFee": 95, "isAnnualFeeWaived": True}
+        ) == 0.0
+
+    def test_first_year_fee_not_waived_is_full(self):
+        assert CardRecommendationService._first_year_fee(
+            {"annualFee": 95, "isAnnualFeeWaived": False}
+        ) == 95.0
+
+    def test_first_year_fee_missing_flag_defaults_to_full(self):
+        # A card with no isAnnualFeeWaived key pays the full fee.
+        assert CardRecommendationService._first_year_fee({"annualFee": 95}) == 95.0
+
+    def test_score_excludes_waived_fee(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(_make_profile(3000.0), [], [self.WAIVED])
+        # $200 bonus + $360 ongoing (1% of $36k) - $0 first-year fee + $0 credits
+        assert results[0]["score"] == 560.0
+
+    def test_waived_card_outranks_identical_unwaived_by_the_fee(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(
+            _make_profile(3000.0), [], [self.UNWAIVED, self.WAIVED]
+        )
+        by_id = {r["card"]["cardId"]: r for r in results}
+        assert by_id["card-waived"]["score"] == 560.0     # fee waived year 1
+        assert by_id["card-unwaived"]["score"] == 465.0   # 560 - 95 fee
+        assert results[0]["card"]["cardId"] == "card-waived"
+
+    def test_explanation_notes_the_waiver(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(_make_profile(3000.0), [], [self.WAIVED])
+        explanation = results[0]["explanation"]
+        assert "waived year 1" in explanation
+        assert "fee $0" in explanation
