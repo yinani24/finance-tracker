@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Manual CSV bank-statement import (Plaid-free ingest path)** — `POST /imports`
+  accepts a multipart CSV upload plus an `account_id`, stores the file, and parses
+  single-signed-amount rows (tolerant date/`$`/comma/parenthesis handling) into
+  deduplicated `Transaction`s (`source="import"`) under that account. Imported rows
+  flow through the same dedupe fingerprint and enrichment hook as Plaid sync, so
+  they categorize identically. Re-uploading a statement adds nothing (idempotent);
+  unparseable rows are skipped and counted; a bad/empty/non-CSV file records the
+  import as `failed` and returns 400 with no partial rows. `GET /imports` and
+  `GET /imports/{id}` report status + imported-transaction count. New
+  `FT_IMPORT_STORAGE_DIR` (local dev storage). Amount sign convention (negative =
+  spend) is documented and flagged for owner confirmation. (#22, slice 1)
+- Shared `app/services/dedupe.py` and `app/services/enrichment/apply.py` extract the
+  transaction dedupe-hash and enrichment-apply logic so the Plaid and import ingest
+  paths cannot drift; `plaid_service` now delegates to both (behavior unchanged).
+
 ### Changed
 - Sign-up-bonus value in the recommendation engine (`recommend_next_card`) is now
   **dollar-denominated**: cashback (`currency == "USD"`) bonuses count at face value
