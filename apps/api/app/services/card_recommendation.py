@@ -242,6 +242,14 @@ class CardRecommendationService:
         """
         avg_monthly_spend: float = profile.get("avg_monthly_spend", 0.0)
 
+        # Cards the user already holds — alternatives must never suggest one of
+        # these (you can't "switch to" a card you already own). Mirrors the
+        # owned-card exclusion in recommend_next_card.
+        owned_keys = {
+            self._card_key(c.get("name", ""), c.get("issuer", ""))
+            for c in user_cards
+        }
+
         # Build lookup for available cards
         available_by_key: Dict[str, dict] = {}
         for ac in available_cards:
@@ -290,8 +298,14 @@ class CardRecommendationService:
             alternatives: List[dict] = []
             if status != "good":
                 for alt in available_cards:
+                    # Only suggest cards the user can actually act on: skip
+                    # discontinued cards (can't be applied for) and any card the
+                    # user already owns (subsumes skipping the analyzed card,
+                    # which is itself owned). Mirrors recommend_next_card.
+                    if alt.get("discontinued", False):
+                        continue
                     alt_key = self._card_key(alt.get("name", ""), alt.get("issuer", ""))
-                    if alt_key == key:
+                    if alt_key in owned_keys:
                         continue
                     alt_fee = float(alt.get("annualFee", 0))
                     if alt_fee > annual_fee:

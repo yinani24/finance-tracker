@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Wallet analysis (`analyze_portfolio`) no longer suggests discontinued or
+  already-owned cards as alternatives.** When a held card is flagged
+  underperforming, the engine proposes better-net-value alternatives — but the
+  loop excluded only the exact card being analyzed, so it could recommend
+  "switch to" a **discontinued** card (3 attractive $0-fee ones exist in the
+  dataset — US Bank Altitude Reserve/Smartly at 2%, Amex Everyday) or a card the
+  user **already holds**. It now skips `discontinued` cards and any card in
+  `user_cards`, matching the exclusions `recommend_next_card` already enforces.
+  Otherwise-eligible alternatives are unaffected. (#44)
 - **First-year fee waiver now honored in the "apply for a new card" recommendation**
   (`recommend_next_card`). The ranking objective is *total first-year value*, but the
   score subtracted a card's full listed `annualFee` even when the card waives that fee
