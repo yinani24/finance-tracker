@@ -1,7 +1,7 @@
 """add spending_profiles recommendation_snapshots and card issuer
 
 Revision ID: 72bfe64b241f
-Revises: 24568b8e4f03
+Revises: 0b62d248f5e8
 Create Date: 2026-04-12 16:45:05.147071
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '72bfe64b241f'
-down_revision: Union[str, Sequence[str], None] = '24568b8e4f03'
+down_revision: Union[str, Sequence[str], None] = '0b62d248f5e8'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

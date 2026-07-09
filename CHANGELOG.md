@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Broken Alembic migration chain on `main`** — migration `72bfe64b241f`
+  (spending_profiles / recommendation_snapshots / `cards.issuer`) declared
+  `down_revision = '24568b8e4f03'`, a phantom revision that was never committed
+  anywhere in history, splitting the version graph into two disconnected chains
+  and making `alembic upgrade head` fail outright. Repointed its `down_revision`
+  to the real predecessor at creation time, `0b62d248f5e8`, restoring a single
+  linear chain (`001 → 0b62d248f5e8 → 72bfe64b241f → 14fc7f6a99e3`). No schema
+  or DDL change — history-metadata only. Unblocks all migration-bearing work
+  (e.g. #23/#25, #24).
+
 ### Documentation
 - Added `docs/prd/recommendation-engine.md` (Phases 4–5 PRD). Documents the
   owner-confirmed "total first-year value" objective and reconciles it against the
