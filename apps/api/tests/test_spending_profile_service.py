@@ -82,6 +82,28 @@ class TestComputeProfile:
         profile = compute_profile(db_session, seed_user.id, lookback_months=6)
         assert profile.avg_monthly_spend == 0.0
 
+    def test_records_category_counts(self, db_session: Session, seed_user: User):
+        _seed_transactions(db_session, seed_user)
+        import json
+
+        from app.services.spending_profile import compute_profile
+
+        profile = compute_profile(db_session, seed_user.id, lookback_months=6)
+        counts = json.loads(profile.category_counts_json)
+        # 3 food-and-drink txns, 1 travel, 1 groceries (income excluded).
+        assert counts["food and drink"] == 3
+        assert counts["travel"] == 1
+        assert counts["groceries"] == 1
+        assert "income" not in counts
+
+    def test_empty_profile_has_empty_counts(self, db_session: Session, seed_user: User):
+        import json
+
+        from app.services.spending_profile import compute_profile
+
+        profile = compute_profile(db_session, seed_user.id, lookback_months=6)
+        assert json.loads(profile.category_counts_json) == {}
+
 
 class TestGetOrRefresh:
     def test_caches_when_no_new_transactions(self, db_session: Session, seed_user: User):

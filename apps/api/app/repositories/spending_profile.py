@@ -19,13 +19,15 @@ class SpendingProfileRepository:
 
     def upsert(self, user_id: int, period_start: date, period_end: date,
                avg_monthly_spend: float, category_breakdown_json: str,
-               top_merchants_json: str) -> SpendingProfile:
+               top_merchants_json: str,
+               category_counts_json: str = "{}") -> SpendingProfile:
         existing = self.get_by_user(user_id)
         if existing:
             existing.period_start = period_start
             existing.period_end = period_end
             existing.avg_monthly_spend = avg_monthly_spend
             existing.category_breakdown_json = category_breakdown_json
+            existing.category_counts_json = category_counts_json
             existing.top_merchants_json = top_merchants_json
             existing.computed_at = datetime.now(timezone.utc)
             self.db.commit()
@@ -35,6 +37,7 @@ class SpendingProfileRepository:
             user_id=user_id, period_start=period_start, period_end=period_end,
             avg_monthly_spend=avg_monthly_spend,
             category_breakdown_json=category_breakdown_json,
+            category_counts_json=category_counts_json,
             top_merchants_json=top_merchants_json,
         )
         self.db.add(profile)

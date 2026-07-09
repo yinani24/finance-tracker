@@ -61,6 +61,7 @@ def compute_profile(
             avg_monthly_spend=0.0,
             category_breakdown_json="{}",
             top_merchants_json="[]",
+            category_counts_json="{}",
         )
 
     # Determine actual period from transactions
@@ -71,11 +72,15 @@ def compute_profile(
     total_spend = sum(abs(t.amount) for t in transactions)
     avg_monthly_spend = total_spend / months
 
-    # Category breakdown: monthly average per category
+    # Category breakdown: monthly average per category, plus transaction counts
+    # (the frequency signal — "how many times did I dine out"). Both accumulated
+    # in the same pass, no extra query.
     category_totals: Dict[str, float] = defaultdict(float)
+    category_counts: Dict[str, int] = defaultdict(int)
     for t in transactions:
         cat = t.category or "uncategorized"
         category_totals[cat] += abs(t.amount)
+        category_counts[cat] += 1
     category_breakdown: Dict[str, float] = {
         cat: round(total / months, 2) for cat, total in category_totals.items()
     }
@@ -98,6 +103,7 @@ def compute_profile(
         avg_monthly_spend=round(avg_monthly_spend, 2),
         category_breakdown_json=json.dumps(category_breakdown),
         top_merchants_json=json.dumps(top_merchants),
+        category_counts_json=json.dumps(dict(category_counts)),
     )
 
 
