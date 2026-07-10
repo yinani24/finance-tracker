@@ -23,6 +23,18 @@ alembic upgrade head                 # run migrations
 alembic revision --autogenerate -m "description"  # create migration
 ```
 
+**Running the test suite in an ephemeral sandbox** (e.g. Claude Code on the web, where there's no service Postgres and the system `pip`/`setuptools` can't build the `plaid-python` sdist): use `uv`, and provision a throwaway Postgres with the helper script. This runs the *full* suite — not just `--noconftest` pure-function checks.
+
+```bash
+cd apps/api
+uv venv .venv && source .venv/bin/activate       # uv builds plaid-python cleanly; system pip may fail
+uv pip install -e ".[dev]"
+./scripts/setup-test-db.sh                         # boots local Postgres + test DB (idempotent, disposable)
+pytest                                             # 235 tests, no extra env vars needed
+```
+
+The conftest fixtures connect to `settings.test_database_url` (default `postgresql://localhost:5432/finance_tracker_test`); the script provisions exactly that. Requires a PostgreSQL package (`initdb`/`pg_ctl`) on the box.
+
 - **Auth:** Supabase JWT — middleware in `app/auth.py`, dependency in `app/api/deps.py`
 - **DB:** PostgreSQL via SQLAlchemy async, connection in `app/database.py`
 - **Config:** `app/config.py` reads from environment / `.env.local`
