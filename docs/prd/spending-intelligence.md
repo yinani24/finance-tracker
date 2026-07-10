@@ -80,9 +80,15 @@ lookback window, plus overall `avg_monthly_spend`. **Shipped** (`category_breakd
 
 ### FR3 — Per-category frequency (the "dining frequency" metric)
 The profile reports, per category, **how many times per month** the user transacts —
-the literal metric `PRODUCT.md` names. Today a raw per-period count exists
-(`category_counts`) but is **not normalized to per-month** and is not surfaced as a
-headline dining figure. **Gap — the primary unblocked slice.**
+the literal metric `PRODUCT.md` names. **Shipped** at the API layer:
+`GET /recommendations/spending-profile` (`app/api/recommendations.py:47-70`) derives
+`monthly_avg_count` (= raw `category_counts` ÷ months-spanned) and `avg_per_txn` per
+category and surfaces a first-class `dining` rollup. Covered by
+`tests/test_recommendations_api.py::test_spending_profile_frequency_metrics`.
+_Implementation note:_ the per-month normalization lives in the endpoint, not on the
+stored `SpendingProfile` (which persists only raw `category_counts`). Promoting it to a
+first-class profile field is a low-value nicety, **not** an unblocked-slice priority.
+(Corrected after the initial draft's audit missed the endpoint.)
 
 ### FR4 — Top merchants
 The profile reports the top merchants by monthly-average spend, for explainability.
@@ -103,16 +109,17 @@ and the `SpendingProfile` model (verified this run):
 |---|---|---|---|
 | Categorization at ingest | every txn → internal category | ✅ taxonomy applied on Plaid + CSV | none |
 | Per-category monthly spend | dollars/mo per category | ✅ `category_breakdown` | none |
-| **Per-category frequency** | **"times/month I dine out"** | ⚠️ `category_counts` = raw period total, not per-month, not surfaced as a dining headline | **FR3 — normalize to per-month + expose** |
+| **Per-category frequency** | **"times/month I dine out"** | ✅ `GET /recommendations/spending-profile` exposes `monthly_avg_count` + a `dining` rollup (tested) | none (metric shipped at API; promoting to a stored profile field is optional) |
 | Top merchants | explainability | ✅ `top_merchants` (top 10) | none |
 | Freshness | recompute on change | ✅ `get_or_refresh` | ⚠️ FR5 edge: profile keyed on latest txn `created_at`; as the 6-month window slides, an aged-out txn does not trigger recompute until the next ingest (bounded, self-healing) |
 | Recurring vs one-off | (implied by "habits") | ❌ none | subscriptions/bills inflate discretionary category totals; not separated — see Open Q3 |
 | Trend / direction | (not stated) | ❌ none | is dining rising or falling? — see Open Q2 |
 
-**Net:** categorization and per-category *spend* are done and correct. The
-per-category *frequency* metric — the owner's literal headline — is the smallest,
-highest-value unblocked slice. Recurring detection and trend are candidate slices
-pending owner scope.
+**Net:** categorization, per-category *spend*, and per-category *frequency* (the owner's
+literal headline) are all done and correct — the frequency metric ships via
+`GET /recommendations/spending-profile`. The remaining genuinely-unshipped, unblocked
+slice is the **FR5 freshness edge** (window-slide recompute, filed as **#60**). Recurring
+detection and trend are candidate slices pending owner scope.
 
 ## Success criteria
 
@@ -146,13 +153,14 @@ pending owner scope.
 
 Filable now, in priority order; **none depend on the #38 card-data decision**:
 
-1. **Per-month category frequency (FR3).** Normalize `category_counts` to per-month and
-   surface a first-class dining frequency figure on the profile. Smallest slice; delivers
-   the literal `PRODUCT.md` headline. (Blocked only on Open Q1's definition — but the
-   per-transaction default is safe to ship and flag.)
-2. **Freshness edge (FR5).** Recompute when the lookback window has advanced past the
-   cached `period_start` even absent a new transaction. Pure correctness; no new product
-   decision.
+1. **Freshness edge (FR5) — filed as #60, the next unblocked slice.** Recompute when the
+   lookback window has advanced past the cached window even absent a new transaction. Pure
+   correctness; no new product decision.
+2. **~~Per-month category frequency (FR3)~~ — ALREADY SHIPPED** via
+   `GET /recommendations/spending-profile` (`monthly_avg_count` + `dining` rollup, tested).
+   Only a low-value nicety remains (promote from ad-hoc endpoint math to a stored profile
+   field); not prioritized. Open Q1 (per-transaction vs distinct-days) still applies if the
+   frequency definition is ever revisited.
 3. **Category trend signal** — *pending Open Q2.*
 4. **Recurring-charge detection** — *pending Open Q3.*
 
