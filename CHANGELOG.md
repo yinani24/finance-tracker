@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Stopped tracking generated `apps/api/finance_tracker_api.egg-info/` build
+  artifacts.** The root `.gitignore` already declared `*.egg-info/`, but the
+  directory had been committed before that rule existed, so every implementer
+  who ran `pip install -e` regenerated it and dragged the artifacts into their
+  diff (e.g. PR #62 carried 3 egg-info files among 7 changed). `git rm --cached`
+  aligns the repo with its own ignore rule; no source or behavior change.
+
 ### Documentation
 - **Added `docs/prd/spending-intelligence.md`** — the Phase-2 PRD, which had never
   been captured. Documents the shipped baseline (ingest-time categorization +
