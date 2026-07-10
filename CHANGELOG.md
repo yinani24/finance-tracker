@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aligns the repo with its own ignore rule; no source or behavior change.
 
 ### Documentation
+- **Reconciled `docs/prd/recommendation-engine.md` with shipped code.** The PRD predated
+  two merged slices and still described them as unbuilt: dollar-valued sign-up bonuses
+  (cents-per-point, #28) and the flat first-year ongoing-rewards term (#37). Corrected the
+  gap table, FR1, the "bottom line", and the decomposition to mark slices 1–2 SHIPPED;
+  downgraded Open Question 1 from a blocking "bonuses are in points, must fix" bug to a
+  resolved, live-and-flagged 1.0¢/point default (owner may still override). The sole
+  remaining engine gap — category-aware earn (slice 3) — stays correctly blocked on #38.
+  No source or behavior change.
 - **Added `docs/prd/spending-intelligence.md`** — the Phase-2 PRD, which had never
   been captured. Documents the shipped baseline (ingest-time categorization +
   per-category monthly spend, top merchants, freshness) against the `PRODUCT.md`
