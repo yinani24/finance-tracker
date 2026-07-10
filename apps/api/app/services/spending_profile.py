@@ -23,9 +23,14 @@ def _months_spanned(period_start: date, period_end: date) -> float:
     return max(float(months), 1.0)
 
 
-def _lookback_start(lookback_months: int) -> date:
-    """Return the first day of the month N months ago (no external deps)."""
-    today = date.today()
+def _lookback_start(lookback_months: int, today: Optional[date] = None) -> date:
+    """Return the first day of the month N months ago (no external deps).
+
+    ``today`` is injectable so callers can simulate a slid window without
+    freezing the wall clock; it defaults to ``date.today()``.
+    """
+    if today is None:
+        today = date.today()
     total_months = today.year * 12 + (today.month - 1)
     total_months -= lookback_months
     year = total_months // 12
@@ -37,10 +42,16 @@ def compute_profile(
     db: Session,
     user_id: int,
     lookback_months: int = 6,
+    today: Optional[date] = None,
 ) -> SpendingProfile:
-    """Aggregate non-income transactions into a SpendingProfile and upsert it."""
-    cutoff = _lookback_start(lookback_months)
-    today = date.today()
+    """Aggregate non-income transactions into a SpendingProfile and upsert it.
+
+    ``today`` defaults to ``date.today()`` and only exists so the lookback
+    window can be pinned in tests; production callers omit it.
+    """
+    if today is None:
+        today = date.today()
+    cutoff = _lookback_start(lookback_months, today=today)
 
     stmt = (
         select(Transaction)
@@ -111,30 +122,55 @@ def get_or_refresh(
     db: Session,
     user_id: int,
     lookback_months: int = 6,
+    today: Optional[date] = None,
 ) -> SpendingProfile:
-    """Return cached profile if fresh; otherwise recompute."""
+    """Return cached profile if fresh; otherwise recompute.
+
+    Two things can make a cached profile stale:
+    1. A newer transaction arrived (``computed_at`` predates it).
+    2. Wall-clock time crossed into a new month, so ``_lookback_start`` has
+       advanced and the oldest month(s) reflected in the profile have aged out
+       of the lookback window — even with no new transaction. Serving the cache
+       here would keep inflating the averages until the next ingest.
+
+    ``today`` is injectable (defaults to ``date.today()``) so the window-slide
+    path can be exercised in tests without freezing the clock.
+    """
+    if today is None:
+        today = date.today()
     repo = SpendingProfileRepository(db)
     existing = repo.get_by_user(user_id)
 
     if existing is not None:
-        # Find the most recently created transaction for this user
-        stmt = (
-            select(Transaction.created_at)
-            .where(Transaction.user_id == user_id)
-            .order_by(Transaction.created_at.desc())
-            .limit(1)
-        )
-        latest_txn_created_at: Optional[datetime] = db.scalars(stmt).first()
+        # Window-slide check: the cached profile only reflects transactions on
+        # or after the cutoff in force when it was computed. Its earliest such
+        # transaction is ``period_start``. If the current cutoff has advanced
+        # past ``period_start``, that oldest transaction (and possibly a whole
+        # month) has aged out, so the cached averages are stale — recompute.
+        current_cutoff = _lookback_start(lookback_months, today=today)
+        window_slid = current_cutoff > existing.period_start
 
-        if latest_txn_created_at is not None:
-            # Normalise both datetimes to UTC-aware for comparison
-            computed_at = existing.computed_at
-            if computed_at.tzinfo is None:
-                computed_at = computed_at.replace(tzinfo=timezone.utc)
-            if latest_txn_created_at.tzinfo is None:
-                latest_txn_created_at = latest_txn_created_at.replace(tzinfo=timezone.utc)
+        if not window_slid:
+            # Find the most recently created transaction for this user
+            stmt = (
+                select(Transaction.created_at)
+                .where(Transaction.user_id == user_id)
+                .order_by(Transaction.created_at.desc())
+                .limit(1)
+            )
+            latest_txn_created_at: Optional[datetime] = db.scalars(stmt).first()
 
-            if computed_at >= latest_txn_created_at:
-                return existing
+            if latest_txn_created_at is not None:
+                # Normalise both datetimes to UTC-aware for comparison
+                computed_at = existing.computed_at
+                if computed_at.tzinfo is None:
+                    computed_at = computed_at.replace(tzinfo=timezone.utc)
+                if latest_txn_created_at.tzinfo is None:
+                    latest_txn_created_at = latest_txn_created_at.replace(
+                        tzinfo=timezone.utc
+                    )
 
-    return compute_profile(db, user_id, lookback_months)
+                if computed_at >= latest_txn_created_at:
+                    return existing
+
+    return compute_profile(db, user_id, lookback_months, today=today)
