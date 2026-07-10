@@ -24,8 +24,16 @@ def _fetch_cards() -> List[Dict]:
     return fetch_cards_sync()
 
 
-def _compute_inputs_hash(profile_json: str, cards_json: str) -> str:
-    raw = f"{profile_json}|{cards_json}"
+def _compute_inputs_hash(*parts: object) -> str:
+    """Fingerprint every input that affects the recommendation output.
+
+    The cached snapshot is only valid while *all* of its inputs are unchanged:
+    the user's spending profile, the cards they own, the card **dataset** the
+    recommendations are ranked over, and the point valuation. Leaving any of
+    these out lets a stale snapshot survive a real input change — e.g. an
+    upstream sign-up-bonus refresh (PRD FR5, freshness).
+    """
+    raw = "|".join(str(p) for p in parts)
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -66,9 +74,20 @@ class RecommendationSnapshotService:
         profile = get_or_refresh_profile(self.db, user_id)
         user_cards = self._get_user_cards(user_id)
 
+        # Fetch the card dataset up front so its contents are part of the cache
+        # key. The dataset — not just the user's profile and owned cards —
+        # determines the ranking, so when upstream sign-up bonuses or cards
+        # change the cached snapshot must be recomputed (PRD FR5, freshness).
+        # ``fetch_cards_sync`` is a process-wide TTL cache, so this is an
+        # in-memory read on the hot path, not an extra upstream round-trip.
+        available_cards = _fetch_cards()
+
         profile_json = profile.category_breakdown_json + str(profile.avg_monthly_spend)
-        cards_json = json.dumps(user_cards, sort_keys=True)
-        current_hash = _compute_inputs_hash(profile_json, cards_json)
+        user_cards_json = json.dumps(user_cards, sort_keys=True)
+        dataset_json = json.dumps(available_cards, sort_keys=True)
+        current_hash = _compute_inputs_hash(
+            profile_json, user_cards_json, dataset_json, settings.points_value_cents
+        )
 
         # Check cache
         existing = self.snapshot_repo.get(user_id, rec_type)
@@ -79,8 +98,7 @@ class RecommendationSnapshotService:
                 "spending_profile": self._profile_to_read(profile),
             }
 
-        # Recompute
-        available_cards = _fetch_cards()
+        # Recompute (dataset already fetched above)
         profile_dict = {
             "avg_monthly_spend": profile.avg_monthly_spend,
             "category_breakdown": json.loads(profile.category_breakdown_json),
