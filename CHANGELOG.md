@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Groceries are now split from dining at ingest.** Plaid's
+  `personal_finance_category.**primary**` value `FOOD_AND_DRINK` covers *both*
+  restaurants and groceries, so all grocery spend was folding into `dining` —
+  inflating the exact dining-share signal the dining-first recommender ranks on
+  and leaving the taxonomy's `groceries` bucket permanently empty. `plaid_service`
+  now derives the category from `personal_finance_category.**detailed**` for food
+  transactions (`FOOD_AND_DRINK_GROCERIES` → `groceries`;
+  `_RESTAURANT`/`_COFFEE`/`_FAST_FOOD`/`_BEER_WINE_AND_LIQUOR`/… → `dining`),
+  falling back to `primary` when `detailed` is absent (no regression for older
+  data). Non-food primaries keep using `primary` unchanged — their detailed
+  labels aren't in the taxonomy and would wrongly collapse to `other`. (#52)
 - **Transaction categories are now mapped into the internal taxonomy at ingest.**
   The vendor-agnostic boundary (`taxonomy.map_to_internal`) existed and was
   unit-tested but was **never called in the pipeline**: the default `NoopProvider`
