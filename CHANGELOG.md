@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (window-slide recompute), filed as #60.
 
 ### Fixed
+- **Spending profiles now recompute when the lookback window slides into a new
+  month, even without a new transaction.** `get_or_refresh` previously only
+  recomputed when a newer transaction existed, so a user who stopped syncing kept
+  getting the old profile while aged-out months silently inflated the averages
+  (dining $/mo, `monthly_avg_count`) — and skewed the recommendation inputs.
+  It now detects that the current 6-month cutoff has advanced past the cached
+  profile's earliest transaction (`period_start`) and recomputes. The same-window
+  cache-hit path is unchanged. A `today` param was added to
+  `_lookback_start`/`compute_profile`/`get_or_refresh` (defaults to `date.today()`,
+  additive) so the slide can be tested hermetically. (#60)
 - **"Apply for a new card" recommendations no longer drop cards whose top offer
   tier is out of reach when a smaller tier is achievable.** `recommend_next_card`
   selected each card's single highest-dollar-value offer with `_best_offer` and
