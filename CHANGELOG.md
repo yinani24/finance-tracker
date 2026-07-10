@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`apps/api/scripts/setup-test-db.sh`** — boots a disposable local Postgres and
+  provisions the `finance_tracker_test` DB (and login role) the conftest fixtures
+  expect, so the full test suite runs in an ephemeral sandbox with no external
+  service DB. Idempotent; data lives under a throwaway `$PGDATA`.
+
 ### Changed
+- **Capped API dependency upper bounds (#68).** Every runtime and dev dependency in
+  `apps/api/pyproject.toml` declared an unbounded `>=` lower bound with no lockfile, so
+  a fresh `pip install -e ".[dev]"` could silently pull a breaking major and two installs
+  on different days could diverge. Added compatible-release upper bounds (major-version
+  caps; `<0.1` for `python-multipart`, `<41.0` for `plaid-python`). The known-good
+  resolution that passes all 235 tests today falls inside every new range — verified
+  in-sandbox by reinstalling under the caps and re-running the full suite. No source or
+  behavior change.
 - **Stopped tracking generated `apps/api/finance_tracker_api.egg-info/` build
   artifacts.** The root `.gitignore` already declared `*.egg-info/`, but the
   directory had been committed before that rule existed, so every implementer
@@ -16,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aligns the repo with its own ignore rule; no source or behavior change.
 
 ### Documentation
+- **Documented the in-sandbox test recipe in `CLAUDE.md` (#68).** `uv` builds the
+  `plaid-python` sdist cleanly where the sandbox's system `pip`/`setuptools` fails, and
+  the new helper script supplies Postgres. Together they run the full `pytest` suite (235
+  tests) rather than the `--noconftest` pure-function subset earlier runs were limited to.
 - **Reconciled `docs/prd/recommendation-engine.md` with shipped code.** The PRD predated
   two merged slices and still described them as unbuilt: dollar-valued sign-up bonuses
   (cents-per-point, #28) and the flat first-year ongoing-rewards term (#37). Corrected the
