@@ -1,9 +1,11 @@
 # PRD — Credit-Card Recommendation Engine (Phases 4–5)
 
-- **Status:** DRAFT (agent-authored). Documents the owner-confirmed objective from
-  `docs/prd/PRODUCT.md` and reconciles it against the engine already in the codebase.
-  Open questions below need owner input before the "total first-year value" objective
-  can be fully built.
+- **Status:** DRAFT (agent-authored), reconciled 2026-07-10 against shipped code. Documents
+  the owner-confirmed objective from `docs/prd/PRODUCT.md` and reconciles it against the
+  engine already in the codebase. Decomposition slices 1–2 (dollar-valued bonuses #28, flat
+  ongoing rewards #37) have **shipped**; the sole remaining engine gap — category-aware
+  earn (slice 3) — is blocked on the #38 card-data decision. Open Question 1 (point
+  valuation) is resolved with a live, flagged 1.0¢/point default.
 - **Owner north-star:** `docs/prd/PRODUCT.md` (CONFIRMED). This PRD refines Phases 4–5
   of that roadmap; it does not override any confirmed decision there.
 - **Depends on:** Phase 2 spending intelligence (`spending_profile.py`, transaction
@@ -70,11 +72,18 @@ the gap so it can be decomposed into shippable Stage-1 issues.
 `first_year_value(card, profile) = best_achievable_signup_bonus_value
 + first_year_ongoing_rewards(card, profile) + statement_credit_value(card) − annual_fee`.
 
-- **Sign-up bonus:** already implemented — `_best_offer` picks the highest-value offer;
-  achievability = `min_spend / avg_monthly_spend ≤ offer_days / 30`. Keep.
-- **Ongoing rewards (NEW):** `Σ_category (monthly_spend[category] × 12 × reward_rate(card,
-  category))`. Requires per-category reward rates from the card dataset (see FR3) and the
-  point/mile valuation from Open Question 1.
+- **Sign-up bonus:** **shipped** — `_best_achievable_offer` filters to the offer tiers the
+  user can hit (achievability = `min_spend / avg_monthly_spend ≤ offer_days / 30`) then
+  picks the highest-**dollar-value** one. Bonus value is dollar-denominated via
+  `_bonus_value_usd` (USD entries at face value, points/miles at `points_value_cents` per
+  point, default 1.0¢) — so bonuses are comparable to cashback dollars (shipped in #28,
+  see Open Question 1). Keep.
+- **Ongoing rewards:** `Σ_category (monthly_spend[category] × 12 × reward_rate(card,
+  category))`. The **flat** version — `avg_monthly_spend × 12 × universalCashbackPercent`
+  via the shared `_ongoing_value` helper — is **shipped** (#37) in both `recommend_next_card`
+  and `analyze_portfolio`. The **category-aware** upgrade (wiring `profile.category_breakdown`
+  into per-category `reward_rate(card, category)`) is the remaining gap and needs the
+  per-category reward rates from FR3 (blocked by #38, Open Question 3).
 - **Credits:** already implemented — `Σ (credit.value × credit.weight)`. Keep, but confirm
   `weight` semantics (Open Question 2).
 
@@ -109,17 +118,20 @@ dataset JSON); a change in either invalidates the snapshot. *(Already implemente
 
 | Capability | Confirmed target | Today in `card_recommendation.py` |
 |---|---|---|
-| Sign-up bonus value | ✅ counts | ✅ `_best_offer` + achievability check |
+| Sign-up bonus value | ✅ counts | ✅ `_best_achievable_offer` + achievability check; **dollar-valued** via `_bonus_value_usd` (cents-per-point, #28) |
 | Statement credits | ✅ counts | ✅ `Σ value×weight` |
-| Annual fee | ✅ subtract | ✅ subtracted |
-| **Ongoing rewards (year 1)** | ✅ **half the objective** | ❌ **not computed** — `next_card` score is `bonus − fee + credits`; ongoing earn omitted |
-| **Category-aware earn** | ✅ product premise (dining first) | ❌ `profile.category_breakdown` is **unused**; portfolio uses flat `universalCashbackPercent` only |
+| Annual fee | ✅ subtract | ✅ subtracted (first-year waivers honored, #42) |
+| **Ongoing rewards (year 1)** | ✅ **half the objective** | ✅ **flat model shipped** (#37) — `next_card` score is `bonus + ongoing − fee + credits`; `_ongoing_value` shared with `analyze_portfolio` |
+| **Category-aware earn** | ✅ product premise (dining first) | ❌ `profile.category_breakdown` is **unused**; both modes use flat `universalCashbackPercent` only — the **one remaining gap**, blocked by #38 |
 | Held vs. new distinction | ✅ two modes | ⚠️ two methods exist but both miss ongoing category earn |
 | Rationale w/ $ value | ✅ | ⚠️ explanation exists but reflects the incomplete score |
 
-**Bottom line:** the plumbing, caching, API surface, and sign-up-bonus math are in place;
-the **ongoing category-aware rewards** term — literally half of "total first-year value"
-and the reason the app reads the user's dining habits — is the missing piece.
+**Bottom line:** the plumbing, caching, API surface, dollar-denominated sign-up-bonus math
+(#28), and the **flat** first-year ongoing-rewards term (#37) are all in place. The one
+remaining piece is making ongoing earn **category-aware** — driving it from the user's
+`category_breakdown` (dining first) instead of a single flat rate. That is the reason the
+app reads the user's dining habits, and it is blocked only on the card-side category-rate
+data source (#38, Open Question 3) — not on any missing engine plumbing.
 
 ## Success criteria
 
@@ -132,12 +144,14 @@ and the reason the app reads the user's dining habits — is the missing piece.
 
 ## Open questions (QUESTIONS FOR HUMAN)
 
-1. **Point/mile valuation.** `PRODUCT.md` Open Question 3 says a fixed cents-per-point
-   assumption is acceptable for MVP. Confirm a single blended value (e.g. **1.0¢/point**),
-   or do you want per-issuer/per-redemption values? Bonuses today are summed as raw
-   `amount` (point counts) with **no ¢/point applied** — so bonus "value" is currently in
-   points, not dollars, and is not comparable to cashback dollars. This must be fixed to
-   rank fairly.
+1. **Point/mile valuation.** *(Assumption live — override optional; no longer blocking.)*
+   `PRODUCT.md` Open Question 3 authorizes proceeding with a fixed cents-per-point
+   assumption for MVP and flagging it. Done: bonuses are dollar-valued at a default
+   **1.0¢/point** (`_bonus_value_usd`, threaded as `points_value_cents` through
+   `recommend_next_card` / `_best_achievable_offer`; shipped #28, covered by
+   `test_card_recommendation_service.py`), so bonus points and cashback dollars now rank on
+   the same scale. **Decision still open only if you want to change the default:** confirm
+   1.0¢/point, or supply per-issuer / per-redemption values. Absent a change, 1.0¢ stands.
 2. **`credit.weight` semantics.** Credits are valued as `value × weight`. Is `weight` the
    probability/utilization you'd actually realize a credit (e.g. 0.9 = "worth 90% to me")?
    Confirm, so the rationale can explain it.
@@ -151,15 +165,20 @@ and the reason the app reads the user's dining habits — is the missing piece.
    you also want a **second-year / ongoing** view (value once the bonus is gone) so a card
    isn't recommended purely on a one-time bonus? Not blocking v1; flag for Phase 5.
 
-## Proposed decomposition (Stage 1 — after answers above)
+## Proposed decomposition (Stage 1 — status)
 
-1. Apply a cents-per-point valuation so bonus points and cashback dollars are comparable
-   (unblocks a correct score; needs Open Question 1).
-2. Add first-year ongoing-rewards term to `next_card` using flat `universalCashbackPercent`
-   (no dataset change; makes the score match the confirmed objective's shape).
-3. Category-aware earn once per-category rates exist (Open Question 3) — wire
-   `profile.category_breakdown` into FR1.
-4. `optimize-wallet` per-category "best held card" assignment.
-5. Phase 5 — multi-card portfolio combination (right card per category across the wallet).
+1. ✅ **SHIPPED (#28).** Cents-per-point valuation so bonus points and cashback dollars are
+   comparable (default 1.0¢/point; Open Question 1 assumption is live and flagged).
+2. ✅ **SHIPPED (#37).** First-year ongoing-rewards term using flat
+   `universalCashbackPercent`, via the shared `_ongoing_value` helper (both modes).
+3. ⛔ **BLOCKED by #38 (Open Question 3).** Category-aware earn — wire
+   `profile.category_breakdown` into per-category `reward_rate(card, category)` in FR1.
+   Needs a card-side category-rate data source (#38 awaits the owner's (A)/(B)/(C) pick).
+4. Depends on (3). `optimize-wallet` per-category "best held card" assignment.
+5. Depends on (3). Phase 5 — multi-card portfolio combination (right card per category
+   across the wallet).
+
+**Net:** slices 1–2 are done; everything remaining (3–5) is gated on the #38 category-rate
+data-source decision. No engine-side implementation work is unblocked until that lands.
 
 Ref: `docs/prd/PRODUCT.md` (Phases 4–5, Decisions #1–2, Open Questions 3–4).
