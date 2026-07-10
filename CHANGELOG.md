@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Recommendation snapshots now refresh when the card dataset changes.** The
+  cached `next-card` / `portfolio` results were keyed only on the user's
+  spending profile and the cards they own — not on the card **dataset** the
+  recommendations are actually ranked over, nor the point valuation. So after an
+  upstream sign-up-bonus change, a newly added card, or a discontinuation
+  (exactly the churn PRD FR5 *Freshness* covers), the GET endpoints kept serving
+  the old ranking until the user changed their profile/cards or manually POSTed
+  `/refresh`. The cache key now includes a fingerprint of the dataset and
+  `points_value_cents`, so the next read recomputes automatically. The dataset
+  fetch is a process-wide TTL cache, so this adds no upstream round-trip on the
+  cache-hit path. Recommendation outputs are otherwise unchanged. (#47)
 - **Wallet analysis (`analyze_portfolio`) no longer suggests discontinued or
   already-owned cards as alternatives.** When a held card is flagged
   underperforming, the engine proposes better-net-value alternatives — but the
