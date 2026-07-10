@@ -31,8 +31,20 @@ _ALIASES: dict[str, str] = {
     "restaurants": "dining",
     "fast food": "dining",
     "coffee": "dining",
+    # Plaid `personal_finance_category.detailed` food splits. Plaid's *primary*
+    # FOOD_AND_DRINK conflates groceries with restaurants; the detailed label
+    # separates them (see plaid_service). Groceries → groceries; everything else
+    # edible → dining.
+    "food and drink groceries": "groceries",
+    "food and drink restaurant": "dining",
+    "food and drink coffee": "dining",
+    "food and drink fast food": "dining",
+    "food and drink beer wine and liquor": "dining",
+    "food and drink vending machines": "dining",
+    "food and drink other": "dining",
     # groceries (a real provider can distinguish these from dining; Plaid's
-    # primary category cannot, which is exactly why enrichment exists)
+    # primary category cannot, which is exactly why the detailed split above and
+    # enrichment exist)
     "groceries": "groceries",
     "grocery": "groceries",
     "supermarkets": "groceries",

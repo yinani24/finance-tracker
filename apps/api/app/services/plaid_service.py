@@ -180,7 +180,23 @@ def sync_transactions(
             category_list = txn_dict.get("personal_finance_category", {})
             category = None
             if isinstance(category_list, dict):
-                category = category_list.get("primary", "").lower().replace("_", " ")
+                primary = (
+                    (category_list.get("primary") or "").lower().replace("_", " ")
+                )
+                detailed = (
+                    (category_list.get("detailed") or "").lower().replace("_", " ")
+                )
+                # Plaid's primary FOOD_AND_DRINK conflates restaurants with
+                # groceries; the detailed label (FOOD_AND_DRINK_GROCERIES vs
+                # _RESTAURANT/_COFFEE/...) splits them, which the dining-first
+                # recommender depends on. Other primaries are already granular
+                # enough — and their detailed labels aren't in the taxonomy —
+                # so keep using primary for them. Fall back to primary when
+                # detailed is absent (no regression for older data).
+                if primary == "food and drink" and detailed:
+                    category = detailed
+                else:
+                    category = primary
 
             row = Transaction(
                 user_id=user_id,

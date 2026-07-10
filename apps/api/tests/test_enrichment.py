@@ -78,6 +78,18 @@ class TestTaxonomyMapper:
         assert map_to_internal("groceries") == "groceries"
         assert map_to_internal("Food & Drink") == "dining"
 
+    def test_plaid_detailed_food_split(self):
+        # Plaid's primary FOOD_AND_DRINK conflates groceries with dining; the
+        # detailed label separates them so category_breakdown's grocery bucket
+        # fills and the dining share isn't inflated.
+        assert map_to_internal("FOOD_AND_DRINK_GROCERIES") == "groceries"
+        assert map_to_internal("FOOD_AND_DRINK_RESTAURANT") == "dining"
+        assert map_to_internal("FOOD_AND_DRINK_COFFEE") == "dining"
+        assert map_to_internal("FOOD_AND_DRINK_FAST_FOOD") == "dining"
+        assert map_to_internal("FOOD_AND_DRINK_BEER_WINE_AND_LIQUOR") == "dining"
+        assert map_to_internal("FOOD_AND_DRINK_VENDING_MACHINES") == "dining"
+        assert map_to_internal("FOOD_AND_DRINK_OTHER") == "dining"
+
     def test_unknown_and_empty_go_to_other(self):
         assert map_to_internal("cryptocurrency mining") == "other"
         assert map_to_internal("") == "other"
@@ -202,3 +214,106 @@ class TestSyncEnrichmentHook:
         txn = db_session.query(Transaction).filter_by(user_id=1).one()
         assert txn.category == "dining"
         assert txn.normalized_merchant == "starbucks"
+
+    def _make_pfc_txn(self, txn_id, merchant, pfc):
+        txn = MagicMock()
+        txn.to_dict.return_value = {
+            "transaction_id": txn_id,
+            "account_id": "acct-1",
+            "amount": 25.5,
+            "merchant_name": merchant,
+            "name": merchant,
+            "date": "2026-04-01",
+            "personal_finance_category": pfc,
+        }
+        return txn
+
+    def _run_sync_with(self, client, added):
+        mock_resp = self._mock_sync_response(
+            accounts=[self._make_plaid_account()], added=added
+        )
+        with patch("app.api.plaid.get_plaid_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.transactions_sync.return_value = mock_resp
+            mock_get_client.return_value = mock_client
+            return client.post(f"/plaid/items/{self._item_id}/sync")
+
+    def test_detailed_splits_groceries_from_dining_at_ingest(
+        self, client, db_session
+    ):
+        # The whole point of #52: a grocery run and a restaurant charge both
+        # arrive under Plaid's primary FOOD_AND_DRINK, but the detailed label
+        # must land them in distinct internal buckets so the dining share the
+        # recommender ranks on isn't inflated by grocery spend.
+        self._item_id = self._make_plaid_item(db_session).id
+        resp = self._run_sync_with(
+            client,
+            [
+                self._make_pfc_txn(
+                    "txn-groc",
+                    "Whole Foods",
+                    {
+                        "primary": "FOOD_AND_DRINK",
+                        "detailed": "FOOD_AND_DRINK_GROCERIES",
+                    },
+                ),
+                self._make_pfc_txn(
+                    "txn-rest",
+                    "Chipotle",
+                    {
+                        "primary": "FOOD_AND_DRINK",
+                        "detailed": "FOOD_AND_DRINK_RESTAURANT",
+                    },
+                ),
+            ],
+        )
+        assert resp.status_code == 200
+
+        cats = {
+            t.merchant: t.category
+            for t in db_session.query(Transaction).filter_by(user_id=1).all()
+        }
+        assert cats["Whole Foods"] == "groceries"
+        assert cats["Chipotle"] == "dining"
+
+    def test_missing_detailed_falls_back_to_primary(self, client, db_session):
+        # Older/partial data with no detailed label must not regress — it keeps
+        # mapping via the primary category (FOOD_AND_DRINK → dining).
+        self._item_id = self._make_plaid_item(db_session).id
+        resp = self._run_sync_with(
+            client,
+            [
+                self._make_pfc_txn(
+                    "txn-noDetail",
+                    "Starbucks",
+                    {"primary": "FOOD_AND_DRINK"},
+                )
+            ],
+        )
+        assert resp.status_code == 200
+
+        txn = db_session.query(Transaction).filter_by(user_id=1).one()
+        assert txn.category == "dining"
+
+    def test_non_food_primary_ignores_detailed(self, client, db_session):
+        # Only FOOD_AND_DRINK is conflated. Other primaries keep using the
+        # primary label (their detailed labels aren't in the taxonomy and would
+        # wrongly collapse to "other"), so transport stays transport.
+        self._item_id = self._make_plaid_item(db_session).id
+        resp = self._run_sync_with(
+            client,
+            [
+                self._make_pfc_txn(
+                    "txn-gas",
+                    "Shell",
+                    {
+                        "primary": "TRANSPORTATION",
+                        "detailed": "TRANSPORTATION_GAS",
+                    },
+                )
+            ],
+        )
+        assert resp.status_code == 200
+
+        txn = db_session.query(Transaction).filter_by(user_id=1).one()
+        assert txn.category == "transport"
