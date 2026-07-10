@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Added `docs/prd/spending-intelligence.md`** — the Phase-2 PRD, which had never
+  been captured. Documents the shipped baseline (ingest-time categorization +
+  per-category monthly spend, top merchants, freshness) against the `PRODUCT.md`
+  Phase-2 promise, names the gap (per-month category *frequency* — the "how many
+  times/month do I dine out" metric — is not yet surfaced), and proposes an
+  unblocked Stage-1 decomposition. All slices are consumer-side and independent of
+  the card-data decision blocking #38.
+
 ### Fixed
 - **"Apply for a new card" recommendations no longer drop cards whose top offer
   tier is out of reach when a smaller tier is achievable.** `recommend_next_card`
