@@ -27,7 +27,9 @@ class TestProviderFactory:
 
 
 class TestNoopProvider:
-    def test_passthrough_preserves_category(self):
+    def test_maps_raw_category_to_internal_taxonomy(self):
+        # Per the provider contract, `category` must be in our internal taxonomy,
+        # not the raw vendor label. The raw label is preserved separately.
         provider = NoopProvider()
         results = provider.enrich(
             [
@@ -40,9 +42,22 @@ class TestNoopProvider:
             ]
         )
         assert len(results) == 1
-        assert results[0].category == "food and drink"
+        assert results[0].category == "dining"
+        assert results[0].raw_provider_category == "food and drink"
         assert results[0].normalized_merchant == "starbucks"
         assert results[0].confidence is None
+
+    def test_none_category_passes_through_as_none(self):
+        # A missing upstream category must stay None (NOT map to "other") so
+        # apply_enrichment leaves the row untouched — the statement-import path
+        # (plaid_category=None, category derived elsewhere) depends on this.
+        provider = NoopProvider()
+        results = provider.enrich(
+            [EnrichmentInput(merchant="Corner Store", amount=-12.0, plaid_category=None)]
+        )
+        assert results[0].category is None
+        assert results[0].raw_provider_category is None
+        assert results[0].normalized_merchant == "corner store"
 
     def test_empty_batch(self):
         assert NoopProvider().enrich([]) == []
@@ -176,12 +191,14 @@ class TestSyncEnrichmentHook:
         assert txn.category == "food and drink"
         assert txn.normalized_merchant == "starbucks"
 
-    def test_default_noop_is_behavior_preserving(self, client, db_session):
-        # No provider patch → default noop → identical to pre-enrichment behavior.
+    def test_default_noop_maps_to_internal_taxonomy(self, client, db_session):
+        # No provider patch → default noop → the raw Plaid label FOOD_AND_DRINK
+        # is mapped into our internal taxonomy ("dining"), so category_breakdown
+        # stays vendor-agnostic and the recommendation engine sees "dining".
         self._item_id = self._make_plaid_item(db_session).id
         resp = self._run_sync(client)
         assert resp.status_code == 200
 
         txn = db_session.query(Transaction).filter_by(user_id=1).one()
-        assert txn.category == "food and drink"
+        assert txn.category == "dining"
         assert txn.normalized_merchant == "starbucks"
