@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Transaction categories are now mapped into the internal taxonomy at ingest.**
+  The vendor-agnostic boundary (`taxonomy.map_to_internal`) existed and was
+  unit-tested but was **never called in the pipeline**: the default `NoopProvider`
+  echoed Plaid's raw label back, so `category_breakdown` was keyed on raw strings
+  like `"food and drink"`/`"general merchandise"` instead of the internal set
+  (`"dining"`/`"shopping"`). That broke the provider contract in `base.py` and
+  would have silently zeroed the category signal for the upcoming category-aware
+  recommendation engine (which keys on `"dining"`). `NoopProvider` now maps
+  `plaid_category` through `map_to_internal`, preserving the raw label in
+  `raw_provider_category`. A `None` upstream category still passes through as
+  `None` (no overwrite), so the statement-import path is unchanged, and the
+  provider-failure fail-open path still keeps the raw Plaid value. (#51)
 - **Recommendation snapshots now refresh when the card dataset changes.** The
   cached `next-card` / `portfolio` results were keyed only on the user's
   spending profile and the cards they own — not on the card **dataset** the
