@@ -113,3 +113,32 @@ class TestGetOrRefresh:
         profile1 = get_or_refresh(db_session, seed_user.id)
         profile2 = get_or_refresh(db_session, seed_user.id)
         assert profile2.computed_at == profile1.computed_at
+
+    def test_recomputes_when_window_slides(self, db_session: Session, seed_user: User):
+        """A profile must be recomputed once wall-clock time slides the lookback
+        window past its data, even when no new transaction has arrived."""
+        _seed_transactions(db_session, seed_user)  # Jan/Feb 2026 expenses
+        from app.services.spending_profile import get_or_refresh
+
+        # Compute for a "today" where the Jan/Feb 2026 window is fully in range
+        # (6-month lookback cutoff = 2025-08-01).
+        profile1 = get_or_refresh(db_session, seed_user.id, today=date(2026, 2, 28))
+        assert profile1.avg_monthly_spend > 0
+        assert profile1.period_start == date(2026, 1, 5)
+
+        # Advance "today" so the window slides past every seeded transaction
+        # (cutoff = 2026-06-01). No new transaction is inserted.
+        profile2 = get_or_refresh(db_session, seed_user.id, today=date(2026, 12, 1))
+
+        # It must recompute against the slid window, not serve stale averages.
+        assert profile2.period_start == date(2026, 6, 1)
+        assert profile2.avg_monthly_spend == 0.0
+
+    def test_caches_when_window_unchanged(self, db_session: Session, seed_user: User):
+        """Same window + no new transaction ⇒ still a cache hit (no recompute)."""
+        _seed_transactions(db_session, seed_user)
+        from app.services.spending_profile import get_or_refresh
+
+        profile1 = get_or_refresh(db_session, seed_user.id, today=date(2026, 2, 28))
+        profile2 = get_or_refresh(db_session, seed_user.id, today=date(2026, 2, 28))
+        assert profile2.computed_at == profile1.computed_at
