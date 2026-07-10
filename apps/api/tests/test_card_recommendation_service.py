@@ -80,6 +80,55 @@ class TestRecommendNextCard:
         assert len(results) == 0
 
 
+# A card with two concurrent offer tiers (like 27 of the 179 dataset cards,
+# e.g. Delta SkyMiles Gold): a high-spend/high-bonus tier and a
+# low-spend/low-bonus tier.
+TIERED_CARD = {
+    "cardId": "card-tiered", "name": "Tiered Rewards", "issuer": "CHASE",
+    "network": "VISA", "currency": "CHASE", "isBusiness": False, "annualFee": 0,
+    "isAnnualFeeWaived": False, "universalCashbackPercent": 1,
+    "url": "https://example.com/tiered", "imageUrl": "/images/tiered.png",
+    "credits": [],
+    "offers": [
+        {"spend": 5000, "amount": [{"amount": 90000}], "days": 180, "credits": []},
+        {"spend": 2000, "amount": [{"amount": 50000}], "days": 180, "credits": []},
+    ],
+    "discontinued": False,
+}
+
+
+class TestMultiTierOffers:
+    """A card must not be dropped just because its *top* tier is unachievable
+    when a smaller tier is within reach (issue #55)."""
+
+    def test_smaller_tier_used_when_top_tier_unachievable(self):
+        service = CardRecommendationService()
+        # $400/mo: top tier ($5k/180d ≈ $833/mo) is out of reach, but the
+        # smaller tier ($2k/180d ≈ $333/mo) is achievable.
+        results = service.recommend_next_card(_make_profile(400.0), [], [TIERED_CARD])
+        assert len(results) == 1
+        r = results[0]
+        # 50k pts @ 1.0¢ = $500 (the smaller tier), not the 90k top tier.
+        assert r["bonus_value"] == 500.0
+        assert r["months_to_hit"] == 2000 / 400
+
+    def test_top_tier_used_when_achievable(self):
+        service = CardRecommendationService()
+        # $1500/mo: top tier ($5k/180d ≈ $833/mo) is achievable and worth more.
+        results = service.recommend_next_card(_make_profile(1500.0), [], [TIERED_CARD])
+        assert len(results) == 1
+        r = results[0]
+        # 90k pts @ 1.0¢ = $900 (the top tier wins on value).
+        assert r["bonus_value"] == 900.0
+        assert r["months_to_hit"] == 5000 / 1500
+
+    def test_card_dropped_only_when_no_tier_achievable(self):
+        service = CardRecommendationService()
+        # $200/mo: even the smaller tier ($2k/180d ≈ $333/mo) is out of reach.
+        results = service.recommend_next_card(_make_profile(200.0), [], [TIERED_CARD])
+        assert results == []
+
+
 class TestBonusValueUsd:
     """Sign-up-bonus valuation in dollars (issue #24)."""
 

@@ -15,21 +15,42 @@ class CardRecommendationService:
         return f"{name.lower()}|{issuer.upper()}"
 
     @staticmethod
-    def _best_offer(card: dict, points_value_cents: float = 1.0) -> Optional[dict]:
-        """Return the offer with the highest dollar-valued bonus, or None.
+    def _best_achievable_offer(
+        card: dict,
+        avg_monthly_spend: float,
+        points_value_cents: float = 1.0,
+    ) -> Optional[tuple[dict, float]]:
+        """Return ``(offer, months_to_hit)`` for the highest-value offer the
+        user can actually earn, or ``None`` if none is achievable.
 
-        Ranks by the same USD valuation used for scoring so "best offer" and
-        the final score agree even for a card mixing points and cashback
-        offers (none exist in the current dataset, but this keeps the two
-        code paths consistent).
+        A card may list several **concurrent** offers — commonly a
+        high-spend/high-bonus tier alongside a lower-spend/lower-bonus tier
+        (27 of the 179 dataset cards do this, e.g. Delta SkyMiles Gold:
+        90k pts @ $5,000/180d *or* 50k pts @ $2,000/180d). Picking the
+        max-bonus offer *before* the achievability check wrongly drops the
+        whole card for a lower-spend user who could still hit the smaller
+        tier. So filter to the offers the user can reach first, then take the
+        best-valued of those.
+
+        Achievable means ``min_spend / avg_monthly_spend <= days / 30``. All
+        other score terms (ongoing earn, fee, credits) are per-card constants,
+        so among achievable offers the USD bonus value is the only
+        differentiator — hence "best achievable" == "highest-value achievable".
+        Requires ``avg_monthly_spend > 0`` (guarded by the caller).
         """
-        offers: List[dict] = card.get("offers", [])
-        if not offers:
-            return None
-        return max(
-            offers,
-            key=lambda o: CardRecommendationService._bonus_value_usd(o, points_value_cents),
-        )
+        best: Optional[tuple[dict, float]] = None
+        best_val: Optional[float] = None
+        for offer in card.get("offers", []):
+            min_spend = float(offer.get("spend", 0))
+            bonus_days = int(offer.get("days", 30))
+            months_to_hit = min_spend / avg_monthly_spend
+            if months_to_hit > bonus_days / 30:
+                continue
+            val = CardRecommendationService._bonus_value_usd(offer, points_value_cents)
+            if best_val is None or val > best_val:
+                best = (offer, months_to_hit)
+                best_val = val
+        return best
 
     @staticmethod
     def _bonus_value_usd(offer: dict, points_value_cents: float = 1.0) -> float:
@@ -112,14 +133,17 @@ class CardRecommendationService:
         available_cards: list of cards from the free API
 
         Logic:
-        1. Skip discontinued cards, cards with no offers, cards user already owns
+        1. Skip discontinued cards, cards user already owns
            (matched by name.lower() + issuer.upper())
-        2. For best offer on each card: bonus_value = dollar value of the
-           bonus (USD entries at face value, points/miles at
-           ``points_value_cents`` per point)
-        3. months_to_hit = min_spend / avg_monthly_spend
-        4. achievable = months_to_hit <= (bonus_days / 30)
-        5. Skip non-achievable
+        2. Pick the best *achievable* offer per card (``_best_achievable_offer``):
+           among the card's offers the user can hit
+           (months_to_hit <= bonus_days/30), take the highest dollar-valued one.
+           A card with multiple offer tiers is kept if *any* tier is achievable —
+           not dropped just because its top tier is out of reach.
+        3. Skip cards with no achievable offer
+        4. bonus_value = dollar value of the chosen offer (USD entries at face
+           value, points/miles at ``points_value_cents`` per point)
+        5. months_to_hit = min_spend / avg_monthly_spend (for the chosen offer)
         6. ongoing_value = avg_monthly_spend * 12 * universalCashbackPercent/100
            (flat first-year earn, shared with analyze_portfolio)
         7. score = bonus_value + ongoing_value - first_year_fee + credit_value
@@ -136,6 +160,10 @@ class CardRecommendationService:
 
         results: List[dict] = []
 
+        # Without spend history no bonus is achievable — nothing to rank.
+        if avg_monthly_spend <= 0:
+            return results
+
         for card in available_cards:
             # 1a. Skip discontinued
             if card.get("discontinued", False):
@@ -146,27 +174,23 @@ class CardRecommendationService:
             if key in owned_keys:
                 continue
 
-            # 1c. Skip cards with no offers
-            offer = self._best_offer(card, points_value_cents)
-            if offer is None:
+            # 2. Pick the best offer the user can actually hit. Cards with no
+            #    offers — and cards whose every tier is out of reach at this
+            #    spend — are skipped. A multi-tier card is kept whenever any
+            #    tier is achievable (e.g. the smaller tier for a lower spender),
+            #    not dropped because only its top tier is unachievable.
+            selected = self._best_achievable_offer(
+                card, avg_monthly_spend, points_value_cents
+            )
+            if selected is None:
                 continue
+            offer, months_to_hit = selected
 
-            # 2. Bonus value (in dollars)
+            # 4. Bonus value (in dollars) and 5. spend terms of the chosen offer
             bonus_val = self._bonus_value_usd(offer, points_value_cents)
             bonus_points = self._bonus_points(offer)
-
-            # 3. months_to_hit
             min_spend: float = float(offer.get("spend", 0))
             bonus_days: int = int(offer.get("days", 30))
-
-            if avg_monthly_spend <= 0:
-                continue
-
-            months_to_hit = min_spend / avg_monthly_spend
-
-            # 4. achievability check
-            if months_to_hit > bonus_days / 30:
-                continue
 
             # 6. Ongoing rewards (flat first-year earn), shared with
             #    analyze_portfolio so the two modes can't drift.
