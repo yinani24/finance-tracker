@@ -72,10 +72,54 @@ class TestRecommendationSnapshotService:
 
         _seed_data(db_session, seed_user)
         service = RecommendationSnapshotService(db_session)
-        service.get_recommendations(seed_user.id, "next_card")
-        service.get_recommendations(seed_user.id, "next_card")
+        # Spy on the write path: a cache hit must NOT recompute/upsert. (The
+        # dataset fetch is a cheap process-wide TTL read and now runs on every
+        # call so its contents can be folded into the cache key, so asserting on
+        # the fetch count no longer measures caching — the upsert does.)
+        with patch.object(
+            service.snapshot_repo, "upsert", wraps=service.snapshot_repo.upsert
+        ) as spy_upsert:
+            service.get_recommendations(seed_user.id, "next_card")
+            service.get_recommendations(seed_user.id, "next_card")
 
-        assert mock_fetch.call_count == 1
+        assert spy_upsert.call_count == 1
+
+    def test_dataset_change_recomputes(self, db_session: Session, seed_user: User):
+        """A change in the card dataset must invalidate the cache (PRD FR5).
+
+        The cache key previously omitted the dataset, so a second GET after an
+        upstream sign-up-bonus change served the stale ranking. Now the dataset
+        is fingerprinted into the key, so the snapshot is recomputed.
+        """
+        from app.services.recommendation_snapshot import RecommendationSnapshotService
+
+        changed_cards = [dict(MOCK_CARDS[0])]
+        # Same card, larger sign-up bonus — a real upstream refresh.
+        changed_cards[0]["offers"] = [
+            {"spend": 500, "amount": [{"amount": 50000}], "days": 90, "credits": []}
+        ]
+
+        _seed_data(db_session, seed_user)
+        service = RecommendationSnapshotService(db_session)
+
+        with patch(
+            "app.services.recommendation_snapshot._fetch_cards",
+            side_effect=[MOCK_CARDS, changed_cards],
+        ):
+            with patch.object(
+                service.snapshot_repo, "upsert", wraps=service.snapshot_repo.upsert
+            ) as spy_upsert:
+                first = service.get_recommendations(seed_user.id, "next_card")
+                second = service.get_recommendations(seed_user.id, "next_card")
+
+        # Both GETs recomputed (dataset differed) → the second did not reuse the
+        # first's stale snapshot.
+        assert spy_upsert.call_count == 2
+        # Bonuses have no ``currency`` field → valued as points at 1.0¢
+        # (20000 pts → $200, 50000 pts → $500). The ranking reflects the newer,
+        # larger bonus rather than the cached stale one.
+        assert first["recommendations"][0]["bonus_value"] == 200.0
+        assert second["recommendations"][0]["bonus_value"] == 500.0
 
     @patch("app.services.recommendation_snapshot._fetch_cards", return_value=MOCK_CARDS)
     def test_invalidate_forces_recompute(self, mock_fetch, db_session: Session, seed_user: User):
