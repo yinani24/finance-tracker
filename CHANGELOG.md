@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **"Apply for a new card" recommendations no longer drop cards whose top offer
+  tier is out of reach when a smaller tier is achievable.** `recommend_next_card`
+  selected each card's single highest-dollar-value offer with `_best_offer` and
+  *only then* checked achievability, so a card advertising two concurrent offers —
+  a high-spend/high-bonus tier plus a low-spend/low-bonus tier — was dropped
+  entirely for any user who couldn't hit the top tier, even when they could
+  comfortably earn the smaller one. This hit **27 of the 179 dataset cards (15%)**
+  (e.g. Delta SkyMiles Gold: 90k pts @ $5,000/180d *or* 50k pts @ $2,000/180d) and
+  disproportionately penalized the lower-spend users the achievability filter is
+  meant to serve. The engine now picks the **best _achievable_ offer** per card
+  (`_best_achievable_offer`): it filters to the tiers the user can reach, then
+  takes the highest-valued of those; a card is skipped only when *no* tier is
+  achievable. Single-offer cards are unaffected. (#55)
 - **Groceries are now split from dining at ingest.** Plaid's
   `personal_finance_category.**primary**` value `FOOD_AND_DRINK` covers *both*
   restaurants and groceries, so all grocery spend was folding into `dining` —
