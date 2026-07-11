@@ -99,7 +99,9 @@ class CardInsightEngine:
                     "target": card.get("url", ""),
                 } if card.get("url") else None,
                 related_goal_id=None,
-                inputs_hash=_hash_inputs(profile_json, cards_json, f"next_card_{card.get('name', '')}"),
+                inputs_hash=_hash_inputs(
+                    profile_json, cards_json, f"next_card_{card.get('name', '')}"
+                ),
             ))
 
         portfolio = svc.analyze_portfolio(profile_dict, user_cards, available_cards)
@@ -117,8 +119,14 @@ class CardInsightEngine:
                     evidence={
                         "summary": analysis["explanation"],
                         "data_points": [
-                            {"label": "Annual value", "value": f"${analysis['estimated_annual_value']:,.2f}"},
-                            {"label": "Annual fee", "value": f"${analysis['user_card'].get('annual_fee', 0):,.2f}"},
+                            {
+                                "label": "Annual value",
+                                "value": f"${analysis['estimated_annual_value']:,.2f}",
+                            },
+                            {
+                                "label": "Annual fee",
+                                "value": f"${analysis['user_card'].get('annual_fee', 0):,.2f}",
+                            },
                             {"label": "Net value", "value": f"${analysis['net_value']:,.2f}"},
                         ],
                     },

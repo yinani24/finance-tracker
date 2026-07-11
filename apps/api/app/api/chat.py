@@ -123,7 +123,11 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any], db: Session, user_i
         return json.dumps(
             [
                 {
-                    "date": t.occurred_on.isoformat() if hasattr(t.occurred_on, "isoformat") else str(t.occurred_on),
+                    "date": (
+                        t.occurred_on.isoformat()
+                        if hasattr(t.occurred_on, "isoformat")
+                        else str(t.occurred_on)
+                    ),
                     "merchant": t.merchant,
                     "amount": float(t.amount),
                     "category": t.category,
