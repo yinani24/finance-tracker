@@ -10,7 +10,13 @@ from app.database import Base
 class Insight(Base):
     __tablename__ = "insights"
     __table_args__ = (
-        UniqueConstraint("user_id", "engine", "kind", "inputs_hash", name="uq_insights_user_engine_kind_hash"),
+        UniqueConstraint(
+            "user_id",
+            "engine",
+            "kind",
+            "inputs_hash",
+            name="uq_insights_user_engine_kind_hash",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -32,4 +38,6 @@ class Insight(Base):
     inputs_hash: Mapped[str] = mapped_column(String(64))
     seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )

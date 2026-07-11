@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,7 +10,6 @@ from sqlalchemy.orm import Session
 from app.models.account import Account
 from app.models.card import Card
 from app.models.goal import Goal
-from app.models.insight import Insight
 from app.models.plaid_item import PlaidItem
 from app.models.transaction import Transaction
 from app.repositories.insight import InsightRepository

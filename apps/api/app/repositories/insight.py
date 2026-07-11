@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from sqlalchemy import case, func, select, update
+from sqlalchemy import case, select, update
 from sqlalchemy.orm import Session
 
 from app.models.insight import Insight
@@ -64,7 +64,9 @@ class InsightRepository:
         unread = 0
         for r in rows:
             by_engine[r.engine] = by_engine.get(r.engine, 0) + 1
-            total_annual += r.impact_annual_cents if r.impact_annual_cents else r.impact_one_time_cents
+            total_annual += (
+                r.impact_annual_cents if r.impact_annual_cents else r.impact_one_time_cents
+            )
             if r.seen_at is None:
                 unread += 1
 
@@ -94,7 +96,11 @@ class InsightRepository:
         now = datetime.now(timezone.utc)
         stmt = (
             update(Insight)
-            .where(Insight.user_id == user_id, Insight.status == "active", Insight.seen_at.is_(None))
+            .where(
+                Insight.user_id == user_id,
+                Insight.status == "active",
+                Insight.seen_at.is_(None),
+            )
             .values(seen_at=now)
         )
         result = self.db.execute(stmt)
