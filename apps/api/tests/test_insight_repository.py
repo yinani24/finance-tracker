@@ -39,9 +39,18 @@ def test_list_active_returns_only_active(db_session: Session, seed_user):
 
 
 def test_list_active_sorted_by_annual_then_one_time(db_session: Session, seed_user):
-    _make_insight(db_session, seed_user.id, inputs_hash="h1", impact_annual_cents=5000, impact_one_time_cents=0)
-    _make_insight(db_session, seed_user.id, inputs_hash="h2", impact_annual_cents=20000, impact_one_time_cents=0)
-    _make_insight(db_session, seed_user.id, inputs_hash="h3", impact_annual_cents=0, impact_one_time_cents=90000)
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h1",
+        impact_annual_cents=5000, impact_one_time_cents=0,
+    )
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h2",
+        impact_annual_cents=20000, impact_one_time_cents=0,
+    )
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h3",
+        impact_annual_cents=0, impact_one_time_cents=90000,
+    )
     repo = InsightRepository(db_session)
     results = repo.list_active(seed_user.id)
     assert [r.inputs_hash for r in results] == ["h3", "h2", "h1"]
@@ -109,8 +118,12 @@ def test_mark_seen(db_session: Session, seed_user):
 def test_wake_snoozed(db_session: Session, seed_user):
     yesterday = date.today() - timedelta(days=1)
     tomorrow = date.today() + timedelta(days=1)
-    _make_insight(db_session, seed_user.id, inputs_hash="h1", status="snoozed", snoozed_until=yesterday)
-    _make_insight(db_session, seed_user.id, inputs_hash="h2", status="snoozed", snoozed_until=tomorrow)
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h1", status="snoozed", snoozed_until=yesterday
+    )
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h2", status="snoozed", snoozed_until=tomorrow
+    )
     repo = InsightRepository(db_session)
     woke = repo.wake_snoozed(seed_user.id)
     assert woke == 1
@@ -120,9 +133,16 @@ def test_wake_snoozed(db_session: Session, seed_user):
 
 
 def test_summary(db_session: Session, seed_user):
-    _make_insight(db_session, seed_user.id, inputs_hash="h1", engine="save", impact_annual_cents=10000)
-    _make_insight(db_session, seed_user.id, inputs_hash="h2", engine="card", impact_annual_cents=5000)
-    _make_insight(db_session, seed_user.id, inputs_hash="h3", engine="save", impact_annual_cents=3000, seen_at=datetime.now(timezone.utc))
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h1", engine="save", impact_annual_cents=10000
+    )
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h2", engine="card", impact_annual_cents=5000
+    )
+    _make_insight(
+        db_session, seed_user.id, inputs_hash="h3", engine="save",
+        impact_annual_cents=3000, seen_at=datetime.now(timezone.utc),
+    )
     repo = InsightRepository(db_session)
     summary = repo.summary(seed_user.id)
     assert summary["total_active"] == 3

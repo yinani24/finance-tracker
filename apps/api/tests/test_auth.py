@@ -108,7 +108,9 @@ class TestGetCurrentUser:
         assert response.json()["user_id"] == user.id
 
     def test_returns_existing_user(self, db_session: Session):
-        existing = User(auth_provider="supabase", auth_subject="existing-id", email="old@example.com")
+        existing = User(
+            auth_provider="supabase", auth_subject="existing-id", email="old@example.com"
+        )
         db_session.add(existing)
         db_session.commit()
         db_session.refresh(existing)

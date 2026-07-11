@@ -59,8 +59,12 @@ def test_get_insight_not_found(client: TestClient, seed_user):
 
 
 def test_summary(client: TestClient, db_session: Session, seed_user):
-    _create_insight(db_session, seed_user.id, inputs_hash="h1", engine="save", impact_annual_cents=10000)
-    _create_insight(db_session, seed_user.id, inputs_hash="h2", engine="card", impact_annual_cents=5000)
+    _create_insight(
+        db_session, seed_user.id, inputs_hash="h1", engine="save", impact_annual_cents=10000
+    )
+    _create_insight(
+        db_session, seed_user.id, inputs_hash="h2", engine="card", impact_annual_cents=5000
+    )
     resp = client.get("/insights/summary")
     assert resp.status_code == 200
     data = resp.json()

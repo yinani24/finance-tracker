@@ -311,7 +311,10 @@ class TestOngoingRewards:
 class TestAnalyzePortfolio:
     def test_flags_card_costing_money(self):
         service = CardRecommendationService()
-        user_cards = [{"name": "Platinum Card", "issuer": "AMERICAN_EXPRESS", "network": "AMERICAN_EXPRESS", "annual_fee": 695}]
+        user_cards = [
+            {"name": "Platinum Card", "issuer": "AMERICAN_EXPRESS",
+             "network": "AMERICAN_EXPRESS", "annual_fee": 695}
+        ]
         result = service.analyze_portfolio(_make_profile(500.0), user_cards, SAMPLE_CARDS)
 
         assert len(result) == 1
@@ -320,7 +323,9 @@ class TestAnalyzePortfolio:
 
     def test_flags_card_as_good(self):
         service = CardRecommendationService()
-        user_cards = [{"name": "Freedom Unlimited", "issuer": "CHASE", "network": "VISA", "annual_fee": 0}]
+        user_cards = [
+            {"name": "Freedom Unlimited", "issuer": "CHASE", "network": "VISA", "annual_fee": 0}
+        ]
         result = service.analyze_portfolio(_make_profile(5000.0), user_cards, SAMPLE_CARDS)
 
         assert len(result) == 1
@@ -329,7 +334,10 @@ class TestAnalyzePortfolio:
 
     def test_suggests_alternatives_for_bad_cards(self):
         service = CardRecommendationService()
-        user_cards = [{"name": "Platinum Card", "issuer": "AMERICAN_EXPRESS", "network": "AMERICAN_EXPRESS", "annual_fee": 695}]
+        user_cards = [
+            {"name": "Platinum Card", "issuer": "AMERICAN_EXPRESS",
+             "network": "AMERICAN_EXPRESS", "annual_fee": 695}
+        ]
         result = service.analyze_portfolio(_make_profile(500.0), user_cards, SAMPLE_CARDS)
 
         assert result[0]["status"] == "costing_money"

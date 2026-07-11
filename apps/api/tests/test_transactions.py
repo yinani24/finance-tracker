@@ -38,15 +38,24 @@ class TestTransactionAPI:
 
     def test_list_with_filters(self, client: TestClient, db_session: Session):
         acct_id = _seed_account(db_session)
-        client.post("/transactions", json={"account_id": acct_id, "occurred_on": "2026-03-01", "amount": -10, "merchant": "A", "dedupe_hash": "h1", "category": "Food"})
-        client.post("/transactions", json={"account_id": acct_id, "occurred_on": "2026-04-01", "amount": -20, "merchant": "B", "dedupe_hash": "h2", "category": "Transport"})
+        client.post("/transactions", json={
+            "account_id": acct_id, "occurred_on": "2026-03-01", "amount": -10,
+            "merchant": "A", "dedupe_hash": "h1", "category": "Food",
+        })
+        client.post("/transactions", json={
+            "account_id": acct_id, "occurred_on": "2026-04-01", "amount": -20,
+            "merchant": "B", "dedupe_hash": "h2", "category": "Transport",
+        })
         resp = client.get("/transactions", params={"category": "Food"})
         assert len(resp.json()) == 1
         assert resp.json()[0]["merchant"] == "A"
 
     def test_update_transaction(self, client: TestClient, db_session: Session):
         acct_id = _seed_account(db_session)
-        create_resp = client.post("/transactions", json={"account_id": acct_id, "occurred_on": "2026-03-15", "amount": -42.50, "merchant": "Whole Foods", "dedupe_hash": "h1"})
+        create_resp = client.post("/transactions", json={
+            "account_id": acct_id, "occurred_on": "2026-03-15", "amount": -42.50,
+            "merchant": "Whole Foods", "dedupe_hash": "h1",
+        })
         txn_id = create_resp.json()["id"]
         resp = client.patch(f"/transactions/{txn_id}", json={"category": "Groceries"})
         assert resp.status_code == 200

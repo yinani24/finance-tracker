@@ -54,8 +54,9 @@ def _seed_transactions(db_session: Session, user: User) -> None:
 class TestComputeProfile:
     def test_computes_categories_and_merchants(self, db_session: Session, seed_user: User):
         _seed_transactions(db_session, seed_user)
-        from app.services.spending_profile import compute_profile
         import json
+
+        from app.services.spending_profile import compute_profile
 
         profile = compute_profile(db_session, seed_user.id, lookback_months=6)
 
