@@ -11,7 +11,9 @@ router = APIRouter(prefix="/card-bonuses", tags=["card-bonuses"])
 async def list_card_bonuses(
     q: Optional[str] = Query(None, description="Search card name or issuer"),
     issuer: Optional[str] = Query(None, description="Filter by issuer (e.g. CHASE)"),
-    network: Optional[str] = Query(None, description="Filter by network (VISA, MASTERCARD, AMERICAN_EXPRESS)"),
+    network: Optional[str] = Query(
+        None, description="Filter by network (VISA, MASTERCARD, AMERICAN_EXPRESS)"
+    ),
     is_business: Optional[bool] = Query(None, description="Filter business vs personal cards"),
     max_annual_fee: Optional[float] = Query(None, description="Max annual fee"),
     limit: int = Query(25, ge=1, le=100),
