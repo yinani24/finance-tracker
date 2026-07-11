@@ -7,9 +7,9 @@ Create Date: 2026-04-01 17:41:48.858241
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '001'
@@ -140,8 +140,12 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_transactions_account_id'), 'transactions', ['account_id'], unique=False)
-    op.create_index(op.f('ix_transactions_dedupe_hash'), 'transactions', ['dedupe_hash'], unique=False)
+    op.create_index(
+        op.f('ix_transactions_account_id'), 'transactions', ['account_id'], unique=False
+    )
+    op.create_index(
+        op.f('ix_transactions_dedupe_hash'), 'transactions', ['dedupe_hash'], unique=False
+    )
     op.create_index(op.f('ix_transactions_user_id'), 'transactions', ['user_id'], unique=False)
     # ### end Alembic commands ###
 

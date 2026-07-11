@@ -1,11 +1,11 @@
 from collections.abc import Generator
 
-import app.models  # noqa: F401
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import app.models  # noqa: F401
 from app.auth import get_current_user
 from app.config import settings
 from app.database import Base, get_db

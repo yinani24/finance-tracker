@@ -24,14 +24,23 @@ class TestAccountAPI:
         assert "id" in data
 
     def test_list_accounts_after_create(self, client: TestClient, db_session: Session):
-        client.post("/accounts", json={"name": "Acct1", "type": "checking", "balance": 100, "currency": "USD"})
-        client.post("/accounts", json={"name": "Acct2", "type": "savings", "balance": 200, "currency": "USD"})
+        client.post(
+            "/accounts",
+            json={"name": "Acct1", "type": "checking", "balance": 100, "currency": "USD"},
+        )
+        client.post(
+            "/accounts",
+            json={"name": "Acct2", "type": "savings", "balance": 200, "currency": "USD"},
+        )
         response = client.get("/accounts")
         assert response.status_code == 200
         assert len(response.json()) == 2
 
     def test_update_account(self, client: TestClient, db_session: Session):
-        create_resp = client.post("/accounts", json={"name": "Old Name", "type": "checking", "balance": 0, "currency": "USD"})
+        create_resp = client.post(
+            "/accounts",
+            json={"name": "Old Name", "type": "checking", "balance": 0, "currency": "USD"},
+        )
         account_id = create_resp.json()["id"]
         response = client.patch(f"/accounts/{account_id}", json={"balance": 999.99})
         assert response.status_code == 200

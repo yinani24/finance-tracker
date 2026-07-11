@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
 
 class TestMeEndpoint:
@@ -20,7 +19,9 @@ class TestMeEndpoint:
         assert data["currency"] == "USD"
 
     def test_update_preferences(self, client: TestClient):
-        response = client.patch("/me/preferences", json={"theme": "dark", "timezone": "America/New_York"})
+        response = client.patch(
+            "/me/preferences", json={"theme": "dark", "timezone": "America/New_York"}
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["theme"] == "dark"

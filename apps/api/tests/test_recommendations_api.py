@@ -50,7 +50,9 @@ def _seed(db_session: Session, user: User) -> None:
 
 class TestRecommendationsAPI:
     @patch("app.services.recommendation_snapshot._fetch_cards", return_value=MOCK_CARDS)
-    def test_get_next_card(self, mock_fetch, client: TestClient, db_session: Session, seed_user: User):
+    def test_get_next_card(
+        self, mock_fetch, client: TestClient, db_session: Session, seed_user: User
+    ):
         _seed(db_session, seed_user)
         resp = client.get("/recommendations/next-card")
         assert resp.status_code == 200
@@ -59,7 +61,9 @@ class TestRecommendationsAPI:
         assert "spending_profile" in data
 
     @patch("app.services.recommendation_snapshot._fetch_cards", return_value=MOCK_CARDS)
-    def test_get_portfolio(self, mock_fetch, client: TestClient, db_session: Session, seed_user: User):
+    def test_get_portfolio(
+        self, mock_fetch, client: TestClient, db_session: Session, seed_user: User
+    ):
         _seed(db_session, seed_user)
         resp = client.get("/recommendations/portfolio")
         assert resp.status_code == 200
@@ -68,7 +72,9 @@ class TestRecommendationsAPI:
         assert "spending_profile" in data
 
     @patch("app.services.recommendation_snapshot._fetch_cards", return_value=MOCK_CARDS)
-    def test_get_spending_profile(self, mock_fetch, client: TestClient, db_session: Session, seed_user: User):
+    def test_get_spending_profile(
+        self, mock_fetch, client: TestClient, db_session: Session, seed_user: User
+    ):
         _seed(db_session, seed_user)
         resp = client.get("/recommendations/spending-profile")
         assert resp.status_code == 200

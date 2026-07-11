@@ -6,8 +6,9 @@ from app.services.insight_types import EngineContext, EngineEvent
 
 
 def _profile_ctx(**overrides):
-    from app.models.spending_profile import SpendingProfile
     from datetime import date, datetime
+
+    from app.models.spending_profile import SpendingProfile
 
     profile = SpendingProfile(
         id=1,
@@ -22,7 +23,10 @@ def _profile_ctx(**overrides):
     from app.models.card import Card
 
     cards = overrides.get("cards", [
-        Card(id=1, user_id=1, name="My Card", network="Visa", issuer="Chase", annual_fee=0.0, rewards_config_json="{}"),
+        Card(
+            id=1, user_id=1, name="My Card", network="Visa", issuer="Chase",
+            annual_fee=0.0, rewards_config_json="{}",
+        ),
     ])
     ctx = EngineContext(spending_profile=profile, cards=cards)
     return ctx
@@ -84,7 +88,10 @@ def test_generate_portfolio_insights():
     from app.models.card import Card
 
     cards = [
-        Card(id=1, user_id=1, name="Expensive Card", network="Visa", issuer="AMEX", annual_fee=550.0, rewards_config_json="{}"),
+        Card(
+            id=1, user_id=1, name="Expensive Card", network="Visa", issuer="AMEX",
+            annual_fee=550.0, rewards_config_json="{}",
+        ),
     ]
     ctx = _profile_ctx(cards=cards)
 
