@@ -149,20 +149,24 @@ detection and trend are candidate slices pending owner scope.
    real modeling decision with card-recommendation implications (you can't change the
    card you pay rent with as freely as where you eat). Defer, or in-scope for Phase 2?
 
-## Proposed decomposition (Stage 1 — the unblocked path)
+## Proposed decomposition (Stage 1 — status)
 
-Filable now, in priority order; **none depend on the #38 card-data decision**:
+Priority order; **none depend on the #38 card-data decision**:
 
-1. **Freshness edge (FR5) — filed as #60, the next unblocked slice.** Recompute when the
-   lookback window has advanced past the cached window even absent a new transaction. Pure
-   correctness; no new product decision.
-2. **~~Per-month category frequency (FR3)~~ — ALREADY SHIPPED** via
-   `GET /recommendations/spending-profile` (`monthly_avg_count` + `dining` rollup, tested).
-   Only a low-value nicety remains (promote from ad-hoc endpoint math to a stored profile
-   field); not prioritized. Open Q1 (per-transaction vs distinct-days) still applies if the
-   frequency definition is ever revisited.
-3. **Category trend signal** — *pending Open Q2.*
-4. **Recurring-charge detection** — *pending Open Q3.*
+1. ✅ **SHIPPED (#60).** Freshness edge (FR5) — `get_or_refresh` now recomputes when the
+   lookback window slides into a new month even absent a new transaction, with an injectable
+   reference "today" so the window-slide is unit-tested. Pure correctness; no product decision.
+2. ✅ **SHIPPED.** Per-month category frequency (FR3) — `GET /recommendations/spending-profile`
+   normalizes counts to per-month (`monthly_avg_count`) and surfaces a first-class `dining`
+   rollup, tested. Only a low-value nicety remains (promote from ad-hoc endpoint math to a
+   stored profile field); not prioritized. Open Q1 (per-transaction vs distinct-days) still
+   applies if the frequency definition is ever revisited.
+3. ⛔ **BLOCKED by Open Q2.** Category trend / recency-weighting signal.
+4. ⛔ **BLOCKED by Open Q3.** Recurring-charge vs discretionary detection.
+
+**Net:** both owner-independent slices (FR3, FR5) are done; everything remaining (3–4) is
+gated on an owner product decision (Open Q2/Q3). No spending-intelligence implementation work
+is unblocked until one of those is answered.
 
 Ref: `docs/prd/PRODUCT.md` (Phase 2, Success criteria), `docs/prd/recommendation-engine.md`
 (consumer of this profile; its category-aware earn is separately blocked by #38).
