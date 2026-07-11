@@ -1,4 +1,3 @@
-import json
 from typing import Literal, Optional
 
 from sqlalchemy.orm import Session
@@ -10,7 +9,6 @@ from app.services.insight_types import (
     EngineContext,
     EngineEvent,
     InsightDraft,
-    InsightEngine,
 )
 
 

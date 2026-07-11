@@ -1,5 +1,4 @@
 import json
-from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -51,8 +50,8 @@ def test_unique_constraint_prevents_duplicates(db_session: Session, seed_user):
     db_session.commit()
 
     db_session.add(Insight(**kwargs))
-    from sqlalchemy.exc import IntegrityError
     import pytest
+    from sqlalchemy.exc import IntegrityError
     with pytest.raises(IntegrityError):
         db_session.commit()
 

@@ -7,9 +7,9 @@ Create Date: 2026-04-12 16:45:05.147071
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '72bfe64b241f'
@@ -32,7 +32,12 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'type', name='uq_recommendation_snapshots_user_type')
     )
-    op.create_index(op.f('ix_recommendation_snapshots_user_id'), 'recommendation_snapshots', ['user_id'], unique=False)
+    op.create_index(
+        op.f('ix_recommendation_snapshots_user_id'),
+        'recommendation_snapshots',
+        ['user_id'],
+        unique=False,
+    )
     op.create_table('spending_profiles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -46,7 +51,9 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', name='uq_spending_profiles_user')
     )
-    op.create_index(op.f('ix_spending_profiles_user_id'), 'spending_profiles', ['user_id'], unique=False)
+    op.create_index(
+        op.f('ix_spending_profiles_user_id'), 'spending_profiles', ['user_id'], unique=False
+    )
     op.add_column('cards', sa.Column('issuer', sa.String(length=50), nullable=True))
     # ### end Alembic commands ###
 
@@ -57,6 +64,8 @@ def downgrade() -> None:
     op.drop_column('cards', 'issuer')
     op.drop_index(op.f('ix_spending_profiles_user_id'), table_name='spending_profiles')
     op.drop_table('spending_profiles')
-    op.drop_index(op.f('ix_recommendation_snapshots_user_id'), table_name='recommendation_snapshots')
+    op.drop_index(
+        op.f('ix_recommendation_snapshots_user_id'), table_name='recommendation_snapshots'
+    )
     op.drop_table('recommendation_snapshots')
     # ### end Alembic commands ###
