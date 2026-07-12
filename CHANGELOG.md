@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Spending Profile view in the web app (#106).** A new "Spending Profile" tab on the
+  Recommendations page renders `/recommendations/spending-profile`: per-category monthly
+  averages (dining first) as ranked bars, the headline "you dine out ~N×/month" figure
+  (`dining.monthly_avg_count`) with avg-per-visit, monthly txn counts and avg-per-transaction
+  per category, and top merchants. Includes loading and empty states ("Add or sync
+  transactions to see your spending profile"). Previously the backend computed this profile
+  but no UI rendered it. Also updated the web `SpendingProfile`/`CategorySpend` types to match
+  the current API response (`count`, `monthly_avg_count`, `avg_per_txn`, top-level `dining`).
+  Ref: `docs/prd/spending-intelligence.md` (User stories 1–2, FR3).
+
 ### Changed
 - **Cleared the remaining ruff debt in `apps/api/tests/` + `alembic/` (#80).** With `app/`
   already clean (#74), this clears the last 53 errors so `ruff check .` is green repo-wide —
