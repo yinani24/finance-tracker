@@ -134,6 +134,9 @@ export interface CardBonusSearchResult {
 export interface CategorySpend {
   category: string;
   monthly_avg: number;
+  count: number;
+  monthly_avg_count: number;
+  avg_per_txn: number;
 }
 
 export interface TopMerchant {
@@ -147,6 +150,7 @@ export interface SpendingProfile {
   period_end: string;
   avg_monthly_spend: number;
   categories: CategorySpend[];
+  dining: CategorySpend | null;
   top_merchants: TopMerchant[];
   computed_at: string;
 }
