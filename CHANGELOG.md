@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   but no UI rendered it. Also updated the web `SpendingProfile`/`CategorySpend` types to match
   the current API response (`count`, `monthly_avg_count`, `avg_per_txn`, top-level `dining`).
   Ref: `docs/prd/spending-intelligence.md` (User stories 1–2, FR3).
+- **Inline transaction recategorization in the web UI (#109).** The transactions page
+  now renders an editable category `<select>` (options = the fixed internal taxonomy:
+  `dining, groceries, travel, transport, shopping, bills, entertainment, health, income,
+  other`) on each row instead of a read-only badge. Changing it PATCHes
+  `/transactions/{id}` via a new `updateTransaction` client fn; on success the
+  `transactions`, `recommendations`, `insights`, and `insights-summary` queries are
+  invalidated so the spending profile self-corrects (the backend already fires
+  `TRANSACTION_MUTATED` to recompute). Closes the write side of the spending-intelligence
+  loop opened on the read side by #106 — a mis-categorized transaction (e.g. a restaurant
+  mislabeled `other`) can now be fixed from the UI. Consumer-side only; per-row loading
+  (disabled while saving) and an error banner included.
 
 ### Changed
 - **Cleared the remaining ruff debt in `apps/api/tests/` + `alembic/` (#80).** With `app/`

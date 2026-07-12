@@ -1,15 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getTransactions, getAccounts } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getTransactions, getAccounts, updateTransaction } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { Search } from "lucide-react";
 
+// The fixed internal category set — must stay in sync with the backend taxonomy
+// (`apps/api/app/services/enrichment/taxonomy.py`). Editing a transaction's
+// category drives the spending profile (dining is the Phase-2 headline metric).
+const TAXONOMY_CATEGORIES = [
+  "dining",
+  "groceries",
+  "travel",
+  "transport",
+  "shopping",
+  "bills",
+  "entertainment",
+  "health",
+  "income",
+  "other",
+] as const;
+
 export default function TransactionsPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterAccount, setFilterAccount] = useState<number | undefined>();
   const [filterCategory, setFilterCategory] = useState<string | undefined>();
+  const [savingId, setSavingId] = useState<number | null>(null);
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["transactions", filterAccount, filterCategory],
@@ -18,6 +36,23 @@ export default function TransactionsPage() {
         account_id: filterAccount,
         category: filterCategory,
       }),
+  });
+
+  // Editing a category PATCHes the transaction; the backend fires
+  // TRANSACTION_MUTATED, which recomputes the spending profile + insights, so we
+  // invalidate those consumers too and the "you dine out ~N×/month" figure
+  // self-corrects.
+  const recategorize = useMutation({
+    mutationFn: ({ id, category }: { id: number; category: string }) =>
+      updateTransaction(id, { category }),
+    onMutate: ({ id }) => setSavingId(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
+      queryClient.invalidateQueries({ queryKey: ["insights-summary"] });
+    },
+    onSettled: () => setSavingId(null),
   });
 
   const { data: accounts = [] } = useQuery({
@@ -103,6 +138,12 @@ export default function TransactionsPage() {
         </select>
       </div>
 
+      {recategorize.isError && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-500">
+          Couldn&apos;t update the category. Please try again.
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <table className="w-full">
           <thead>
@@ -160,11 +201,24 @@ export default function TransactionsPage() {
                       {t.merchant}
                     </td>
                     <td className="px-5 py-3">
-                      {t.category && (
-                        <span className="inline-block px-2 py-0.5 bg-accent text-muted rounded text-xs capitalize">
-                          {t.category.replace(/_/g, " ")}
-                        </span>
-                      )}
+                      <select
+                        aria-label="Category"
+                        value={t.category ?? "other"}
+                        disabled={savingId === t.id}
+                        onChange={(e) =>
+                          recategorize.mutate({
+                            id: t.id,
+                            category: e.target.value,
+                          })
+                        }
+                        className="border border-input bg-background text-foreground rounded-lg px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        {TAXONOMY_CATEGORIES.map((c) => (
+                          <option key={c} value={c} className="capitalize">
+                            {c}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-5 py-3 text-sm text-muted">
                       {accountMap[t.account_id] || `#${t.account_id}`}
