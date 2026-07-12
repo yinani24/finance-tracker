@@ -120,6 +120,11 @@ export const createTransaction = (data: Partial<Transaction>) =>
     method: "POST",
     body: JSON.stringify(data),
   });
+export const updateTransaction = (id: number, data: Partial<Transaction>) =>
+  request<Transaction>(`/transactions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 
 // Goals
 export const getGoals = () => request<Goal[]>("/goals");
