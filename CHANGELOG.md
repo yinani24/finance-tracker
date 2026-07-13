@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Spending Profile view in the web app (#106).** A new "Spending Profile" tab on the
+  Recommendations page renders `/recommendations/spending-profile`: per-category monthly
+  averages (dining first) as ranked bars, the headline "you dine out ~N×/month" figure
+  (`dining.monthly_avg_count`) with avg-per-visit, monthly txn counts and avg-per-transaction
+  per category, and top merchants. Includes loading and empty states ("Add or sync
+  transactions to see your spending profile"). Previously the backend computed this profile
+  but no UI rendered it. Also updated the web `SpendingProfile`/`CategorySpend` types to match
+  the current API response (`count`, `monthly_avg_count`, `avg_per_txn`, top-level `dining`).
+  Ref: `docs/prd/spending-intelligence.md` (User stories 1–2, FR3).
 - **Edit & delete manually-added cards in the web UI (#118).** Each card in the
   "Added manually" section of the Cards page now has an **Edit** action (a dialog
   prefilled with name / network / annual fee, mirroring the Add-Card form) and a
@@ -19,15 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the name, a wrong fee, or a wrong network was permanent. Plaid-linked cards stay
   read-only. Consumer-side only; no card-catalog data. Ref:
   `docs/prd/recommendation-engine.md`.
-- **Spending Profile view in the web app (#106).** A new "Spending Profile" tab on the
-  Recommendations page renders `/recommendations/spending-profile`: per-category monthly
-  averages (dining first) as ranked bars, the headline "you dine out ~N×/month" figure
-  (`dining.monthly_avg_count`) with avg-per-visit, monthly txn counts and avg-per-transaction
-  per category, and top merchants. Includes loading and empty states ("Add or sync
-  transactions to see your spending profile"). Previously the backend computed this profile
-  but no UI rendered it. Also updated the web `SpendingProfile`/`CategorySpend` types to match
-  the current API response (`count`, `monthly_avg_count`, `avg_per_txn`, top-level `dining`).
-  Ref: `docs/prd/spending-intelligence.md` (User stories 1–2, FR3).
 - **Inline transaction recategorization in the web UI (#109).** The transactions page
   now renders an editable category `<select>` (options = the fixed internal taxonomy:
   `dining, groceries, travel, transport, shopping, bills, entertainment, health, income,
