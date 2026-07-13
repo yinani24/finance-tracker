@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Card-catalog browse page in the web UI (#123).** A new nav-linked "Explore
+  cards" page (`/explore`) renders the previously UI-less `GET /card-bonuses`
+  surface: a search box plus issuer / network / max-annual-fee / personal-vs-business
+  filters over the public 179-card dataset, with server-side pagination. The issuer
+  dropdown is populated by a new `getCardBonusIssuers()` client fn wired to
+  `GET /card-bonuses/issuers`. Each result card shows name, issuer, network, annual
+  fee (flagging first-year waivers), and its best sign-up offer (highest total bonus
+  value with the spend/time requirement). Loading, empty, and error states render
+  gracefully. Read-only surface — no mutations, backend untouched. This makes step 3
+  of the MVP loop (match against the card dataset) directly explorable, complementing
+  the Recommendations page's single best pick. "Add to wallet" and a per-card detail
+  page are deferred fast-follows. Ref: `docs/prd/PRODUCT.md` (MVP loop step 3),
+  `docs/prd/recommendation-engine.md`.
 - **CSV statement import in the web UI (#114).** A new "Import CSV statement"
   card on the Transactions page surfaces the previously UI-less `/imports`
   backend: pick an account, choose a `.csv` bank/card export, and upload it. The
