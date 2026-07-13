@@ -215,3 +215,32 @@ export interface InsightSummary {
   unread_count: number;
   by_engine: Record<string, number>;
 }
+
+// Result of one statement-import run (POST /imports response). `duplicates` and
+// `skipped` are per-run counts so the UI can show exactly what a single upload did.
+export interface ImportSummary {
+  import_id: number;
+  account_id: number;
+  provider: string;
+  import_type: string;
+  status: string;
+  total_rows: number;
+  added: number;
+  duplicates: number;
+  skipped: number;
+  error_message: string | null;
+}
+
+// Persisted status of an import (GET /imports and GET /imports/{id}).
+export interface ImportRecord {
+  id: number;
+  account_id: number;
+  provider: string;
+  import_type: string;
+  status: string;
+  error_message: string | null;
+  transaction_count: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}

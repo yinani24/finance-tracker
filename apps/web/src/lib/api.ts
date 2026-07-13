@@ -3,6 +3,8 @@ import type {
   Card,
   CardBonusSearchResult,
   Goal,
+  ImportRecord,
+  ImportSummary,
   Insight,
   InsightSummary,
   LinkTokenResponse,
@@ -47,8 +49,13 @@ async function fetchWithAuth<T>(
   token: string | null,
   options?: RequestInit
 ): Promise<Response> {
+  // FormData (file uploads) must NOT carry an explicit Content-Type — the
+  // browser sets `multipart/form-data` with the correct boundary itself. Only
+  // default to JSON for non-FormData bodies.
+  const isFormData =
+    typeof FormData !== "undefined" && options?.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...options?.headers as Record<string, string>,
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -220,3 +227,14 @@ export const markInsightsSeen = () =>
 export const getInsightsHistory = () => request<Insight[]>("/insights/history");
 export const refreshInsights = () =>
   request<{ status: string }>("/insights/refresh", { method: "POST" });
+
+// Statement imports (CSV). Uploads a bank/card statement file for an account;
+// the backend parses, dedupes, and creates transactions, returning a per-run
+// summary. `getImports` lists past import runs and their status.
+export const createImport = (accountId: number, file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("account_id", String(accountId));
+  return request<ImportSummary>("/imports", { method: "POST", body: form });
+};
+export const getImports = () => request<ImportRecord[]>("/imports");
