@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTransactions, getAccounts, updateTransaction } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { Search } from "lucide-react";
+import { StatementImport } from "@/components/statement-import";
 
 // The fixed internal category set — must stay in sync with the backend taxonomy
 // (`apps/api/app/services/enrichment/taxonomy.py`). Editing a transaction's
@@ -98,6 +99,8 @@ export default function TransactionsPage() {
           )}
         </p>
       </div>
+
+      <StatementImport />
 
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-[200px]">

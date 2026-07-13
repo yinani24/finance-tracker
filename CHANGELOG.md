@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CSV statement import in the web UI (#114).** A new "Import CSV statement"
+  card on the Transactions page surfaces the previously UI-less `/imports`
+  backend: pick an account, choose a `.csv` bank/card export, and upload it. The
+  backend (`POST /imports`) parses, dedupes, and creates transactions, and the UI
+  shows a per-run summary (added / duplicates skipped / unparseable rows) plus a
+  "Recent imports" list from `GET /imports`. On success the `transactions`,
+  `accounts`, `recommendations`, `spending-profile`, `insights`, and
+  `insights-summary` queries are invalidated so the spending profile and card
+  recommendations reflect the new data immediately. This is the keys-free path to
+  get real transaction history in (Plaid needs live linking) — feeding the whole
+  spending→recommendation loop. Also: `fetchWithAuth` now omits the JSON
+  `Content-Type` for `FormData` bodies so the browser sets the multipart boundary.
+  Consumer-side only; backend unchanged (was already shipped + mounted, just
+  unreachable). Ref: `docs/prd/spending-intelligence.md`, `docs/prd/PRODUCT.md`
+  (MVP loop step 1: connect/ingest accounts).
 - **Spending Profile view in the web app (#106).** A new "Spending Profile" tab on the
   Recommendations page renders `/recommendations/spending-profile`: per-category monthly
   averages (dining first) as ranked bars, the headline "you dine out ~N×/month" figure
