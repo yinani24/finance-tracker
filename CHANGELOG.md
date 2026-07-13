@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Edit & delete manually-added cards in the web UI (#118).** Each card in the
+  "Added manually" section of the Cards page now has an **Edit** action (a dialog
+  prefilled with name / network / annual fee, mirroring the Add-Card form) and a
+  **Delete** action (inline confirm). Edits PATCH `/cards/{id}` via a new
+  `updateCard` client fn; deletes use the already-shipped-but-unwired `deleteCard`.
+  On success the `cards` and `recommendations` queries are invalidated so the
+  recommendation engine's existing-card math (earn rates, first-year-value net of
+  annual fee) re-runs. Previously a manual card could only be created — a typo in
+  the name, a wrong fee, or a wrong network was permanent. Plaid-linked cards stay
+  read-only. Consumer-side only; no card-catalog data. Ref:
+  `docs/prd/recommendation-engine.md`.
 - **Spending Profile view in the web app (#106).** A new "Spending Profile" tab on the
   Recommendations page renders `/recommendations/spending-profile`: per-category monthly
   averages (dining first) as ranked bars, the headline "you dine out ~N×/month" figure
