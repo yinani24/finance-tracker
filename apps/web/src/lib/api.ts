@@ -147,6 +147,11 @@ export const updateGoal = (id: number, data: Partial<Goal>) =>
 export const getCards = () => request<Card[]>("/cards");
 export const createCard = (data: Partial<Card>) =>
   request<Card>("/cards", { method: "POST", body: JSON.stringify(data) });
+export const updateCard = (id: number, data: Partial<Card>) =>
+  request<Card>(`/cards/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 export const deleteCard = (id: number) =>
   request<void>(`/cards/${id}`, { method: "DELETE" });
 
