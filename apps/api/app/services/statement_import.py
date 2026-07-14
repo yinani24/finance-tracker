@@ -69,11 +69,27 @@ class ParsedRow:
 
 
 @dataclass
+class RowError:
+    """A single data row that couldn't be parsed, with why.
+
+    ``row`` is the 1-based line number in the uploaded file (the header is
+    row 1, so the first data row is row 2), so the user can locate the
+    offending line in their statement.
+    """
+
+    row: int
+    reason: str
+
+
+@dataclass
 class ImportResult:
     total_rows: int
     added: int
     duplicates: int
     skipped: int
+    # Per-row parse failures (row number + reason). ``len(errors) == skipped``;
+    # ``skipped`` is retained for back-compat with existing summary consumers.
+    errors: list[RowError]
 
 
 def _match_column(fieldnames: list[str], hints: tuple[str, ...]) -> str | None:
@@ -117,12 +133,13 @@ def _parse_date(raw: str) -> date:
     raise ValueError(f"unrecognized date format: {text!r}")
 
 
-def parse_csv(content: bytes) -> tuple[list[ParsedRow], int]:
-    """Parse CSV bytes into ``ParsedRow``s plus a count of skipped rows.
+def parse_csv(content: bytes) -> tuple[list[ParsedRow], list[RowError]]:
+    """Parse CSV bytes into ``ParsedRow``s plus a list of per-row parse errors.
 
     Raises ``StatementParseError`` if the file is empty/undecodable or lacks the
     required date / description / amount columns. Individual rows that fail to
-    parse are skipped (counted), never aborting the whole file.
+    parse are collected as ``RowError`` (row number + reason), never aborting the
+    whole file — the count of these is the import's ``skipped`` total.
     """
     if not content or not content.strip():
         raise StatementParseError("file is empty")
@@ -154,13 +171,14 @@ def parse_csv(content: bytes) -> tuple[list[ParsedRow], int]:
         )
 
     rows: list[ParsedRow] = []
-    skipped = 0
-    for raw_row in reader:
+    errors: list[RowError] = []
+    # Data rows start at file line 2 (line 1 is the header).
+    for line_no, raw_row in enumerate(reader, start=2):
         try:
             occurred_on = _parse_date(raw_row.get(date_col, ""))
             signed_amount = _parse_amount(raw_row.get(amount_col, ""))
-        except ValueError:
-            skipped += 1
+        except ValueError as exc:
+            errors.append(RowError(row=line_no, reason=str(exc)))
             continue
         merchant = (raw_row.get(desc_col) or "").strip() or "Unknown"
         rows.append(
@@ -170,7 +188,7 @@ def parse_csv(content: bytes) -> tuple[list[ParsedRow], int]:
                 signed_amount=signed_amount,
             )
         )
-    return rows, skipped
+    return rows, errors
 
 
 def _persist_rows(
@@ -262,7 +280,7 @@ def run_import(
     )
 
     try:
-        parsed, skipped = parse_csv(file_bytes)
+        parsed, errors = parse_csv(file_bytes)
     except StatementParseError as exc:
         repo.mark_failed(record, str(exc))
         raise
@@ -270,9 +288,10 @@ def run_import(
     added, duplicates = _persist_rows(db, user_id, account_id, record.id, parsed)
     repo.mark_done(record)
     result = ImportResult(
-        total_rows=len(parsed) + skipped,
+        total_rows=len(parsed) + len(errors),
         added=added,
         duplicates=duplicates,
-        skipped=skipped,
+        skipped=len(errors),
+        errors=errors,
     )
     return record, result

@@ -218,6 +218,13 @@ export interface InsightSummary {
 
 // Result of one statement-import run (POST /imports response). `duplicates` and
 // `skipped` are per-run counts so the UI can show exactly what a single upload did.
+// A single data row that failed to parse during import (row = 1-based file
+// line number, header is line 1).
+export interface ImportRowError {
+  row: number;
+  reason: string;
+}
+
 export interface ImportSummary {
   import_id: number;
   account_id: number;
@@ -228,6 +235,7 @@ export interface ImportSummary {
   added: number;
   duplicates: number;
   skipped: number;
+  errors: ImportRowError[];
   error_message: string | null;
 }
 
