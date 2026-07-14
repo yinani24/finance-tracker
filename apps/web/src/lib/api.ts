@@ -180,6 +180,8 @@ export const searchCardBonuses = (params?: {
     `/card-bonuses${qs ? `?${qs}` : ""}`
   );
 };
+export const getCardBonusIssuers = () =>
+  request<string[]>("/card-bonuses/issuers");
 
 // Plaid
 export const getPlaidItems = () => request<PlaidItem[]>("/plaid/items");
