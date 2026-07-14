@@ -63,8 +63,8 @@ class TestParseUnit:
             "Transaction Date,Merchant,Amount\n"
             "06/01/2026,Coffee Shop,-3.50\n"
         )
-        rows, skipped = parse_csv(csv_text.encode("utf-8"))
-        assert skipped == 0
+        rows, errors = parse_csv(csv_text.encode("utf-8"))
+        assert errors == []
         assert len(rows) == 1
         assert rows[0].merchant == "Coffee Shop"
         assert rows[0].signed_amount == -3.50
@@ -77,9 +77,14 @@ class TestParseUnit:
             "not-a-date,Bad Date,-2.00\n"
             "2026-06-03,Bad Amount,notnum\n"
         )
-        rows, skipped = parse_csv(csv_text.encode("utf-8"))
+        rows, errors = parse_csv(csv_text.encode("utf-8"))
         assert len(rows) == 1
-        assert skipped == 2
+        assert len(errors) == 2
+        # Errors carry the 1-based file line number (header is line 1) and a
+        # human-readable reason, not just a count.
+        assert [e.row for e in errors] == [3, 4]
+        assert "date" in errors[0].reason.lower()
+        assert errors[1].reason  # non-empty amount-parse reason
 
     def test_parse_csv_missing_columns_raises(self):
         try:
@@ -165,6 +170,11 @@ class TestImportAPI:
         assert body["added"] == 1
         assert body["skipped"] == 1
         assert body["total_rows"] == 2
+        # Criterion 5: the skipped row is reported per-row (row + reason), not
+        # only counted.
+        assert len(body["errors"]) == 1
+        assert body["errors"][0]["row"] == 3
+        assert body["errors"][0]["reason"]
 
     def test_import_into_unknown_account_404(self, client: TestClient):
         resp = _upload(client, 9999, BASIC_CSV)

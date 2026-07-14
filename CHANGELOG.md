@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Per-row error reporting on CSV import (#149).** The `POST /imports` response
+  now returns an `errors[]` list — each entry `{row, reason}` naming the 1-based
+  file line (header is line 1) and why it couldn't be parsed (e.g. `row 14:
+  unrecognized date format: 'bogus'`) — instead of only a `skipped` count.
+  `parse_csv` now returns `(rows, errors)` and `ImportResult`/`ImportSummary`
+  carry the list (`len(errors) == skipped`, which is retained for back-compat).
+  The Transactions "Import CSV statement" card shows a collapsible "Show N
+  unparseable rows" detail listing each failed row and reason, so the user can
+  fix and re-upload rather than guessing which lines were dropped. Closes the
+  last unmet acceptance criterion on the CSV-ingest path. Ref:
+  `docs/prd/PRODUCT.md` (data ingestion).
 - **CSV statement import in the web UI (#114).** A new "Import CSV statement"
   card on the Transactions page surfaces the previously UI-less `/imports`
   backend: pick an account, choose a `.csv` bank/card export, and upload it. The

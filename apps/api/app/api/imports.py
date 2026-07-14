@@ -7,6 +7,7 @@ from app.models.import_record import Import
 from app.repositories.account import AccountRepository
 from app.repositories.import_record import ImportRepository
 from app.schemas.import_record import ImportRead, ImportSummary
+from app.schemas.import_record import RowError as RowErrorSchema
 from app.services.statement_import import StatementParseError, run_import
 
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -61,6 +62,7 @@ async def create_import(
         added=result.added,
         duplicates=result.duplicates,
         skipped=result.skipped,
+        errors=[RowErrorSchema(row=e.row, reason=e.reason) for e in result.errors],
         error_message=record.error_message,
     )
 

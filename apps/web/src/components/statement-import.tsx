@@ -112,6 +112,21 @@ export function StatementImport() {
           {summary.total_rows === 1 ? "" : "s"} · {summary.duplicates} duplicate
           {summary.duplicates === 1 ? "" : "s"} skipped
           {summary.skipped > 0 ? ` · ${summary.skipped} unparseable` : ""}.
+          {summary.errors.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-muted hover:text-card-foreground">
+                Show {summary.errors.length} unparseable row
+                {summary.errors.length === 1 ? "" : "s"}
+              </summary>
+              <ul className="mt-1.5 space-y-0.5 text-xs text-muted">
+                {summary.errors.map((e) => (
+                  <li key={e.row} className="font-mono">
+                    Row {e.row}: {e.reason}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
