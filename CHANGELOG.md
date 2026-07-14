@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Category-aware ongoing earn in the recommendation engine (#38).** The engine
+  now ranks cards by how well their per-category reward rates match *how the user
+  actually spends* (dining first) — the core product premise — instead of a single
+  flat cashback rate. A new curated, owner-approved data file
+  `apps/api/app/data/card_category_rates.json` (path **A** from #38) maps the
+  sibling dataset's `cardId` → per-category earn rate (percent-equivalent) for a
+  seed of ~13 top dining/grocery/travel cards (Amex Gold, Chase Sapphire, Cap One
+  Savor, Citi Strata Premier, Blue Cash, …); the upstream `credit-card-bonuses-api`
+  export has no per-category rates and can't be enriched. The shared
+  `_ongoing_value` seam (used by both apply-for-new and held-card analysis)
+  computes earn as `Σ_category (category_monthly × 12 × rate/100)`, falling back to
+  each card's flat `universalCashbackPercent` for any category — and any card — not
+  in the table. **Strictly additive:** an uncurated card's score is byte-identical
+  to the old flat model. Recommendation rationales now show the blended effective
+  rate. See `apps/api/app/data/README.md` for the rate provenance/refresh notes.
+  Ref: `docs/prd/recommendation-engine.md` (slice 3, FR1), `docs/prd/PRODUCT.md`
+  (Phase 4).
 - **CSV statement import in the web UI (#114).** A new "Import CSV statement"
   card on the Transactions page surfaces the previously UI-less `/imports`
   backend: pick an account, choose a `.csv` bank/card export, and upload it. The
