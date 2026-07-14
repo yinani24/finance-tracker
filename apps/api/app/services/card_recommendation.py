@@ -1,6 +1,33 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Dict, List, Optional
+
+# Curated per-category ongoing-earn rates, keyed by upstream ``cardId`` (see
+# ``app/data/card_category_rates.json`` and its README). Loaded once at import,
+# DB-free, mirroring how ``card_bonuses`` stays a pure fetch/query layer. Keys
+# beginning with ``_`` (e.g. ``_meta``) are documentation and skipped. Any load
+# failure degrades gracefully to an empty table → the engine falls back to the
+# flat model everywhere, exactly as before this slice.
+_CATEGORY_RATES_PATH = Path(__file__).resolve().parent.parent / "data" / "card_category_rates.json"
+
+
+def _load_category_rates() -> Dict[str, Dict[str, float]]:
+    try:
+        raw = json.loads(_CATEGORY_RATES_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        card_id: rates
+        for card_id, rates in raw.items()
+        if not card_id.startswith("_") and isinstance(rates, dict)
+    }
+
+
+_CATEGORY_RATES: Dict[str, Dict[str, float]] = _load_category_rates()
 
 
 class CardRecommendationService:
@@ -102,16 +129,53 @@ class CardRecommendationService:
         return float(card.get("annualFee", 0))
 
     @staticmethod
-    def _ongoing_value(cashback_pct: float, avg_monthly_spend: float) -> float:
-        """First-year flat-cashback ongoing rewards, in **dollars**.
+    def _ongoing_value(
+        card: dict,
+        avg_monthly_spend: float,
+        category_breakdown: Optional[Dict[str, float]] = None,
+    ) -> float:
+        """First-year ongoing rewards, in **dollars** — category-aware.
 
         Single source of truth for the earn model shared by
         ``recommend_next_card`` (apply-for-new) and ``analyze_portfolio``
-        (held cards), so the two modes can't drift. Flat model:
-        ``annual_spend × universalCashbackPercent``. Category-aware earn from
-        ``profile.category_breakdown`` is a future slice — this stays flat.
+        (held cards), so the two modes can't drift.
+
+        Earn is driven by ``category_breakdown`` (monthly-average dollars per
+        internal spending category, as built by ``spending_profile``): for each
+        category the card's curated per-category rate is used
+        (``app/data/card_category_rates.json``, keyed by ``cardId``), falling
+        back to the card's flat ``universalCashbackPercent`` for any category
+        the card doesn't curate.
+
+        **Additive / non-regressive by construction.** A card with no curated
+        rates — and any call without a ``category_breakdown`` — evaluates to
+        exactly the old flat number ``avg_monthly_spend × 12 ×
+        universalCashbackPercent / 100``, because ``sum(category_breakdown
+        .values()) == avg_monthly_spend`` (both are total spend ÷ months) and
+        every category then earns at the flat rate.
         """
-        return avg_monthly_spend * 12 * cashback_pct / 100.0
+        flat_pct: float = float(card.get("universalCashbackPercent", 0))
+        card_id = card.get("cardId")
+        rates = _CATEGORY_RATES.get(card_id, {}) if card_id else {}
+
+        # No curated rates or no per-category breakdown → exact flat behavior.
+        if not rates or not category_breakdown:
+            return avg_monthly_spend * 12 * flat_pct / 100.0
+
+        total = 0.0
+        covered = 0.0
+        for category, monthly in category_breakdown.items():
+            rate = rates.get(category, flat_pct)
+            total += monthly * 12 * float(rate) / 100.0
+            covered += monthly
+
+        # Any spend not represented in the breakdown (shouldn't occur when the
+        # profile is consistent, but guard against a truncated/rounded one)
+        # earns at the flat rate so the total never silently under-counts.
+        remainder = avg_monthly_spend - covered
+        if remainder > 0:
+            total += remainder * 12 * flat_pct / 100.0
+        return total
 
     # ------------------------------------------------------------------ #
     # Public API                                                           #
@@ -152,6 +216,7 @@ class CardRecommendationService:
         9. Each result includes an explanation string
         """
         avg_monthly_spend: float = profile.get("avg_monthly_spend", 0.0)
+        category_breakdown: Dict[str, float] = profile.get("category_breakdown", {}) or {}
 
         owned_keys = {
             self._card_key(c.get("name", ""), c.get("issuer", ""))
@@ -192,10 +257,11 @@ class CardRecommendationService:
             min_spend: float = float(offer.get("spend", 0))
             bonus_days: int = int(offer.get("days", 30))
 
-            # 6. Ongoing rewards (flat first-year earn), shared with
+            # 6. Ongoing rewards (category-aware first-year earn), shared with
             #    analyze_portfolio so the two modes can't drift.
-            cashback_pct: float = float(card.get("universalCashbackPercent", 0))
-            ongoing_val = self._ongoing_value(cashback_pct, avg_monthly_spend)
+            ongoing_val = self._ongoing_value(
+                card, avg_monthly_spend, category_breakdown
+            )
 
             # 7. Score. First-year fee is $0 when the card waives its annual
             #    fee the first year (isAnnualFeeWaived) — the objective is
@@ -219,12 +285,16 @@ class CardRecommendationService:
                 fee_clause = f"- fee $0 (${annual_fee:,.0f} waived year 1)"
             else:
                 fee_clause = f"- fee ${first_year_fee:,.0f}"
+            # Effective (blended) earn rate: identical to the flat cashback for
+            # uncurated cards, and the true category-weighted rate for curated
+            # ones — so the rationale never overstates a flat-rate card.
+            effective_pct = (ongoing_val / annual_spend * 100) if annual_spend > 0 else 0.0
             explanation = (
                 f"{bonus_phrase} by spending "
                 f"${min_spend:,.0f} in {bonus_days} days. "
                 f"Estimated first-year value: ${score:,.0f} "
                 f"(bonus ${bonus_val:,.0f} + ongoing ${ongoing_val:,.0f} "
-                f"({cashback_pct:,.1f}% on ${annual_spend:,.0f}) "
+                f"({effective_pct:,.1f}% blended on ${annual_spend:,.0f}) "
                 f"{fee_clause} + credits ${credit_val:,.0f})."
             )
 
@@ -265,6 +335,7 @@ class CardRecommendationService:
         6. Return list with explanation strings
         """
         avg_monthly_spend: float = profile.get("avg_monthly_spend", 0.0)
+        category_breakdown: Dict[str, float] = profile.get("category_breakdown", {}) or {}
 
         # Cards the user already holds — alternatives must never suggest one of
         # these (you can't "switch to" a card you already own). Mirrors the
@@ -287,18 +358,18 @@ class CardRecommendationService:
             matched = available_by_key.get(key)
 
             if matched is not None:
-                cashback_pct: float = float(matched.get("universalCashbackPercent", 0))
                 annual_fee: float = float(matched.get("annualFee", 0))
                 credit_val = self._credit_value(matched)
+                ongoing_val = self._ongoing_value(
+                    matched, avg_monthly_spend, category_breakdown
+                )
             else:
-                cashback_pct = 0.0
                 annual_fee = float(user_card.get("annual_fee", 0))
                 credit_val = 0.0
+                ongoing_val = 0.0
 
             # 2. estimated_annual_value
-            estimated_annual_value = (
-                self._ongoing_value(cashback_pct, avg_monthly_spend) + credit_val
-            )
+            estimated_annual_value = ongoing_val + credit_val
 
             # 3. net_value
             net_value = estimated_annual_value - annual_fee
@@ -334,10 +405,10 @@ class CardRecommendationService:
                     alt_fee = float(alt.get("annualFee", 0))
                     if alt_fee > annual_fee:
                         continue
-                    alt_cashback = float(alt.get("universalCashbackPercent", 0))
                     alt_credit = self._credit_value(alt)
                     alt_annual_value = (
-                        self._ongoing_value(alt_cashback, avg_monthly_spend) + alt_credit
+                        self._ongoing_value(alt, avg_monthly_spend, category_breakdown)
+                        + alt_credit
                     )
                     alt_net = alt_annual_value - alt_fee
                     if alt_net > net_value:

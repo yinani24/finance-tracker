@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "description": "Curated per-category ongoing-earn rates for the highest-value / most-popular cards, keyed by the sibling credit-card-bonuses-api `cardId`. Maps finance-tracker's 10 internal spending categories (see app/services/enrichment/taxonomy.py) to an earn rate expressed as a PERCENT-EQUIVALENT, comparable to each card's flat `universalCashbackPercent`. A card that earns '4x points on dining' is recorded as `\"dining\": 4`. Any category a card omits here, and any card absent from this table, falls back to that card's flat `universalCashbackPercent` in card_recommendation.py — so this file is strictly additive and never regresses the flat model.",
+    "source": "Public issuer reward schedules (agent-curated). Rates are the ongoing base multipliers for direct spend in each category; portal-only, rotating (e.g. Discover/Custom Cash 5%), and capped-spend nuances are intentionally not modeled in this first slice.",
+    "unit": "percent_equivalent",
+    "points_caveat": "Points-denominated cards (Amex MR, Chase UR, Citi TY, Cap One miles) are recorded at their raw multiplier (e.g. 4x = 4). Transferable points are frequently worth more than 1.0 cent, so these values are CONSERVATIVE relative to a redemption-aware valuation. The engine's `points_value_cents` knob is applied to sign-up bonuses, not yet to ongoing earn.",
+    "as_of": "2026-07",
+    "provenance": "Seeded per owner decision on issue #38 (path A). Pending owner verification of individual rates before treating as ground truth.",
+    "internal_categories": ["dining", "groceries", "travel", "transport", "shopping", "bills", "entertainment", "health", "income", "other"]
+  },
+
+  "cafe43d37256bec116dff4be6cced2cf": {
+    "_name": "Amex Gold",
+    "dining": 4,
+    "groceries": 4,
+    "travel": 3
+  },
+  "ad9a96ed5f730a79d0171f1f8ca92d0c": {
+    "_name": "Amex Green",
+    "dining": 3,
+    "travel": 3,
+    "transport": 3
+  },
+  "ec1872dfd8a65491a33bae2da4dd487f": {
+    "_name": "Amex Platinum",
+    "travel": 5
+  },
+  "04abf9273e03fbe626fe80a9ffd53523": {
+    "_name": "Amex Blue Cash Preferred",
+    "groceries": 6,
+    "entertainment": 6,
+    "transport": 3
+  },
+  "6980c320c341292b63273e4362601aa8": {
+    "_name": "Amex Blue Cash Everyday",
+    "groceries": 3,
+    "shopping": 3,
+    "transport": 3
+  },
+  "84c122e1077e2929b1f563bd143ce82e": {
+    "_name": "Amex EveryDay Preferred",
+    "groceries": 3,
+    "transport": 2
+  },
+  "99d4ec3c5bcd51b70b83b4b792af3ef6": {
+    "_name": "Amex Delta SkyMiles Gold",
+    "dining": 2,
+    "groceries": 2
+  },
+  "57f8a819c3bb4c6aa494016703281f35": {
+    "_name": "Chase Sapphire Preferred",
+    "dining": 3,
+    "travel": 2,
+    "entertainment": 3
+  },
+  "77e3ef2fc9c35498ba1a3f46a63235cb": {
+    "_name": "Chase Sapphire Reserve",
+    "dining": 3,
+    "travel": 3
+  },
+  "3a9ea798ce73485fc8456280fd4b1816": {
+    "_name": "Chase Freedom Unlimited",
+    "dining": 3,
+    "health": 3
+  },
+  "6ba7f561f6a4f7f2934bec25bd9a3130": {
+    "_name": "Chase Freedom Flex",
+    "dining": 3,
+    "health": 3
+  },
+  "2d16431e0caee645b420cc3d3255b2ee": {
+    "_name": "Capital One Savor",
+    "dining": 3,
+    "groceries": 3,
+    "entertainment": 3
+  },
+  "d7e2e5b5e595ca6510c101349c914513": {
+    "_name": "Citi Strata Premier",
+    "dining": 3,
+    "groceries": 3,
+    "travel": 3,
+    "transport": 3
+  }
+}
