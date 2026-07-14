@@ -245,10 +245,21 @@ class TestOngoingRewards:
     }
 
     def test_ongoing_value_math(self):
-        # $3,000/mo × 12 × 2% = $720
-        assert CardRecommendationService._ongoing_value(2, 3000.0) == 720.0
+        # $3,000/mo × 12 × 2% = $720 — flat model, no category breakdown given.
+        two_pct = {"cardId": "x", "universalCashbackPercent": 2}
+        assert CardRecommendationService._ongoing_value(two_pct, 3000.0) == 720.0
         # zero-cashback card earns nothing ongoing
-        assert CardRecommendationService._ongoing_value(0, 3000.0) == 0.0
+        zero_pct = {"cardId": "y", "universalCashbackPercent": 0}
+        assert CardRecommendationService._ongoing_value(zero_pct, 3000.0) == 0.0
+        # an uncurated card with a breakdown still equals the flat number, since
+        # sum(breakdown) == avg_monthly_spend and every category earns the flat
+        # rate (additivity guarantee).
+        assert (
+            CardRecommendationService._ongoing_value(
+                two_pct, 3000.0, {"dining": 1000.0, "travel": 2000.0}
+            )
+            == 720.0
+        )
 
     def test_score_includes_bonus_and_ongoing(self):
         service = CardRecommendationService()
@@ -304,8 +315,10 @@ class TestOngoingRewards:
         assert "ongoing" in explanation
         assert "credits" in explanation
         assert "fee" in explanation
-        # the ongoing clause surfaces the rate and the annual spend it applies to
-        assert "2.0% on $36,000" in explanation
+        # the ongoing clause surfaces the (blended) rate and the annual spend it
+        # applies to. CARD_A is not in the curated category table → the blended
+        # rate equals its flat 2% cashback.
+        assert "2.0% blended on $36,000" in explanation
 
 
 class TestAnalyzePortfolio:
@@ -464,3 +477,93 @@ class TestFirstYearFeeWaiver:
         explanation = results[0]["explanation"]
         assert "waived year 1" in explanation
         assert "fee $0" in explanation
+
+
+class TestCategoryAwareEarn:
+    """Category-aware ongoing earn from the curated per-category rate table (#38).
+
+    Uses a real curated ``cardId`` — Amex Gold
+    (``cafe43d37256bec116dff4be6cced2cf``: dining 4, groceries 4, travel 3 in
+    ``app/data/card_category_rates.json``) — so these tests also assert the
+    shipped data file is wired in correctly.
+    """
+
+    GOLD_ID = "cafe43d37256bec116dff4be6cced2cf"
+
+    def _curated_card(self, **overrides):
+        card = {
+            "cardId": self.GOLD_ID, "name": "Gold", "issuer": "AMERICAN_EXPRESS",
+            "network": "AMERICAN_EXPRESS", "annualFee": 0, "isAnnualFeeWaived": False,
+            "universalCashbackPercent": 1, "credits": [], "discontinued": False,
+            "offers": [{"spend": 500, "amount": [{"amount": 100, "currency": "USD"}],
+                        "days": 90, "credits": []}],
+        }
+        card.update(overrides)
+        return card
+
+    def test_curated_rate_applied_per_category(self):
+        # $1,000/mo all dining → Gold earns the curated 4% on dining, not 1%.
+        gold = self._curated_card()
+        assert CardRecommendationService._ongoing_value(
+            gold, 1000.0, {"dining": 1000.0}
+        ) == 480.0  # 1000 × 12 × 4%
+
+    def test_uncurated_category_falls_back_to_flat(self):
+        # Dining is curated at 4; 'bills' is not curated for Gold → its flat 1%.
+        gold = self._curated_card()
+        got = CardRecommendationService._ongoing_value(
+            gold, 1000.0, {"dining": 500.0, "bills": 500.0}
+        )
+        assert got == 500 * 12 * 4 / 100 + 500 * 12 * 1 / 100  # 240 + 60 = 300
+
+    def test_uncurated_card_identical_to_flat(self):
+        # A card absent from the table earns exactly the flat number even with a
+        # breakdown present — the additivity / non-regression guarantee.
+        flat = {"cardId": "not-in-table", "universalCashbackPercent": 2}
+        assert CardRecommendationService._ongoing_value(
+            flat, 1000.0, {"dining": 400.0, "travel": 600.0}
+        ) == 1000.0 * 12 * 2 / 100  # 240.0
+
+    def test_ranking_shifts_with_category_spend(self):
+        """PRD success criterion: moving spend between categories changes the
+        ranking. A dining-4x curated card beats a flat-2% card when spend is
+        dining-heavy, and loses when the same spend moves off dining."""
+        service = CardRecommendationService()
+        gold = self._curated_card()  # dining 4%, flat 1% elsewhere
+        flat2 = {
+            "cardId": "flat-2pct", "name": "Flat Two", "issuer": "BANKF",
+            "network": "VISA", "annualFee": 0, "universalCashbackPercent": 2,
+            "credits": [], "discontinued": False,
+            "offers": [{"spend": 500, "amount": [{"amount": 100, "currency": "USD"}],
+                        "days": 90, "credits": []}],
+        }
+        cards = [gold, flat2]
+
+        dining_heavy = {"avg_monthly_spend": 1000.0,
+                        "category_breakdown": {"dining": 1000.0}, "top_merchants": []}
+        res = service.recommend_next_card(dining_heavy, [], cards)
+        # Gold: 100 bonus + 480 ongoing = 580; Flat: 100 + 240 = 340.
+        assert res[0]["card"]["cardId"] == self.GOLD_ID
+        by_id = {r["card"]["cardId"]: r for r in res}
+        assert by_id[self.GOLD_ID]["ongoing_value"] == 480.0
+
+        # Same total spend, now on a category Gold doesn't bonus → Gold drops to
+        # its flat 1% and the flat-2% card wins. Ranking flips.
+        bills_heavy = {"avg_monthly_spend": 1000.0,
+                       "category_breakdown": {"bills": 1000.0}, "top_merchants": []}
+        res2 = service.recommend_next_card(bills_heavy, [], cards)
+        assert res2[0]["card"]["cardId"] == "flat-2pct"
+
+    def test_analyze_portfolio_uses_curated_rate(self):
+        """The held-card path shares the same seam, so a curated held card is
+        valued category-aware too."""
+        service = CardRecommendationService()
+        gold = self._curated_card()
+        user_cards = [{"name": "Gold", "issuer": "AMERICAN_EXPRESS",
+                       "network": "AMERICAN_EXPRESS", "annual_fee": 0}]
+        profile = {"avg_monthly_spend": 1000.0,
+                   "category_breakdown": {"dining": 1000.0}, "top_merchants": []}
+        result = service.analyze_portfolio(profile, user_cards, [gold])
+        assert len(result) == 1
+        # dining 4% on $12k = $480 (vs the old flat 1% = $120).
+        assert result[0]["estimated_annual_value"] == 480.0
