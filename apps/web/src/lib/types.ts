@@ -127,7 +127,10 @@ export interface CardBonusSearchResult {
   total: number;
   limit: number;
   offset: number;
-  cards: CardBonus[];
+  // The `/card-bonuses` endpoint returns the page window under `results`
+  // (see apps/api/app/services/card_bonuses.py:search_cards and the
+  // `body["results"]` assertions in tests/test_card_bonuses.py).
+  results: CardBonus[];
 }
 
 // Recommendations

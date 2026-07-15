@@ -87,7 +87,7 @@ export default function ExplorePage() {
     placeholderData: keepPreviousData,
   });
 
-  const cards = data?.cards ?? [];
+  const cards = data?.results ?? [];
   const total = data?.total ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
   const from = total === 0 ? 0 : page * PAGE_SIZE + 1;
