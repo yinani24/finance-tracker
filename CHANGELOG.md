@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Explore cards page rendered zero results (#123 regression).** The web
+  `CardBonusSearchResult` type and the `/explore` page read the card page window
+  from `data.cards`, but the `GET /card-bonuses` endpoint returns it under
+  `results` (the tested HTTP contract — see `tests/test_card_bonuses.py`). At
+  runtime `data.cards` was always `undefined`, so the page showed a real total in
+  its header ("Browse N cards") yet "No cards match your filters" in the grid for
+  every query. Aligned the type and page to `results`; no backend change.
+
 ### Added
 - **Card-catalog browse page in the web UI (#123).** A new nav-linked "Explore
   cards" page (`/explore`) renders the previously UI-less `GET /card-bonuses`
