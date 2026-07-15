@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { searchCardBonuses, getCardBonusIssuers } from "@/lib/api";
 import type { CardBonus, CardBonusOffer } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
-import { Search, CreditCard, ExternalLink, Gift } from "lucide-react";
+import { Search, CreditCard, ChevronRight, Gift } from "lucide-react";
 
 const PAGE_SIZE = 24;
 
@@ -212,9 +213,10 @@ export default function ExplorePage() {
             {cards.map((card) => {
               const offer = bestOffer(card);
               return (
-                <div
+                <Link
                   key={card.cardId}
-                  className="flex flex-col bg-card rounded-xl border border-border p-5"
+                  href={`/explore/${encodeURIComponent(card.cardId)}`}
+                  className="flex flex-col bg-card rounded-xl border border-border p-5 hover:border-ring/50 hover:bg-card/80 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -227,17 +229,7 @@ export default function ExplorePage() {
                         {card.isBusiness ? " · Business" : ""}
                       </p>
                     </div>
-                    {card.url && (
-                      <a
-                        href={card.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                        aria-label={`Open ${card.name} details`}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                   </div>
 
                   <div className="mt-3 text-xs text-muted">
@@ -265,7 +257,7 @@ export default function ExplorePage() {
                       </div>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
