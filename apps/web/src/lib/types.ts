@@ -69,6 +69,7 @@ export interface Card {
   name: string;
   network: string | null;
   annual_fee: number;
+  issuer: string | null;
   rewards_config_json: string | null;
   created_at: string;
   updated_at: string;
