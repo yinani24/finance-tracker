@@ -12,7 +12,6 @@ import {
   ArrowDownRight,
   Lightbulb,
 } from "lucide-react";
-import { Chat } from "@/components/chat";
 import { InsightsWidget } from "@/components/insights-widget";
 import Link from "next/link";
 
@@ -143,8 +142,8 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
-      <Chat />
+      {/* AI Financial Assistant removed from the dashboard for now.
+          Component kept at @/components/chat — re-add <Chat /> to restore. */}
     </div>
   );
 }
