@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    window.location.href = "/dashboard";
   }, [supabase]);
 
   const validateAndSetSession = useCallback(
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       validateAndSetSession(session);
 
       if (event === "SIGNED_OUT" && hadSession.current) {
-        window.location.href = "/login";
+        window.location.href = "/dashboard";
       }
     });
 
