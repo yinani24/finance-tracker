@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every query. Aligned the type and page to `results`; no backend change.
 
 ### Added
+- **Per-card detail page in the web UI (#168).** Clicking a card on `/explore`
+  now opens an in-app detail view (`/explore/{cardId}`) that consumes the
+  previously UI-less `GET /card-bonuses/{card_id}` endpoint — showing the card's
+  annual fee (and first-year waiver), base earn rate, all sign-up offers (bonus
+  value + spend requirement), credits/perks, and a link to the official card
+  page. Unknown card ids render a clean "Card not found" (endpoint 404). Adds
+  `getCardBonus(cardId)` to the web API client; grid tiles now link to the
+  detail page (the external issuer link moved onto the detail view).
 - **Card-catalog browse page in the web UI (#123).** A new nav-linked "Explore
   cards" page (`/explore`) renders the previously UI-less `GET /card-bonuses`
   surface: a search box plus issuer / network / max-annual-fee / personal-vs-business

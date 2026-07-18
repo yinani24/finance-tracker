@@ -1,6 +1,7 @@
 import type {
   Account,
   Card,
+  CardBonus,
   CardBonusSearchResult,
   Goal,
   ImportRecord,
@@ -182,6 +183,10 @@ export const searchCardBonuses = (params?: {
 };
 export const getCardBonusIssuers = () =>
   request<string[]>("/card-bonuses/issuers");
+// Single card by its `cardId` (public — no auth). The endpoint returns 404 for
+// an unknown id, which surfaces here as a thrown `API 404: ...` error.
+export const getCardBonus = (cardId: string) =>
+  request<CardBonus>(`/card-bonuses/${encodeURIComponent(cardId)}`);
 
 // Plaid
 export const getPlaidItems = () => request<PlaidItem[]>("/plaid/items");
