@@ -1,11 +1,15 @@
 # PRD — Credit-Card Recommendation Engine (Phases 4–5)
 
-- **Status:** DRAFT (agent-authored), reconciled 2026-07-10 against shipped code. Documents
-  the owner-confirmed objective from `docs/prd/PRODUCT.md` and reconciles it against the
-  engine already in the codebase. Decomposition slices 1–2 (dollar-valued bonuses #28, flat
-  ongoing rewards #37) have **shipped**; the sole remaining engine gap — category-aware
-  earn (slice 3) — is blocked on the #38 card-data decision. Open Question 1 (point
-  valuation) is resolved with a live, flagged 1.0¢/point default.
+- **Status:** DRAFT (agent-authored), reconciled 2026-07-10 against shipped code; decomposition
+  status re-synced 2026-07-18. Documents the owner-confirmed objective from `docs/prd/PRODUCT.md`
+  and reconciles it against the engine already in the codebase. Decomposition slices 1–3 have
+  **shipped**: dollar-valued bonuses (#24), flat ongoing rewards (#35), and **category-aware
+  earn (slice 3, #38 → option A)** — the curated `app/data/card_category_rates.json` table is
+  wired into `_ongoing_value` and was verified/blessed via #171. The #38 card-data decision is
+  **resolved** (in-repo curated table). The remaining gaps are slices 4–5 (per-category
+  best-held-card assignment and Phase-5 multi-card combination), which are now **unblocked**
+  (issue #177 tracks slice 4). Open Question 1 (point valuation) is resolved with a live,
+  flagged 1.0¢/point default.
 - **Owner north-star:** `docs/prd/PRODUCT.md` (CONFIRMED). This PRD refines Phases 4–5
   of that roadmap; it does not override any confirmed decision there.
 - **Depends on:** Phase 2 spending intelligence (`spending_profile.py`, transaction
@@ -122,16 +126,18 @@ dataset JSON); a change in either invalidates the snapshot. *(Already implemente
 | Statement credits | ✅ counts | ✅ `Σ value×weight` |
 | Annual fee | ✅ subtract | ✅ subtracted (first-year waivers honored, #42) |
 | **Ongoing rewards (year 1)** | ✅ **half the objective** | ✅ **flat model shipped** (#37) — `next_card` score is `bonus + ongoing − fee + credits`; `_ongoing_value` shared with `analyze_portfolio` |
-| **Category-aware earn** | ✅ product premise (dining first) | ❌ `profile.category_breakdown` is **unused**; both modes use flat `universalCashbackPercent` only — the **one remaining gap**, blocked by #38 |
-| Held vs. new distinction | ✅ two modes | ⚠️ two methods exist but both miss ongoing category earn |
-| Rationale w/ $ value | ✅ | ⚠️ explanation exists but reflects the incomplete score |
+| **Category-aware earn** | ✅ product premise (dining first) | ✅ **shipped (slice 3, #38→A)** — `_ongoing_value` reads `category_breakdown` and per-category curated rates (`app/data/card_category_rates.json`), flat-cashback fallback; used by **both** modes; rates blessed via #171 |
+| Held vs. new distinction | ✅ two modes | ✅ both `recommend_next_card` and `analyze_portfolio` compute category-aware first-year value |
+| Rationale w/ $ value | ✅ | ✅ dollar-denominated explanation with the four FR1 components |
+| **Per-category best-held-card** | ✅ "use THIS card for dining" (User Story 2) | ❌ **the remaining gap** — `analyze_portfolio` values each held card in isolation but names no per-category winner (**slice 4**, issue #177) |
 
 **Bottom line:** the plumbing, caching, API surface, dollar-denominated sign-up-bonus math
-(#28), and the **flat** first-year ongoing-rewards term (#37) are all in place. The one
-remaining piece is making ongoing earn **category-aware** — driving it from the user's
-`category_breakdown` (dining first) instead of a single flat rate. That is the reason the
-app reads the user's dining habits, and it is blocked only on the card-side category-rate
-data source (#38, Open Question 3) — not on any missing engine plumbing.
+(#24), the first-year ongoing-rewards term (#35), and **category-aware earn** (slice 3, #38→A;
+`_ongoing_value` drives earn from `category_breakdown` and the curated per-category rate table,
+blessed via #171) are all in place. The remaining engine work is **slice 4** — the per-category
+"best held card" assignment that answers *"which of my cards should I use for dining vs.
+groceries?"* (User Story 2, issue #177) — and **slice 5** (Phase-5 multi-card combination).
+Both are now **unblocked**; the #38 data-source dependency is resolved.
 
 ## Success criteria
 
@@ -171,14 +177,18 @@ data source (#38, Open Question 3) — not on any missing engine plumbing.
    comparable (default 1.0¢/point; Open Question 1 assumption is live and flagged).
 2. ✅ **SHIPPED (#37).** First-year ongoing-rewards term using flat
    `universalCashbackPercent`, via the shared `_ongoing_value` helper (both modes).
-3. ⛔ **BLOCKED by #38 (Open Question 3).** Category-aware earn — wire
-   `profile.category_breakdown` into per-category `reward_rate(card, category)` in FR1.
-   Needs a card-side category-rate data source (#38 awaits the owner's (A)/(B)/(C) pick).
-4. Depends on (3). `optimize-wallet` per-category "best held card" assignment.
-5. Depends on (3). Phase 5 — multi-card portfolio combination (right card per category
+3. ✅ **SHIPPED (#38 → option A).** Category-aware earn — `_ongoing_value` wires
+   `profile.category_breakdown` into per-category rates from the curated in-repo
+   `app/data/card_category_rates.json` (flat-cashback fallback), used by both modes. The
+   #38 data-source decision resolved to the in-repo curated table; rates verified/blessed
+   via #171.
+4. 🔜 **UNBLOCKED — issue #177.** `optimize-wallet` per-category "best held card"
+   assignment (which held card to use for dining vs. groceries vs. travel; User Story 2).
+5. Depends on (4). Phase 5 — multi-card portfolio combination (right card per category
    across the wallet).
 
-**Net:** slices 1–2 are done; everything remaining (3–5) is gated on the #38 category-rate
-data-source decision. No engine-side implementation work is unblocked until that lands.
+**Net:** slices 1–3 are done. Slice 4 (per-category best-held-card, #177) is now unblocked
+and is the next shippable engine slice; slice 5 (multi-card combination) follows it. The #38
+category-rate data-source dependency is resolved — engine work is no longer gated on it.
 
 Ref: `docs/prd/PRODUCT.md` (Phases 4–5, Decisions #1–2, Open Questions 3–4).
