@@ -38,7 +38,11 @@ IMPORT_TYPE = "csv"
 # slice 1; arbitrary layouts are the job of the column-mapping slice.
 _DATE_HINTS = ("date",)
 _DESC_HINTS = ("description", "merchant", "name", "payee", "memo", "details")
-_AMOUNT_HINTS = ("amount", "debit", "value")
+# A single signed-amount column (negative = spend).
+_AMOUNT_HINTS = ("amount", "value")
+# Some banks export two magnitude columns instead of one signed column.
+_DEBIT_HINTS = ("debit", "withdrawal")
+_CREDIT_HINTS = ("credit", "deposit")
 
 _DATE_FORMATS = (
     "%Y-%m-%d",
@@ -93,10 +97,17 @@ class ImportResult:
 
 
 def _match_column(fieldnames: list[str], hints: tuple[str, ...]) -> str | None:
-    for name in fieldnames:
-        normalized = (name or "").strip().lower()
-        if any(hint in normalized for hint in hints):
-            return name
+    """Return the column best matching ``hints``, honoring hint priority.
+
+    Hints are tried in order, so a higher-priority hint wins even if a
+    lower-priority one appears earlier among the columns (e.g. ``Description``
+    beats a ``Details`` transaction-type column).
+    """
+    normalized = [(name, (name or "").strip().lower()) for name in fieldnames]
+    for hint in hints:
+        for name, norm in normalized:
+            if hint in norm:
+                return name
     return None
 
 
@@ -119,6 +130,17 @@ def _parse_amount(raw: str) -> float:
         raise ValueError("empty amount")
     value = float(text)
     return -value if negative else value
+
+
+def _parse_amount_or_zero(raw: str) -> float:
+    """Like ``_parse_amount`` but treats an empty cell as ``0.0``.
+
+    Used for two-column debit/credit layouts where a given row populates only
+    one of the two columns.
+    """
+    if not (raw or "").strip():
+        return 0.0
+    return _parse_amount(raw)
 
 
 def _parse_date(raw: str) -> date:
@@ -156,12 +178,17 @@ def parse_csv(content: bytes) -> tuple[list[ParsedRow], list[RowError]]:
     date_col = _match_column(fieldnames, _DATE_HINTS)
     desc_col = _match_column(fieldnames, _DESC_HINTS)
     amount_col = _match_column(fieldnames, _AMOUNT_HINTS)
+    debit_col = _match_column(fieldnames, _DEBIT_HINTS)
+    credit_col = _match_column(fieldnames, _CREDIT_HINTS)
+    # Prefer a single signed amount column; otherwise fall back to a
+    # debit/credit magnitude pair (spend = debit, income = credit).
+    has_amount = amount_col is not None or debit_col is not None or credit_col is not None
     missing = [
         label
         for label, col in (
             ("date", date_col),
             ("description", desc_col),
-            ("amount", amount_col),
+            ("amount", "present" if has_amount else None),
         )
         if col is None
     ]
@@ -176,7 +203,18 @@ def parse_csv(content: bytes) -> tuple[list[ParsedRow], list[RowError]]:
     for line_no, raw_row in enumerate(reader, start=2):
         try:
             occurred_on = _parse_date(raw_row.get(date_col, ""))
-            signed_amount = _parse_amount(raw_row.get(amount_col, ""))
+            if amount_col is not None:
+                signed_amount = _parse_amount(raw_row.get(amount_col, ""))
+            else:
+                # Two-column debit/credit: spend is negative, income positive.
+                # Use magnitudes so either column's sign representation works.
+                debit_raw = raw_row.get(debit_col, "") if debit_col else ""
+                credit_raw = raw_row.get(credit_col, "") if credit_col else ""
+                if not (debit_raw or "").strip() and not (credit_raw or "").strip():
+                    raise ValueError("empty amount")
+                debit = abs(_parse_amount_or_zero(debit_raw))
+                credit = abs(_parse_amount_or_zero(credit_raw))
+                signed_amount = credit - debit
         except ValueError as exc:
             errors.append(RowError(row=line_no, reason=str(exc)))
             continue
