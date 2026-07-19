@@ -2,11 +2,19 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { getCardBonus } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCardBonus, getCards, createCard } from "@/lib/api";
 import type { CardBonus, CardBonusOffer } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
-import { ArrowLeft, ExternalLink, Gift, CreditCard, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Gift,
+  CreditCard,
+  Sparkles,
+  Plus,
+  Check,
+} from "lucide-react";
 
 function formatBonus(offer: CardBonusOffer, cardCurrency: string): string {
   return offer.amount
@@ -37,6 +45,71 @@ function sortedOffers(card: CardBonus): CardBonusOffer[] {
 
 function is404(error: unknown): boolean {
   return error instanceof Error && error.message.includes("API 404");
+}
+
+// Moves a catalog card into the user's tracked wallet via POST /cards. Stores
+// `name` and `issuer` verbatim from the dataset so the held card matches its
+// catalog entry under the recommendation engine's `name.lower()|issuer.upper()`
+// key (see apps/api/app/services/card_recommendation.py) — that match is what
+// lets the portfolio analysis value the card, so this is more than a shortcut.
+function AddToWalletButton({ card }: { card: CardBonus }) {
+  const queryClient = useQueryClient();
+
+  // Used only to detect duplicates. If it fails to load (e.g. no session), we
+  // fall back to showing the add button rather than blocking the action.
+  const { data: cards } = useQuery({
+    queryKey: ["cards"],
+    queryFn: getCards,
+  });
+
+  const alreadyInWallet = Boolean(
+    cards?.some((c) => c.name.toLowerCase() === card.name.toLowerCase())
+  );
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      createCard({
+        name: card.name,
+        issuer: card.issuer,
+        network: card.network,
+        annual_fee: card.annualFee,
+      }),
+    onSuccess: () => {
+      // Adding a card changes portfolio recommendations, so refresh both — the
+      // same invalidation the Cards page uses on manual add/edit/delete.
+      queryClient.invalidateQueries({ queryKey: ["cards"] });
+      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+    },
+    onError: () => {},
+  });
+
+  if (alreadyInWallet) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted">
+        <Check className="w-4 h-4" />
+        In your wallet
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+      >
+        <Plus className="w-4 h-4" />
+        {mutation.isPending ? "Adding…" : "Add to my wallet"}
+      </button>
+      {mutation.isError && (
+        <span className="text-xs text-red-500">
+          Couldn&apos;t add. Try again.
+        </span>
+      )}
+    </div>
+  );
 }
 
 const backLink = (
@@ -96,13 +169,16 @@ export default function CardDetailPage() {
     <div className="p-8 max-w-3xl mx-auto">
       {backLink}
 
-      <div className="mt-6">
-        <h1 className="text-2xl font-semibold text-card-foreground">{card.name}</h1>
-        <p className="text-sm text-muted mt-1">
-          {card.issuer}
-          {card.network ? ` · ${card.network}` : ""}
-          {card.isBusiness ? " · Business" : ""}
-        </p>
+      <div className="mt-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-card-foreground">{card.name}</h1>
+          <p className="text-sm text-muted mt-1">
+            {card.issuer}
+            {card.network ? ` · ${card.network}` : ""}
+            {card.isBusiness ? " · Business" : ""}
+          </p>
+        </div>
+        <AddToWalletButton card={card} />
       </div>
 
       {/* Key facts */}

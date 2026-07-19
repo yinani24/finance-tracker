@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every query. Aligned the type and page to `results`; no backend change.
 
 ### Added
+- **"Add to my wallet" from the Explore card detail page (#174).** The per-card
+  detail view (`/explore/{cardId}`) now has an "Add to my wallet" action that
+  creates the card via `POST /cards`, storing `name` and `issuer` **verbatim from
+  the catalog dataset**. That matters beyond convenience: the recommendation engine
+  matches held cards to the dataset by `name.lower()|issuer.upper()`
+  (`card_recommendation.py`), so a card added this way is recognized by the
+  portfolio analysis (which the freeform manual add — no issuer field — usually
+  isn't). The button de-dupes against the existing wallet (name match, case-
+  insensitive) and renders a disabled "In your wallet" state instead of allowing a
+  duplicate; on success it invalidates both `["cards"]` and `["recommendations"]`.
+  Adds `issuer` to the web `Card` type (the backend already returns it). Frontend
+  only; backend untouched. Fast-follow of #123, builds on #168/#169.
 - **Per-card detail page in the web UI (#168).** Clicking a card on `/explore`
   now opens an in-app detail view (`/explore/{cardId}`) that consumes the
   previously UI-less `GET /card-bonuses/{card_id}` endpoint — showing the card's
