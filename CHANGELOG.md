@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every query. Aligned the type and page to `results`; no backend change.
 
 ### Added
+- **Per-category "best held card" assignment in the portfolio recommendation
+  (#177).** `GET /recommendations/portfolio` now returns an additive
+  `category_assignments` field answering PRD User Story 2 — *which of your cards
+  should you reach for per category* (e.g. "Use Amex Gold for dining — 4% vs 1% on
+  your other cards"). For every internal category the user actually spends in, the
+  engine picks the held card with the highest curated per-category earn, using the
+  **same** rate lookup as the first-year earn model: a new shared
+  `CardRecommendationService._category_rate` is now the single source of truth for
+  both `_ongoing_value` and the new `best_card_per_category`, so the two can't
+  drift. Ties resolve deterministically (highest rate → lowest annual fee →
+  case-insensitive name) to keep the inputs-hash snapshot cache stable. The
+  portfolio snapshot now caches the per-card analyses and the assignments as one
+  blob so both survive a cache hit — the cache-hit and cold paths share a single
+  `_shape_payload` helper (with a defensive wrap for legacy list-shaped snapshots)
+  so a stored blob is never double-nested under `cards`. `analyze_portfolio` keeps
+  its `List[dict]` contract, so the `card_insight_engine` caller is unchanged.
+  Backend-only + additive; frontend rendering of the assignments is a fast-follow.
 - **"Add to my wallet" from the Explore card detail page (#174).** The per-card
   detail view (`/explore/{cardId}`) now has an "Add to my wallet" action that
   creates the card via `POST /cards`, storing `name` and `issuer` **verbatim from
