@@ -100,6 +100,38 @@ class TestParseUnit:
         except StatementParseError:
             pass
 
+    def test_parse_csv_debit_credit_columns(self):
+        # Banks that export two magnitude columns: debit = spend (negative),
+        # credit = income (positive); a row populates only one.
+        csv_text = (
+            "Date,Description,Debit,Credit\n"
+            "07/08/2026,Rent,1800.00,\n"
+            "07/09/2026,Refund,,45.00\n"
+        )
+        rows, errors = parse_csv(csv_text.encode("utf-8"))
+        assert errors == []
+        by_merchant = {r.merchant: r.signed_amount for r in rows}
+        assert by_merchant["Rent"] == -1800.00
+        assert by_merchant["Refund"] == 45.00
+
+    def test_parse_csv_debit_credit_row_with_neither_is_error(self):
+        csv_text = "Date,Description,Debit,Credit\n07/10/2026,Blank,,\n"
+        rows, errors = parse_csv(csv_text.encode("utf-8"))
+        assert rows == []
+        assert len(errors) == 1 and "empty amount" in errors[0].reason
+
+    def test_parse_csv_description_wins_over_details_column(self):
+        # A leading "Details" transaction-type column (DEBIT/CREDIT) must not be
+        # picked as the merchant over the real "Description" column.
+        csv_text = (
+            "Details,Posting Date,Description,Amount,Type\n"
+            "DEBIT,07/01/2026,STARBUCKS STORE,-5.75,DEBIT_CARD\n"
+        )
+        rows, errors = parse_csv(csv_text.encode("utf-8"))
+        assert errors == []
+        assert rows[0].merchant == "STARBUCKS STORE"
+        assert rows[0].signed_amount == -5.75
+
 
 class TestImportAPI:
     def test_happy_path(self, client: TestClient):
