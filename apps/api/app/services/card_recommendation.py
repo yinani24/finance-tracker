@@ -108,9 +108,24 @@ class CardRecommendationService:
         )
 
     @staticmethod
-    def _credit_value(card: dict) -> float:
-        credits: List[dict] = card.get("credits", [])
-        return float(sum(c.get("value", 0) * c.get("weight", 1.0) for c in credits))
+    def _credit_value(card: dict, points_value_cents: float = 1.0) -> float:
+        """Value recurring/anniversary credits in **dollars**.
+
+        Like ``_bonus_value_usd``: a USD credit is taken at face value, while a
+        credit denominated in points/miles (any non-USD ``currency``) is valued
+        at ``points_value_cents`` per point. Without this, a 15,000-point
+        anniversary credit was counted as $15,000 (not ~$150), which dominated
+        the first-year-value ranking.
+        """
+        total = 0.0
+        for c in card.get("credits", []):
+            value = float(c.get("value", 0)) * float(c.get("weight", 1.0))
+            currency = c.get("currency")
+            if currency and currency != "USD":
+                total += value * points_value_cents / 100.0
+            else:
+                total += value
+        return total
 
     @staticmethod
     def _first_year_fee(card: dict) -> float:
@@ -268,7 +283,7 @@ class CardRecommendationService:
             #    first-year value, so a waived fee must not be subtracted.
             annual_fee: float = float(card.get("annualFee", 0))
             first_year_fee = self._first_year_fee(card)
-            credit_val = self._credit_value(card)
+            credit_val = self._credit_value(card, points_value_cents)
             score = bonus_val + ongoing_val - first_year_fee + credit_val
 
             # 8. Explanation (dollar-denominated; show the points conversion
