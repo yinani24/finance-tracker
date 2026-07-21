@@ -9,13 +9,15 @@ from app.services.enrichment.base import (
     EnrichmentResult,
 )
 from app.services.enrichment.noop import NoopProvider
+from app.services.enrichment.rules import RulesProvider
 
 logger = logging.getLogger(__name__)
 
 # Registry of available providers, keyed by the FT_ENRICHMENT_PROVIDER value.
-# Slice 2 adds "ntropy" (and, if procured, "spade") here.
+# A richer provider ("ntropy"/"spade") can be added here later.
 _PROVIDERS: dict[str, type] = {
     "noop": NoopProvider,
+    "rules": RulesProvider,
 }
 
 __all__ = [
@@ -23,6 +25,7 @@ __all__ = [
     "EnrichmentProvider",
     "EnrichmentResult",
     "NoopProvider",
+    "RulesProvider",
     "get_provider",
 ]
 
