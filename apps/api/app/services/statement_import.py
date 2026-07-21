@@ -297,6 +297,7 @@ def run_import(
     file_bytes: bytes,
     filename: str,
     mime_type: str,
+    account_is_credit: bool = False,
 ) -> tuple[Import, ImportResult]:
     """Persist an ``Import`` + file, parse the CSV, and ingest transactions.
 
@@ -326,7 +327,7 @@ def run_import(
             # Lazy import so CSV-only paths don't load pdfplumber/anthropic.
             from app.services.statement_pdf import parse_pdf
 
-            parsed, errors = parse_pdf(file_bytes)
+            parsed, errors = parse_pdf(file_bytes, is_credit=account_is_credit)
         else:
             parsed, errors = parse_csv(file_bytes)
     except StatementParseError as exc:

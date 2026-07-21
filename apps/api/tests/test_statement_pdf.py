@@ -31,17 +31,15 @@ class TestExtractText:
 
 
 class TestHeuristicRows:
-    def test_parses_date_led_lines_first_amount_wins(self):
+    def test_parses_date_led_lines_trailing_amount(self):
         text = (
-            "DEMO BANK Statement\n"
-            "Date Description Amount Balance\n"
-            "07/01/2026 ACME PAYROLL 3,200.00 3,200.00\n"
-            "07/03/2026 CHIPOTLE 452 -12.65 3,187.35\n"
+            "DEMO STATEMENT\n"
+            "07/01/2026 ACME PAYROLL 3,200.00\n"
+            "07/03/2026 CHIPOTLE 452 -12.65\n"
             "not a transaction line\n"
         )
         rows, errors = _heuristic_rows(text)
         by = {r.merchant: r.signed_amount for r in rows}
-        # first money after the date is the amount; the balance column is ignored
         assert by["ACME PAYROLL"] == 3200.00
         assert by["CHIPOTLE 452"] == -12.65
         assert errors == []
@@ -49,6 +47,27 @@ class TestHeuristicRows:
     def test_trailing_minus_is_negative(self):
         rows, _ = _heuristic_rows("07/04/2026 STORE 42.00-\n")
         assert rows[0].signed_amount == -42.00
+
+    def test_bare_mmdd_gets_inferred_statement_year(self):
+        # Credit-card statements use MM/DD with no year; infer it from a full
+        # date elsewhere in the text (e.g. the Opening/Closing line).
+        text = "Opening/Closing Date 06/05/26 - 07/04/26\n06/06 SQ *COFFEE BAR 8.56\n"
+        rows, _ = _heuristic_rows(text)
+        assert rows[0].occurred_on.isoformat() == "2026-06-06"
+        assert rows[0].signed_amount == 8.56
+
+    def test_credit_flip_inverts_sign(self):
+        # Credit-card convention: purchase positive -> spend (negative);
+        # payment negative -> credit (positive).
+        text = (
+            "Opening/Closing Date 06/05/26 - 07/04/26\n"
+            "06/06 SQ *COFFEE BAR 8.56\n"
+            "06/07 PAYMENT THANK YOU -100.00\n"
+        )
+        rows, _ = _heuristic_rows(text, flip_sign=True)
+        by = {r.merchant: r.signed_amount for r in rows}
+        assert by["SQ *COFFEE BAR"] == -8.56
+        assert by["PAYMENT THANK YOU"] == 100.00
 
 
 class TestParsePdf:

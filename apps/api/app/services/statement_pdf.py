@@ -27,13 +27,17 @@ from app.services.statement_import import (
 
 logger = logging.getLogger(__name__)
 
-# A line that begins with a date, used by the free heuristic parser.
+# A line that begins with a transaction date. Handles full dates (MM/DD/YY,
+# YYYY-MM-DD) and the bare MM/DD that credit-card statements (e.g. Chase) use.
 _LINE_DATE = re.compile(
-    r"^\s*(?P<date>\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})\s+(?P<rest>.+)$"
+    r"^\s*(?P<date>\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2})"
+    r"\s+(?P<rest>.+)$"
 )
 # A currency amount: optional $, thousands separators, 2 decimals, optional
 # leading/trailing minus or accounting parentheses.
 _MONEY = re.compile(r"-?\(?\$?\d[\d,]*\.\d{2}\)?-?")
+# A full date anywhere in the text, used to infer the year for bare MM/DD rows.
+_ANY_FULL_DATE = re.compile(r"\b\d{1,2}[/-]\d{1,2}[/-](\d{2,4})\b")
 
 # Current Anthropic model for statement extraction (overridable via env).
 _MODEL = settings.pdf_import_model or "claude-sonnet-5"
@@ -121,9 +125,15 @@ def _llm_extract_rows(text: str) -> list[dict]:
     return _extract_json_array(raw)
 
 
-def parse_pdf(pdf_bytes: bytes) -> tuple[list[ParsedRow], list[RowError]]:
+def parse_pdf(
+    pdf_bytes: bytes, is_credit: bool = False
+) -> tuple[list[ParsedRow], list[RowError]]:
     """Parse a PDF statement into ``ParsedRow``s + per-row errors, mirroring
     :func:`statement_import.parse_csv` so the rest of the pipeline is identical.
+
+    ``is_credit`` flips the amount sign, because credit-card statements list
+    purchases as positive and payments/credits as negative — the opposite of our
+    ``negative = spend`` convention.
 
     Raises ``StatementParseError`` for whole-file failures (unreadable PDF, no
     text, missing API key, unparseable model output); individual bad items are
@@ -134,24 +144,47 @@ def parse_pdf(pdf_bytes: bytes) -> tuple[list[ParsedRow], list[RowError]]:
 
     text = extract_text(pdf_bytes)
 
-    # Free path first: regex-parse date-led lines. Works for the common
-    # "date  description  amount" statement layout with no API cost. Only fall
-    # back to the (paid) LLM when the heuristic finds nothing — e.g. an unusual
-    # multi-line or non-tabular layout.
-    rows, errors = _heuristic_rows(text)
+    # Free path first: regex-parse date-led lines. Works for common statement
+    # layouts (incl. Chase-style MM/DD credit-card rows) with no API cost. Only
+    # fall back to the (paid) LLM when the heuristic finds nothing.
+    rows, errors = _heuristic_rows(text, flip_sign=is_credit)
     if rows:
         return rows, errors
 
-    return _items_to_rows(_llm_extract_rows(text))
+    llm_rows, llm_errors = _items_to_rows(_llm_extract_rows(text))
+    if is_credit:
+        llm_rows = [
+            ParsedRow(
+                occurred_on=r.occurred_on,
+                merchant=r.merchant,
+                signed_amount=-r.signed_amount,
+            )
+            for r in llm_rows
+        ]
+    return llm_rows, llm_errors
 
 
-def _heuristic_rows(text: str) -> tuple[list[ParsedRow], list[RowError]]:
+def _infer_year(text: str) -> int | None:
+    """Best-effort statement year, to fill in bare ``MM/DD`` rows. Uses the first
+    full date found (e.g. an Opening/Closing date), normalizing 2-digit years."""
+    m = _ANY_FULL_DATE.search(text)
+    if not m:
+        return None
+    year = int(m.group(1))
+    return 2000 + year if year < 100 else year
+
+
+def _heuristic_rows(
+    text: str, flip_sign: bool = False
+) -> tuple[list[ParsedRow], list[RowError]]:
     """Parse transactions from date-led statement lines with no LLM.
 
-    For each line beginning with a date, the FIRST money amount after the date
-    is taken as the transaction amount (a trailing running-balance column, if
-    present, is ignored), and the text before it as the description.
+    For each line beginning with a date, the LAST money amount on the line is
+    the transaction amount (statement descriptions can contain digits/phone
+    numbers, but the amount is the trailing column). Bare ``MM/DD`` dates get the
+    statement year inferred. ``flip_sign`` inverts the sign for credit cards.
     """
+    year = _infer_year(text)
     rows: list[ParsedRow] = []
     for line in text.splitlines():
         m = _LINE_DATE.match(line)
@@ -161,16 +194,25 @@ def _heuristic_rows(text: str) -> tuple[list[ParsedRow], list[RowError]]:
         money = list(_MONEY.finditer(rest))
         if not money:
             continue
-        amount_token = money[0].group(0)
+        last = money[-1]
+        amount_token = last.group(0)
         # trailing-minus convention (e.g. "12.65-") → negative
         if amount_token.endswith("-"):
             amount_token = "-" + amount_token[:-1]
-        description = rest[: money[0].start()].strip() or "Unknown"
+        description = rest[: last.start()].strip() or "Unknown"
+        date_str = m.group("date")
+        # A bare MM/DD (credit-card style) gets the inferred statement year.
+        if date_str.count("/") == 1 and date_str.count("-") == 0:
+            if year is None:
+                continue
+            date_str = f"{date_str}/{year}"
         try:
-            occurred_on = _parse_date(m.group("date"))
+            occurred_on = _parse_date(date_str)
             signed_amount = _parse_amount(amount_token)
         except ValueError:
             continue
+        if flip_sign:
+            signed_amount = -signed_amount
         rows.append(
             ParsedRow(
                 occurred_on=occurred_on,
