@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTransactions, getAccounts, updateTransaction } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -79,6 +79,20 @@ export default function TransactionsPage() {
     (a, b) =>
       new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime()
   );
+
+  // Paginate the (filtered, sorted) list so long statements stay scannable.
+  const PAGE_SIZE = 25;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = sorted.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+  // Jump back to page 1 whenever the filters/search change the result set.
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterAccount, filterCategory]);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -192,7 +206,7 @@ export default function TransactionsPage() {
                     </td>
                   </tr>
                 ))
-              : sorted.map((t) => (
+              : paged.map((t) => (
                   <tr
                     key={t.id}
                     className="border-b border-border last:border-0 hover:bg-accent/30 transition-colors"
@@ -237,6 +251,39 @@ export default function TransactionsPage() {
           </tbody>
         </table>
       </div>
+
+      {!isLoading && sorted.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-4 text-sm">
+          <span className="text-muted">
+            Showing{" "}
+            <span className="font-mono tabular-nums">
+              {(currentPage - 1) * PAGE_SIZE + 1}–
+              {Math.min(currentPage * PAGE_SIZE, sorted.length)}
+            </span>{" "}
+            of{" "}
+            <span className="font-mono tabular-nums">{sorted.length}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-muted font-mono tabular-nums">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
