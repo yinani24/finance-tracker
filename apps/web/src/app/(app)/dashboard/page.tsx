@@ -118,7 +118,7 @@ export default function DashboardPage() {
               <h2 className="font-semibold text-card-foreground">Top Card Picks</h2>
             </div>
             <Link
-              href="/recommendations"
+              href="/cards/recommendations"
               className="text-sm text-muted hover:text-card-foreground transition-colors"
             >
               View all &rarr;

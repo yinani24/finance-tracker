@@ -17,6 +17,24 @@ const nextConfig: NextConfig = {
     const backend = process.env.API_PROXY_TARGET || "http://localhost:8000";
     return [{ source: "/_api/:path*", destination: `${backend}/:path*` }];
   },
+  // The card-related surfaces (Explore, Recommendations) were consolidated under
+  // the /cards section. Redirect the old top-level routes so bookmarks and any
+  // stale links keep working. Temporary (307) to keep the move reversible.
+  async redirects() {
+    return [
+      { source: "/explore", destination: "/cards/explore", permanent: false },
+      {
+        source: "/explore/:cardId",
+        destination: "/cards/explore/:cardId",
+        permanent: false,
+      },
+      {
+        source: "/recommendations",
+        destination: "/cards/recommendations",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

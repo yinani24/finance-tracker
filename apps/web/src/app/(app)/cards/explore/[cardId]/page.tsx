@@ -114,7 +114,7 @@ function AddToWalletButton({ card }: { card: CardBonus }) {
 
 const backLink = (
   <Link
-    href="/explore"
+    href="/cards/explore"
     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
   >
     <ArrowLeft className="w-4 h-4" />
@@ -135,7 +135,7 @@ export default function CardDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8 max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         {backLink}
         <div className="mt-6 h-8 w-64 bg-muted rounded animate-pulse" />
         <div className="mt-4 h-40 bg-card rounded-xl border border-border animate-pulse" />
@@ -146,7 +146,7 @@ export default function CardDetailPage() {
   if (isError || !card) {
     const notFound = is404(error);
     return (
-      <div className="p-8 max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         {backLink}
         <div className="mt-8 text-center py-16 text-muted">
           <CreditCard className="w-8 h-8 mx-auto mb-3 opacity-50" />
@@ -166,7 +166,7 @@ export default function CardDetailPage() {
   const offers = sortedOffers(card);
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       {backLink}
 
       <div className="mt-6 flex items-start justify-between gap-4">
