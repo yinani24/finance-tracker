@@ -57,10 +57,10 @@ export function StatementImport() {
     <div className="bg-card rounded-xl border border-border p-5 mb-6">
       <div className="flex items-center gap-2 mb-1">
         <Upload className="w-4 h-4 text-muted-foreground" />
-        <h2 className="font-semibold text-card-foreground">Import CSV statement</h2>
+        <h2 className="font-semibold text-card-foreground">Import statement</h2>
       </div>
       <p className="text-sm text-muted mb-4">
-        Upload a bank or card statement (CSV) to add transactions. Duplicates are
+        Upload a bank or card statement (CSV or PDF) to add transactions. Duplicates are
         detected and skipped, so re-uploading an overlapping export is safe.
       </p>
 
@@ -83,7 +83,7 @@ export function StatementImport() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.pdf,text/csv,application/pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="text-sm text-foreground file:mr-3 file:rounded-lg file:border file:border-input file:bg-background file:px-3 file:py-2 file:text-sm file:text-foreground hover:file:bg-muted/10"
         />

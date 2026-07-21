@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # publicly reachable URL (see docs/prd/plaid-integration.md Q3).
     plaid_webhook_verify: bool = True
     anthropic_api_key: str = ""
+    # Model used to parse PDF statements (blank → a sensible current default).
+    pdf_import_model: str = ""
     card_bonuses_url: str = ""
     # Transaction-enrichment provider (see app/services/enrichment). Defaults to
     # the keyless "noop" provider so tests/CI stay hermetic; set to a real
