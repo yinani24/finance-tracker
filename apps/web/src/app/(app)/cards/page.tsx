@@ -61,18 +61,8 @@ export default function CardsPage() {
   const hasAny = creditAccounts.length > 0 || cards.length > 0;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-card-foreground">Cards</h1>
-          <p className="text-sm text-muted mt-1">
-            {isLoading ? (
-              <span className="inline-block h-4 w-36 bg-muted rounded animate-pulse align-middle" />
-            ) : (
-              "Your credit cards"
-            )}
-          </p>
-        </div>
+    <div>
+      <div className="flex items-center justify-end mb-6">
         <Dialog
           open={open}
           onOpenChange={(o) => {

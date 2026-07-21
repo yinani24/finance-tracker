@@ -8,9 +8,6 @@ import {
   ArrowLeftRight,
   Target,
   CreditCard,
-  Compass,
-  Lightbulb,
-  Sparkles,
   Settings,
   LogOut,
   PanelLeftClose,
@@ -36,9 +33,6 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/cards", label: "Cards", icon: CreditCard },
-  { href: "/explore", label: "Explore cards", icon: Compass },
-  { href: "/insights", label: "Insights", icon: Sparkles },
-  { href: "/recommendations", label: "Recommendations", icon: Lightbulb },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
