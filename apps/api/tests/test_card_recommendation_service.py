@@ -155,6 +155,31 @@ class TestBonusValueUsd:
         assert CardRecommendationService._bonus_points(offer) == 50000.0
 
 
+class TestCreditValue:
+    """Recurring/anniversary credit valuation in dollars."""
+
+    def test_usd_credit_at_face_value(self):
+        card = {"credits": [{"value": 200, "currency": "USD"}]}
+        assert CardRecommendationService._credit_value(card) == 200.0
+
+    def test_points_credit_converts_at_cents_not_face(self):
+        # A 15,000-point anniversary credit is ~$150 at 1.0¢/pt, NOT $15,000.
+        card = {"credits": [{"value": 15000, "currency": "WYNDHAM"}]}
+        assert CardRecommendationService._credit_value(card) == 150.0
+
+    def test_points_credit_rate_is_configurable(self):
+        card = {"credits": [{"value": 15000, "currency": "WYNDHAM"}]}
+        assert CardRecommendationService._credit_value(card, 1.5) == 225.0
+
+    def test_missing_currency_treated_as_dollars(self):
+        card = {"credits": [{"value": 300}]}
+        assert CardRecommendationService._credit_value(card) == 300.0
+
+    def test_weight_is_applied(self):
+        card = {"credits": [{"value": 100, "currency": "USD", "weight": 2}]}
+        assert CardRecommendationService._credit_value(card) == 200.0
+
+
 class TestCrossTypeRanking:
     """Points and cashback cards must rank on the same dollar scale (issue #24)."""
 
