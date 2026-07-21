@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Transaction-enrichment provider (see app/services/enrichment). Defaults to
     # the keyless "noop" provider so tests/CI stay hermetic; set to a real
     # provider (e.g. "ntropy", slice 2) once a key is provisioned.
-    enrichment_provider: str = "noop"
+    enrichment_provider: str = "rules"
     # Blended cents-per-point used to value sign-up-bonus points/miles in
     # dollars so points cards and cashback cards rank on one scale (the
     # owner-confirmed "total first-year value" objective; see
