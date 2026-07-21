@@ -125,15 +125,27 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recommendations.recommendations.slice(0, 2).map((rec) => (
+            {recommendations.recommendations.slice(0, 5).map((rec, i) => (
               <div key={rec.card.cardId} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-medium text-sm text-card-foreground">{rec.card.name}</p>
-                    <p className="text-xs text-muted">{rec.card.issuer}</p>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <span className="text-xs font-mono text-muted mt-0.5">
+                      {i + 1}.
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm text-card-foreground truncate">
+                        {rec.card.name}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {rec.card.issuer}
+                        {rec.card.annualFee
+                          ? ` · $${rec.card.annualFee}/yr`
+                          : " · no annual fee"}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-xs font-mono bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded">
-                    {rec.bonus_value.toLocaleString()} pts
+                  <span className="whitespace-nowrap text-xs font-mono bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded">
+                    ~${Math.round(rec.score).toLocaleString()} · 1st yr
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{rec.explanation}</p>
