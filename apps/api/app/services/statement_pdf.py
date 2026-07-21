@@ -14,6 +14,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import re
 
 from app.config import settings
 from app.services.statement_import import (
@@ -25,6 +26,14 @@ from app.services.statement_import import (
 )
 
 logger = logging.getLogger(__name__)
+
+# A line that begins with a date, used by the free heuristic parser.
+_LINE_DATE = re.compile(
+    r"^\s*(?P<date>\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})\s+(?P<rest>.+)$"
+)
+# A currency amount: optional $, thousands separators, 2 decimals, optional
+# leading/trailing minus or accounting parentheses.
+_MONEY = re.compile(r"-?\(?\$?\d[\d,]*\.\d{2}\)?-?")
 
 # Current Anthropic model for statement extraction (overridable via env).
 _MODEL = settings.pdf_import_model or "claude-sonnet-5"
@@ -124,11 +133,58 @@ def parse_pdf(pdf_bytes: bytes) -> tuple[list[ParsedRow], list[RowError]]:
         raise StatementParseError("file is empty")
 
     text = extract_text(pdf_bytes)
-    items = _llm_extract_rows(text)
 
+    # Free path first: regex-parse date-led lines. Works for the common
+    # "date  description  amount" statement layout with no API cost. Only fall
+    # back to the (paid) LLM when the heuristic finds nothing — e.g. an unusual
+    # multi-line or non-tabular layout.
+    rows, errors = _heuristic_rows(text)
+    if rows:
+        return rows, errors
+
+    return _items_to_rows(_llm_extract_rows(text))
+
+
+def _heuristic_rows(text: str) -> tuple[list[ParsedRow], list[RowError]]:
+    """Parse transactions from date-led statement lines with no LLM.
+
+    For each line beginning with a date, the FIRST money amount after the date
+    is taken as the transaction amount (a trailing running-balance column, if
+    present, is ignored), and the text before it as the description.
+    """
+    rows: list[ParsedRow] = []
+    for line in text.splitlines():
+        m = _LINE_DATE.match(line)
+        if not m:
+            continue
+        rest = m.group("rest")
+        money = list(_MONEY.finditer(rest))
+        if not money:
+            continue
+        amount_token = money[0].group(0)
+        # trailing-minus convention (e.g. "12.65-") → negative
+        if amount_token.endswith("-"):
+            amount_token = "-" + amount_token[:-1]
+        description = rest[: money[0].start()].strip() or "Unknown"
+        try:
+            occurred_on = _parse_date(m.group("date"))
+            signed_amount = _parse_amount(amount_token)
+        except ValueError:
+            continue
+        rows.append(
+            ParsedRow(
+                occurred_on=occurred_on,
+                merchant=description,
+                signed_amount=signed_amount,
+            )
+        )
+    return rows, []
+
+
+def _items_to_rows(items: list) -> tuple[list[ParsedRow], list[RowError]]:
+    """Coerce LLM-returned transaction dicts into ``ParsedRow``s."""
     rows: list[ParsedRow] = []
     errors: list[RowError] = []
-    # 1-based index into the model's returned list, for locating a bad item.
     for idx, item in enumerate(items, start=1):
         if not isinstance(item, dict):
             errors.append(RowError(row=idx, reason="not a transaction object"))
