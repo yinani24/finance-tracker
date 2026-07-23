@@ -6,6 +6,7 @@ from app.services.enrichment import (
     EnrichmentInput,
     EnrichmentResult,
     NoopProvider,
+    RulesProvider,
     get_provider,
 )
 from app.services.enrichment.taxonomy import (
@@ -15,11 +16,16 @@ from app.services.enrichment.taxonomy import (
 
 
 class TestProviderFactory:
-    def test_default_is_noop(self):
-        assert isinstance(get_provider(), NoopProvider)
+    def test_default_is_rules(self):
+        # Default is the rule-based categorizer so statement-import data (which
+        # arrives with no category) still gets a spending breakdown.
+        assert isinstance(get_provider(), RulesProvider)
 
     def test_explicit_noop(self):
         assert isinstance(get_provider("noop"), NoopProvider)
+
+    def test_explicit_rules(self):
+        assert isinstance(get_provider("rules"), RulesProvider)
 
     def test_unknown_falls_back_to_noop(self):
         # A bad/misconfigured provider name must never break ingest.
@@ -317,3 +323,35 @@ class TestSyncEnrichmentHook:
 
         txn = db_session.query(Transaction).filter_by(user_id=1).one()
         assert txn.category == "transport"
+
+
+class TestRulesProvider:
+    def _cat(self, merchant, plaid_category=None):
+        (res,) = RulesProvider().enrich(
+            [EnrichmentInput(merchant=merchant, amount=-10.0, plaid_category=plaid_category)]
+        )
+        return res.category
+
+    def test_categorizes_common_merchants_by_name(self):
+        cases = {
+            "STARBUCKS #1122": "dining",
+            "DOORDASH SUSHI": "dining",
+            "WHOLE FOODS MKT": "groceries",   # must NOT be dining
+            "TRADER JOES": "groceries",
+            "DELTA AIR LINES": "travel",
+            "MARRIOTT HOTEL": "travel",
+            "UBER TRIP": "transport",
+            "AMAZON MKTPL": "shopping",
+            "RENT PAYMENT": "bills",
+            "PG&E ELECTRIC": "bills",
+        }
+        for merchant, expected in cases.items():
+            assert self._cat(merchant) == expected, merchant
+
+    def test_unknown_merchant_falls_back_to_other(self):
+        assert self._cat("ZZZ QRSTUV LLC") == "other"
+
+    def test_prefers_upstream_plaid_category_when_present(self):
+        # Plaid-sourced rows keep their upstream category (mapped to our
+        # taxonomy); merchant rules only fill in when there is none.
+        assert self._cat("STARBUCKS #1122", plaid_category="travel") == "travel"

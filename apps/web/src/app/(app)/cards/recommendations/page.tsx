@@ -359,16 +359,8 @@ export default function RecommendationsPage() {
   });
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-card-foreground">
-            Recommendations
-          </h1>
-          <p className="text-sm text-muted mt-1">
-            Personalized credit card advice based on your spending
-          </p>
-        </div>
+    <div>
+      <div className="flex items-center justify-end mb-6">
         <button
           onClick={() => refreshMutation.mutate()}
           disabled={refreshMutation.isPending}

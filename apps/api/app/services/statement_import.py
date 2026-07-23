@@ -297,6 +297,7 @@ def run_import(
     file_bytes: bytes,
     filename: str,
     mime_type: str,
+    account_is_credit: bool = False,
 ) -> tuple[Import, ImportResult]:
     """Persist an ``Import`` + file, parse the CSV, and ingest transactions.
 
@@ -306,8 +307,12 @@ def run_import(
     The caller is responsible for verifying ``account_id`` belongs to the user
     before calling this.
     """
+    is_pdf = (mime_type or "").lower() == "application/pdf" or (
+        filename or ""
+    ).lower().endswith(".pdf")
+    import_type = "pdf" if is_pdf else IMPORT_TYPE
     repo = ImportRepository(db)
-    record = repo.create(user_id, account_id, PROVIDER, IMPORT_TYPE)
+    record = repo.create(user_id, account_id, PROVIDER, import_type)
     storage_key = save_upload(file_bytes, filename)
     repo.add_file(
         import_id=record.id,
@@ -318,7 +323,13 @@ def run_import(
     )
 
     try:
-        parsed, errors = parse_csv(file_bytes)
+        if is_pdf:
+            # Lazy import so CSV-only paths don't load pdfplumber/anthropic.
+            from app.services.statement_pdf import parse_pdf
+
+            parsed, errors = parse_pdf(file_bytes, is_credit=account_is_credit)
+        else:
+            parsed, errors = parse_csv(file_bytes)
     except StatementParseError as exc:
         repo.mark_failed(record, str(exc))
         raise

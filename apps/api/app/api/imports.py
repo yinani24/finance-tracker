@@ -48,6 +48,7 @@ async def create_import(
             file_bytes=content,
             filename=file.filename or "upload.csv",
             mime_type=file.content_type or "text/csv",
+            account_is_credit=(account.type == "credit"),
         )
     except StatementParseError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
