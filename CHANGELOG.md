@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Transactions category filter was a dead-end (#198).** The category dropdown
+  derived its options from the returned rows, but `filterCategory` is applied
+  server-side — so once a category was selected the API returned only those rows
+  and the dropdown collapsed to "All Categories" + the active category, forcing a
+  reset-to-All before switching. Options now come from the canonical
+  `TAXONOMY_CATEGORIES` constant already defined in the page, so the full taxonomy
+  is always available and you can switch categories directly. Frontend-only.
 - **Explore cards page rendered zero results (#123 regression).** The web
   `CardBonusSearchResult` type and the `/explore` page read the card page window
   from `data.cards`, but the `GET /card-bonuses` endpoint returns it under

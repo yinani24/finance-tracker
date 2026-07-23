@@ -61,9 +61,11 @@ export default function TransactionsPage() {
     queryFn: getAccounts,
   });
 
-  const categories = [
-    ...new Set(transactions.map((t) => t.category).filter(Boolean)),
-  ].sort();
+  // Filter options come from the canonical taxonomy, NOT from the returned
+  // rows — `filterCategory` is applied server-side (in the query key + request),
+  // so deriving options from `transactions` collapsed the dropdown to just the
+  // active category and made switching between categories a dead-end (#198).
+  const categories = TAXONOMY_CATEGORIES;
 
   const accountMap = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
 
@@ -148,7 +150,7 @@ export default function TransactionsPage() {
         >
           <option value="">All Categories</option>
           {categories.map((c) => (
-            <option key={c} value={c!}>
+            <option key={c} value={c} className="capitalize">
               {c}
             </option>
           ))}
