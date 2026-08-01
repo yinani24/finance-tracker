@@ -37,10 +37,10 @@ function StatCard({
           {value}
         </span>
         {trend === "up" && (
-          <ArrowUpRight className="w-4 h-4 text-emerald-500 mb-1" />
+          <ArrowUpRight className="w-4 h-4 text-success mb-1" />
         )}
         {trend === "down" && (
-          <ArrowDownRight className="w-4 h-4 text-red-500 mb-1" />
+          <ArrowDownRight className="w-4 h-4 text-destructive mb-1" />
         )}
       </div>
     </div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <span className="whitespace-nowrap text-xs font-mono bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded">
+                  <span className="whitespace-nowrap text-xs font-mono bg-success/10 text-success px-2 py-0.5 rounded">
                     ~${Math.round(rec.score).toLocaleString()} · 1st yr
                   </span>
                 </div>

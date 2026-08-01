@@ -149,7 +149,7 @@ export default function SettingsPage() {
                       }
                     }}
                     disabled={deleteMutation.isPending}
-                    className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-sm text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Remove
@@ -161,7 +161,7 @@ export default function SettingsPage() {
         )}
 
         {syncResult && (
-          <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 text-sm text-emerald-600 dark:text-emerald-400">
+          <div className="mt-4 bg-success/10 border border-success/20 rounded-lg p-4 text-sm text-success">
             Sync complete:{" "}
             <span className="font-mono tabular-nums">
               {syncResult.transactions_added}

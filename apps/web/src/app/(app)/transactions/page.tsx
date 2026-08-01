@@ -156,7 +156,7 @@ export default function TransactionsPage() {
       </div>
 
       {recategorize.isError && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-500">
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
           Couldn&apos;t update the category. Please try again.
         </div>
       )}
@@ -241,7 +241,7 @@ export default function TransactionsPage() {
                       {accountMap[t.account_id] || `#${t.account_id}`}
                     </td>
                     <td
-                      className={`px-5 py-3 text-sm font-mono font-medium tabular-nums text-right ${t.is_income ? "text-emerald-500" : "text-card-foreground"}`}
+                      className={`px-5 py-3 text-sm font-mono font-medium tabular-nums text-right ${t.is_income ? "text-success" : "text-card-foreground"}`}
                     >
                       {t.is_income ? "+" : "-"}
                       {formatCurrency(Math.abs(t.amount))}

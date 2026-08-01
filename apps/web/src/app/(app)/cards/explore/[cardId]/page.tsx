@@ -98,13 +98,13 @@ function AddToWalletButton({ card }: { card: CardBonus }) {
         type="button"
         onClick={() => mutation.mutate()}
         disabled={mutation.isPending}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors active:translate-y-px"
       >
         <Plus className="w-4 h-4" />
         {mutation.isPending ? "Adding…" : "Add to my wallet"}
       </button>
       {mutation.isError && (
-        <span className="text-xs text-red-500">
+        <span className="text-xs text-destructive">
           Couldn&apos;t add. Try again.
         </span>
       )}
