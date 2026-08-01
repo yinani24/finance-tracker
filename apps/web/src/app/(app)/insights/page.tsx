@@ -222,7 +222,7 @@ export default function InsightsPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+              className={`rounded-full px-4 py-1.5 text-sm motion-base ${
                 active
                   ? "bg-primary text-primary-foreground"
                   : "border border-border bg-background text-muted hover:text-card-foreground"

@@ -124,7 +124,7 @@ export default function TransactionsPage() {
             placeholder="Search merchants..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
           />
         </div>
         <select
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
           onChange={(e) =>
             setFilterAccount(e.target.value ? Number(e.target.value) : undefined)
           }
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
         >
           <option value="">All Accounts</option>
           {accounts.map((a) => (
@@ -144,7 +144,7 @@ export default function TransactionsPage() {
         <select
           value={filterCategory ?? ""}
           onChange={(e) => setFilterCategory(e.target.value || undefined)}
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
         >
           <option value="">All Categories</option>
           {categories.map((c) => (
@@ -209,7 +209,7 @@ export default function TransactionsPage() {
               : paged.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-border last:border-0 hover:bg-accent/30 transition-colors"
+                    className="row-interactive border-b border-border last:border-0 hover:bg-accent/30"
                   >
                     <td className="px-5 py-3 text-sm text-muted font-mono tabular-nums">
                       {t.occurred_on}
@@ -228,7 +228,7 @@ export default function TransactionsPage() {
                             category: e.target.value,
                           })
                         }
-                        className="border border-input bg-background text-foreground rounded-lg px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors disabled:opacity-50 disabled:cursor-wait"
+                        className="border border-input bg-background text-foreground rounded-lg px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base disabled:opacity-50 disabled:cursor-wait"
                       >
                         {TAXONOMY_CATEGORIES.map((c) => (
                           <option key={c} value={c} className="capitalize">
@@ -267,7 +267,7 @@ export default function TransactionsPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
-              className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="motion-base px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -277,7 +277,7 @@ export default function TransactionsPage() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages}
-              className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="motion-base px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Next
             </button>

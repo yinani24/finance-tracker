@@ -38,7 +38,7 @@ export function InsightsWidget() {
         </div>
         <Link
           href="/insights"
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-card-foreground transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-muted hover:text-card-foreground motion-base"
         >
           View all <ArrowRight className="w-3.5 h-3.5" />
         </Link>
@@ -58,7 +58,7 @@ export function InsightsWidget() {
           <Link
             key={ins.id}
             href="/insights"
-            className="block rounded-lg border border-border p-4 hover:border-primary/40 transition-colors"
+            className="block rounded-lg border border-border p-4 hover:border-primary/40 motion-base"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

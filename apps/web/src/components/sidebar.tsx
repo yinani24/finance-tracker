@@ -80,7 +80,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "group/sidebar relative border-r border-border bg-card flex flex-col h-screen sticky top-0 transition-[width] duration-200 ease-in-out overflow-hidden",
+        "group/sidebar relative border-r border-border bg-card flex flex-col h-screen sticky top-0 transition-[width] duration-[var(--dur-page)] ease-[var(--ease-composio)] overflow-hidden",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -94,7 +94,7 @@ export function Sidebar() {
           <button
             onClick={collapsed ? toggle : undefined}
             className={cn(
-              "flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center transition-transform duration-150",
+              "flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center motion-base",
               collapsed && "cursor-pointer hover:scale-105 active:scale-95"
             )}
             title={collapsed ? "Expand sidebar" : undefined}
@@ -158,15 +158,17 @@ export function Sidebar() {
               key={href}
               href={href}
               title={collapsed ? label : undefined}
+              data-active={active}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center rounded-lg text-sm font-medium transition-colors",
+                "nav-item flex items-center rounded-lg text-sm font-medium",
                 collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5",
                 active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted hover:bg-accent/50 hover:text-card-foreground"
+                  ? "text-sidebar-accent-foreground"
+                  : "text-muted hover:text-card-foreground"
               )}
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
+              <Icon className="nav-icon w-5 h-5 flex-shrink-0" />
               {!collapsed && <span className="truncate">{label}</span>}
             </Link>
           );
@@ -178,7 +180,7 @@ export function Sidebar() {
           <Popover>
             <PopoverTrigger
               className={cn(
-                "w-full flex items-center rounded-lg transition-colors hover:bg-accent/50 cursor-pointer",
+                "w-full flex items-center rounded-lg motion-base hover:bg-accent/50 cursor-pointer",
                 collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
               )}
             >
@@ -206,7 +208,7 @@ export function Sidebar() {
               <Separator />
               <Link
                 href="/settings"
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-popover-foreground hover:bg-accent transition-colors"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-popover-foreground hover:bg-accent motion-base"
               >
                 <Settings className="w-4 h-4" />
                 Settings
@@ -214,7 +216,7 @@ export function Sidebar() {
               <Separator />
               <button
                 onClick={signOut}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10 motion-base"
               >
                 <LogOut className="w-4 h-4" />
                 Sign out

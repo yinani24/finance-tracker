@@ -132,7 +132,7 @@ export default function SettingsPage() {
                   <button
                     onClick={() => syncMutation.mutate(item.id)}
                     disabled={syncMutation.isPending}
-                    className="flex items-center gap-1.5 text-sm text-accent-foreground hover:text-accent-foreground/80 px-3 py-1.5 rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-sm text-accent-foreground hover:text-accent-foreground/80 px-3 py-1.5 rounded-lg hover:bg-accent motion-base disabled:opacity-50"
                   >
                     <RefreshCw
                       className={cn(
@@ -149,7 +149,7 @@ export default function SettingsPage() {
                       }
                     }}
                     disabled={deleteMutation.isPending}
-                    className="flex items-center gap-1.5 text-sm text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-sm text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive/10 motion-base disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Remove
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                       prefsMutation.mutate({ theme: opt });
                     }}
                     className={cn(
-                      "p-1.5 rounded-md transition-colors",
+                      "p-1.5 rounded-md motion-base",
                       theme === opt
                         ? "bg-card text-card-foreground shadow-sm"
                         : "text-muted-foreground hover:text-card-foreground"
