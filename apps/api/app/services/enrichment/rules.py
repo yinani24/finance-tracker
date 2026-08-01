@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.services.enrichment.base import EnrichmentInput, EnrichmentResult
 from app.services.enrichment.taxonomy import map_to_internal
+from app.services.merchant import normalize_merchant
 
 # Ordered merchant-keyword rules → internal taxonomy category. First rule with a
 # keyword that appears (as a substring) in the normalized merchant name wins, so
@@ -81,7 +82,8 @@ _RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "shopping",
         (
-            "amazon", "target", "walmart", "best buy", "ebay", "etsy", "apple store",
+            "amazon", "amzn", "target", "walmart", "best buy", "ebay", "etsy",
+            "apple store",
             "nike", "adidas", "macy", "nordstrom", "kohl", "ikea", "home depot",
             "lowe", "sephora", "ulta", "store", "shop",
         ),
@@ -124,10 +126,14 @@ class RulesProvider:
     def enrich(self, txns: list[EnrichmentInput]) -> list[EnrichmentResult]:
         results: list[EnrichmentResult] = []
         for t in txns:
+            # Classify on the RAW merchant (substring keyword matching already
+            # sees through processor prefixes, and keeps brand tokens like
+            # "amzn"). Store the normalized name for clean display + as the base
+            # layer a future real classifier consumes.
             category, confidence = self._categorize(t.merchant, t.plaid_category)
             results.append(
                 EnrichmentResult(
-                    normalized_merchant=(t.merchant or "").lower().strip() or None,
+                    normalized_merchant=normalize_merchant(t.merchant).lower() or None,
                     category=category,
                     confidence=confidence,
                     raw_provider_category=t.plaid_category,
