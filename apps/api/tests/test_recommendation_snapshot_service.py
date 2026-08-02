@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
 from unittest.mock import patch
 
 from sqlalchemy.orm import Session
@@ -9,6 +8,7 @@ from app.models.account import Account
 from app.models.card import Card
 from app.models.transaction import Transaction
 from app.models.user import User
+from tests.conftest import month_first_before_today
 
 MOCK_CARDS = [
     {
@@ -38,9 +38,14 @@ def _seed_data(db_session: Session, user: User) -> None:
     db_session.commit()
     db_session.refresh(account)
 
+    # Window-relative date: the snapshot service computes the spending profile
+    # with the real ``date.today()`` (no injectable clock), so an absolute date
+    # would age out of the 6-month lookback and yield an empty profile → no
+    # recommendations (see #220). Anchor to last month so it is always in range.
     db_session.add(
         Transaction(
-            user_id=user.id, account_id=account.id, occurred_on=date(2026, 1, 5),
+            user_id=user.id, account_id=account.id,
+            occurred_on=month_first_before_today(1).replace(day=5),
             amount=-2000.0, merchant="Store", normalized_merchant="store",
             category="shopping", is_income=False, dedupe_hash="snap-h1",
         )

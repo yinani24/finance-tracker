@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -9,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.models.user import User
+from tests.conftest import month_first_before_today
 
 MOCK_CARDS = [
     {
@@ -38,9 +38,12 @@ def _seed(db_session: Session, user: User) -> None:
     db_session.commit()
     db_session.refresh(account)
 
+    # Window-relative date so the seeded spend never ages out of the profile's
+    # 6-month lookback as the wall clock advances (see #220).
     db_session.add(
         Transaction(
-            user_id=user.id, account_id=account.id, occurred_on=date(2026, 1, 5),
+            user_id=user.id, account_id=account.id,
+            occurred_on=month_first_before_today(1).replace(day=5),
             amount=-1500.0, merchant="Store", normalized_merchant="store",
             category="shopping", is_income=False, dedupe_hash="api-h1",
         )
@@ -92,12 +95,16 @@ class TestRecommendationsAPI:
         db_session.add(account)
         db_session.commit()
         db_session.refresh(account)
-        # 4 dining transactions across 2 months, total $200.
+        # 4 dining transactions across 2 (window-relative) months, total $200.
+        # Anchored to the two most recent whole months so they always fall
+        # inside the 6-month lookback and span exactly 2 months (see #220).
+        m2 = month_first_before_today(2)
+        m1 = month_first_before_today(1)
         dining = [
-            (date(2026, 3, 5), -40.0, "freq-d1"),
-            (date(2026, 3, 20), -60.0, "freq-d2"),
-            (date(2026, 4, 10), -50.0, "freq-d3"),
-            (date(2026, 4, 25), -50.0, "freq-d4"),
+            (m2.replace(day=5), -40.0, "freq-d1"),
+            (m2.replace(day=20), -60.0, "freq-d2"),
+            (m1.replace(day=10), -50.0, "freq-d3"),
+            (m1.replace(day=25), -50.0, "freq-d4"),
         ]
         db_session.add_all(
             Transaction(

@@ -32,6 +32,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   currency (dollars only when the card is `"USD"`); explicit per-amount currency
   tags still win, so the 11 tagged bonuses and all points cards are unchanged.
   This is the bonus-path sibling of the #192 credit-path fix. Backend-only.
+- **Red trunk: 4 time-bomb tests on the spending-profile / recommendation-snapshot
+  path (#220).** Fixtures in `test_spending_profile_service.py`,
+  `test_recommendation_snapshot_service.py`, and `test_recommendations_api.py`
+  seeded transactions at absolute Jan–Apr 2026 dates while the services compute
+  a 6-month lookback from `date.today()`. Once "today" reached August 2026 the
+  January seed dates aged out of the window, producing an empty profile → empty
+  recommendations (`IndexError`) and dropped categories. Root cause was wall-clock
+  drift, **not** the #216 classifier change (`compute_profile` reads the stored
+  `category`, it does not re-classify). Fixtures are now time-independent: the
+  two spending-profile tests pin an explicit `today`, and the snapshot / API
+  fixtures anchor seed dates to the current month via a new
+  `month_first_before_today` conftest helper. Also hardened
+  `test_spending_profile_frequency_metrics`, a latent bomb that would have gone
+  red around October 2026. No production code changed; full suite green (284 passed).
 - **Next-card recommendation showed the dollar sign-up bonus as "pts" (#196).**
   On Recommendations → **Next Card**, the bonus was rendered
   `{bonus_value.toLocaleString()} pts`, but `bonus_value` is a USD amount

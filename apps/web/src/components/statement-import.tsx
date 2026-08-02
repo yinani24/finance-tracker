@@ -11,12 +11,16 @@ import { Upload } from "lucide-react";
 // into transactions. This is the keys-free path to get real transaction history
 // in (Plaid needs live linking), and it feeds the spending profile + insights —
 // so on success we invalidate those queries, mirroring inline recategorization.
+const IMPORTS_PER_PAGE = 5;
+
 export function StatementImport() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [accountId, setAccountId] = useState<number | undefined>();
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
+  // Recent imports accumulate, so page them rather than truncating at 5.
+  const [importPage, setImportPage] = useState(1);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["accounts"],
@@ -52,6 +56,13 @@ export function StatementImport() {
     setSummary(null);
     mutation.mutate({ id: accountId, f: file });
   };
+
+  const importPages = Math.max(1, Math.ceil(imports.length / IMPORTS_PER_PAGE));
+  const currentImportPage = Math.min(importPage, importPages);
+  const pagedImports = imports.slice(
+    (currentImportPage - 1) * IMPORTS_PER_PAGE,
+    currentImportPage * IMPORTS_PER_PAGE
+  );
 
   return (
     <div className="bg-card rounded-xl border border-border p-5 mb-6">
@@ -136,7 +147,7 @@ export function StatementImport() {
             Recent imports
           </div>
           <ul className="text-sm text-card-foreground divide-y divide-border">
-            {imports.slice(0, 5).map((imp) => (
+            {pagedImports.map((imp) => (
               <li key={imp.id} className="flex items-center justify-between py-2">
                 <span className="text-muted">
                   {new Date(imp.created_at).toLocaleDateString()} ·{" "}
@@ -161,6 +172,38 @@ export function StatementImport() {
               </li>
             ))}
           </ul>
+          {importPages > 1 && (
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <span className="text-muted">
+                <span className="font-mono tabular-nums">
+                  {(currentImportPage - 1) * IMPORTS_PER_PAGE + 1}–
+                  {Math.min(currentImportPage * IMPORTS_PER_PAGE, imports.length)}
+                </span>{" "}
+                of <span className="font-mono tabular-nums">{imports.length}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImportPage((p) => Math.max(1, p - 1))}
+                  disabled={currentImportPage <= 1}
+                  className="rounded border border-border px-2 py-1 motion-base hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="font-mono tabular-nums text-muted">
+                  {currentImportPage} / {importPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setImportPage((p) => Math.min(importPages, p + 1))}
+                  disabled={currentImportPage >= importPages}
+                  className="rounded border border-border px-2 py-1 motion-base hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
