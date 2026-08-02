@@ -16,7 +16,8 @@ MOCK_CARDS = [
         "name": "Test Card",
         "issuer": "TEST",
         "network": "VISA",
-        "currency": "USD",
+        # A points card: the 20k/50k bonuses below are points, not dollars.
+        "currency": "TEST_POINTS",
         "isBusiness": False,
         "annualFee": 0,
         "isAnnualFeeWaived": False,
@@ -120,7 +121,8 @@ class TestRecommendationSnapshotService:
         # Both GETs recomputed (dataset differed) → the second did not reuse the
         # first's stale snapshot.
         assert spy_upsert.call_count == 2
-        # Bonuses have no ``currency`` field → valued as points at 1.0¢
+        # Field-less bonus amounts inherit the card's (points) currency → valued
+        # at 1.0¢/point
         # (20000 pts → $200, 50000 pts → $500). The ranking reflects the newer,
         # larger bonus rather than the cached stale one.
         assert first["recommendations"][0]["bonus_value"] == 200.0

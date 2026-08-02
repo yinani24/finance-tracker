@@ -170,6 +170,40 @@ class CardRecommendationService:
         )
 
     @staticmethod
+    def _credit_entries_value(
+        credits: list, points_value_cents: float = 1.0
+    ) -> float:
+        """Value a list of credit entries in **dollars**.
+
+        An explicit non-USD ``currency`` marks a points/miles credit (valued at
+        ``points_value_cents``); everything else — including a credit with no
+        ``currency`` field at all — is dollars. Field-less credits in this
+        dataset are statement credits, fee waivers and vouchers, which are
+        dollar-denominated, so they must NOT inherit the card's points currency.
+        """
+        total = 0.0
+        for c in credits or []:
+            value = float(c.get("value", 0)) * float(c.get("weight", 1.0))
+            currency = c.get("currency")
+            if currency and currency != "USD":
+                total += value * points_value_cents / 100.0
+            else:
+                total += value
+        return total
+
+    @staticmethod
+    def _offer_credit_value(offer: dict, points_value_cents: float = 1.0) -> float:
+        """Value credits attached to a specific sign-up offer (#202).
+
+        These are first-year sweeteners — statement credits, waived annual fees,
+        companion vouchers — and were previously dropped entirely from the
+        ranking even though the objective is first-year value.
+        """
+        return CardRecommendationService._credit_entries_value(
+            offer.get("credits"), points_value_cents
+        )
+
+    @staticmethod
     def _credit_value(card: dict, points_value_cents: float = 1.0) -> float:
         """Value recurring/anniversary credits in **dollars**.
 
@@ -179,15 +213,9 @@ class CardRecommendationService:
         anniversary credit was counted as $15,000 (not ~$150), which dominated
         the first-year-value ranking.
         """
-        total = 0.0
-        for c in card.get("credits", []):
-            value = float(c.get("value", 0)) * float(c.get("weight", 1.0))
-            currency = c.get("currency")
-            if currency and currency != "USD":
-                total += value * points_value_cents / 100.0
-            else:
-                total += value
-        return total
+        return CardRecommendationService._credit_entries_value(
+            card.get("credits"), points_value_cents
+        )
 
     @staticmethod
     def _first_year_fee(card: dict) -> float:
@@ -347,6 +375,10 @@ class CardRecommendationService:
             annual_fee: float = float(card.get("annualFee", 0))
             first_year_fee = self._first_year_fee(card)
             credit_val = self._credit_value(card, points_value_cents)
+            # Offer-attached credits are first-year value too (#202): statement
+            # credits, waived fees and vouchers that only apply to this offer.
+            offer_credit_val = self._offer_credit_value(offer, points_value_cents)
+            credit_val += offer_credit_val
             score = bonus_val + ongoing_val - first_year_fee + credit_val
 
             # 8. Explanation (dollar-denominated; show the points conversion
