@@ -7,7 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Data-architecture & product-evolution plan (`docs/prd/data-architecture-and-evolution.md`).**
+  Documents today's real data flow (Plaid + statement import → dedup → enrichment →
+  spending profile → recommendation engine) and an honest limitations list; surveys
+  competitors (Range, Arta, Monarch, Copilot, Ramp, Mercury) and the MCP
+  financial-data landscape; evaluates ingestion options (Plaid vs alternative
+  aggregators vs an MCP-based approach) with a recommendation; and lays out a
+  phased backend→frontend evolution (merchant normalization → real classification
+  provider → trajectory analysis → a read-first finance-tracker MCP server →
+  richer card data). Planning doc only — no application code changed.
+
 ### Fixed
+- **Next-card recommendation showed the dollar sign-up bonus as "pts" (#196).**
+  On Recommendations → **Next Card**, the bonus was rendered
+  `{bonus_value.toLocaleString()} pts`, but `bonus_value` is a USD amount
+  (`card_recommendation.py`: *"bonus_value = dollar value of the chosen offer …
+  points/miles at `points_value_cents` per point"*), so a $600 cash bonus
+  displayed as "600 pts" — and contradicted the same card's `explanation` string,
+  which already prints the correct dollar value. This undercut #192 (which fixed
+  the backend to value points at cents). The bonus now renders via
+  `formatCurrency`. The adjacent "Score" figure — also dollar-denominated
+  (`score = bonus_value + ongoing_value − first_year_fee + credit_value`) — is now
+  shown as currency and relabeled "1st-yr value", matching the Portfolio/Spending
+  tabs (which already use `formatCurrency`) and PRD FR4's "you'd earn ~$X" framing.
+  Frontend-only; no backend/schema change.
 - **Explore cards page rendered zero results (#123 regression).** The web
   `CardBonusSearchResult` type and the `/explore` page read the card page window
   from `data.cards`, but the `GET /card-bonuses` endpoint returns it under
@@ -17,6 +41,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every query. Aligned the type and page to `results`; no backend change.
 
 ### Added
+- **Per-category "best held card" assignment in the portfolio recommendation
+  (#177).** `GET /recommendations/portfolio` now returns an additive
+  `category_assignments` field answering PRD User Story 2 — *which of your cards
+  should you reach for per category* (e.g. "Use Amex Gold for dining — 4% vs 1% on
+  your other cards"). For every internal category the user actually spends in, the
+  engine picks the held card with the highest curated per-category earn, using the
+  **same** rate lookup as the first-year earn model: a new shared
+  `CardRecommendationService._category_rate` is now the single source of truth for
+  both `_ongoing_value` and the new `best_card_per_category`, so the two can't
+  drift. Ties resolve deterministically (highest rate → lowest annual fee →
+  case-insensitive name) to keep the inputs-hash snapshot cache stable. The
+  portfolio snapshot now caches the per-card analyses and the assignments as one
+  blob so both survive a cache hit — the cache-hit and cold paths share a single
+  `_shape_payload` helper (with a defensive wrap for legacy list-shaped snapshots)
+  so a stored blob is never double-nested under `cards`. `analyze_portfolio` keeps
+  its `List[dict]` contract, so the `card_insight_engine` caller is unchanged.
+  Backend-only + additive; frontend rendering of the assignments is a fast-follow.
 - **"Add to my wallet" from the Explore card detail page (#174).** The per-card
   detail view (`/explore/{cardId}`) now has an "Add to my wallet" action that
   creates the card via `POST /cards`, storing `name` and `issuer` **verbatim from
