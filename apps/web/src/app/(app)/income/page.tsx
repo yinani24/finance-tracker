@@ -38,7 +38,9 @@ export default function IncomePage() {
       .sort((a, b) => b.total - a.total);
   }, [txns]);
 
-  const monthlyIncome = summary.totalIncome / summary.months;
+  // Averaged over the months income actually appears in, which is rarely the
+  // same window the card statements cover.
+  const monthlyIncome = summary.monthlyIncome;
   const net = monthlyIncome - summary.monthlySpend;
   const savingsRate = monthlyIncome > 0 ? net / monthlyIncome : null;
 

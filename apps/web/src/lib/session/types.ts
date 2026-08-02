@@ -23,6 +23,10 @@ export interface HeldCard {
    * each call site.
    */
   productName?: string;
+  /** Last four of the account number — the strongest identity a statement gives. */
+  last4?: string;
+  /** Period end of the newest statement seen, so older ones don't overwrite. */
+  statementThrough?: string;
   issuer?: string;
   /** Credit limit, in dollars. Drives utilization. */
   creditLimit?: number;

@@ -312,12 +312,132 @@ function decodeUtf8(content: Uint8Array): string {
  * parse are collected as `RowError` (row number + reason), never aborting the
  * whole file.
  */
+/** Does this row parse as data rather than as column titles? */
+function looksLikeData(row: string[]): boolean {
+  if (row.length < 2) return false;
+  let hasDate = false;
+  let hasAmount = false;
+  for (const cell of row) {
+    if (!hasDate) {
+      try {
+        parseDate(cell);
+        hasDate = true;
+        continue;
+      } catch {
+        /* not a date; keep looking */
+      }
+    }
+    if (!hasAmount && cell.trim() !== "") {
+      try {
+        parseAmount(cell);
+        hasAmount = true;
+      } catch {
+        /* not an amount */
+      }
+    }
+  }
+  return hasDate && hasAmount;
+}
+
+/**
+ * Column positions for a CSV with no header row.
+ *
+ * Plenty of exports — Chase's bank-account download among them — are bare
+ * `date,description,amount` with no titles at all. Rejecting those for having
+ * "no header row" was wrong twice over: the file is perfectly well formed, and
+ * the error blamed the user for a shape we simply hadn't handled.
+ *
+ * Columns are identified by what they contain rather than by position, voting
+ * across every row so one odd value can't decide the layout.
+ */
+function inferColumns(
+  table: string[][]
+): { dateIdx: number; descIdx: number; amountIdx: number } | null {
+  const width = Math.max(...table.map((r) => r.length));
+  const dateHits = new Array<number>(width).fill(0);
+  const amountHits = new Array<number>(width).fill(0);
+  const textHits = new Array<number>(width).fill(0);
+
+  for (const row of table) {
+    for (let i = 0; i < width; i++) {
+      const cell = (row[i] ?? "").trim();
+      if (!cell) continue;
+      try {
+        parseDate(cell);
+        dateHits[i] += 1;
+        continue;
+      } catch {
+        /* not a date */
+      }
+      try {
+        parseAmount(cell);
+        amountHits[i] += 1;
+      } catch {
+        textHits[i] += 1;
+      }
+    }
+  }
+
+  const best = (hits: number[], exclude: number[]) => {
+    let idx = -1;
+    let max = 0;
+    for (let i = 0; i < hits.length; i++) {
+      if (exclude.includes(i)) continue;
+      if (hits[i] > max) {
+        max = hits[i];
+        idx = i;
+      }
+    }
+    return idx;
+  };
+
+  const dateIdx = best(dateHits, []);
+  const amountIdx = best(amountHits, [dateIdx]);
+  const descIdx = best(textHits, [dateIdx, amountIdx]);
+  if (dateIdx < 0 || amountIdx < 0 || descIdx < 0) return null;
+  return { dateIdx, descIdx, amountIdx };
+}
+
 export function parseCsv(content: Uint8Array | string): ParseResult {
   const text =
     typeof content === "string" ? content : decodeUtf8(content);
   if (!text.trim()) throw new StatementParseError("file is empty");
 
   const table = parseCsvRows(text);
+  if (table.length === 0) {
+    throw new StatementParseError("file is empty");
+  }
+
+  // A first row that parses as data means there is no header to consume.
+  if (looksLikeData(table[0])) {
+    const cols = inferColumns(table);
+    if (!cols) {
+      throw new StatementParseError(
+        "no header row, and columns could not be identified by content",
+      );
+    }
+    const rows: ParsedRow[] = [];
+    const errors: RowError[] = [];
+    let lineNo = 0;
+    for (const rawRow of table) {
+      lineNo += 1;
+      if (rawRow.length === 1 && rawRow[0] === "") continue;
+      try {
+        rows.push({
+          occurredOn: parseDate(rawRow[cols.dateIdx]),
+          merchant: (rawRow[cols.descIdx] ?? "").trim(),
+          signedAmount: parseAmount(rawRow[cols.amountIdx]),
+        });
+      } catch (err) {
+        errors.push({
+          row: lineNo,
+          reason: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return { rows, errors };
+  }
+
   const header = table.shift();
   if (!header || header.length === 0) {
     throw new StatementParseError("no CSV header row found");

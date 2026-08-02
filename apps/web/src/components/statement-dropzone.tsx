@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, Loader2, AlertTriangle } from "lucide-react";
 import { useSession } from "@/lib/session/session-context";
+import type { HeldCard } from "@/lib/session/types";
 import { parseStatement, categorize } from "@/lib/statement";
 import {
   parseStatementMetadata,
@@ -21,6 +22,33 @@ import { extractText } from "@/lib/statement/parse-pdf";
  * the tab and lands in session memory no matter where it was dropped.
  */
 
+/**
+ * The card an incoming statement belongs to, if it is already known.
+ *
+ * Tried strongest first. The last four of the account number is the only field
+ * that stays constant across statements; the credit limit changes, and the
+ * display label changes with it whenever a field fails to parse.
+ */
+export function findHeldCard(
+  cards: HeldCard[],
+  meta: StatementMetadata,
+  label: string
+): HeldCard | undefined {
+  if (meta.last4) {
+    const byNumber = cards.find((c) => c.last4 === meta.last4);
+    if (byNumber) return byNumber;
+  }
+  if (meta.cardName) {
+    const byProduct = cards.find(
+      (c) =>
+        c.productName?.toLowerCase() === meta.cardName!.toLowerCase() &&
+        (c.issuer ?? "").toLowerCase() === (meta.issuer ?? "").toLowerCase()
+    );
+    if (byProduct) return byProduct;
+  }
+  return cards.find((c) => c.name === label);
+}
+
 export interface IngestResult {
   meta: StatementMetadata;
   added: number;
@@ -30,7 +58,7 @@ export interface IngestResult {
 
 /** Parse files into the session. Returns what each file yielded. */
 export function useStatementIngest() {
-  const { session, addCard, addTransactions } = useSession();
+  const { session, addCard, updateCard, addTransactions } = useSession();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -66,20 +94,44 @@ export function useStatementIngest() {
 
           // The statement named the account — record it without asking, and
           // reuse the existing card when a later statement is for the same one.
+          //
+          // Matching on the display label alone split one card into several:
+          // successive statements for the same account differ in credit limit
+          // and, when the account-number line doesn't parse, in the label
+          // itself. Identity comes from the account number when the statement
+          // prints one, and from product + issuer otherwise.
           const label = statementLabel(meta);
-          const existing = session.heldCards.find((c) => c.name === label);
+          const existing = findHeldCard(session.heldCards, meta, label);
           const named = Boolean(meta.cardName || meta.issuer || meta.creditLimit);
-          const sourceId = existing
-            ? existing.id
-            : named
-              ? addCard({
-                  name: label,
-                  productName: meta.cardName,
-                  issuer: meta.issuer,
-                  creditLimit: meta.creditLimit,
-                  currentBalance: meta.currentBalance,
-                })
-              : undefined;
+
+          let sourceId: string | undefined;
+          if (existing) {
+            sourceId = existing.id;
+            // Later statements carry the current limit and balance; earlier
+            // ones must not overwrite them.
+            const newer =
+              !existing.statementThrough ||
+              (meta.periodEnd ?? "") >= existing.statementThrough;
+            if (newer) {
+              updateCard(existing.id, {
+                creditLimit: meta.creditLimit ?? existing.creditLimit,
+                currentBalance: meta.currentBalance ?? existing.currentBalance,
+                last4: meta.last4 ?? existing.last4,
+                productName: meta.cardName ?? existing.productName,
+                statementThrough: meta.periodEnd ?? existing.statementThrough,
+              });
+            }
+          } else if (named) {
+            sourceId = addCard({
+              name: label,
+              productName: meta.cardName,
+              last4: meta.last4,
+              statementThrough: meta.periodEnd,
+              issuer: meta.issuer,
+              creditLimit: meta.creditLimit,
+              currentBalance: meta.currentBalance,
+            });
+          }
 
           addTransactions(
             rows.map((r) => ({
@@ -113,7 +165,7 @@ export function useStatementIngest() {
       }
       return results;
     },
-    [addCard, addTransactions, session.heldCards]
+    [addCard, updateCard, addTransactions, session.heldCards]
   );
 
   return { ingest, busy, failure, setFailure };

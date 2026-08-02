@@ -12,9 +12,36 @@
 
 import type { HeldCard, SessionState, SessionTransaction } from "./types";
 
+/**
+ * Money moving between the user's own accounts, which is neither earning nor
+ * spending.
+ *
+ * Paying a credit card appears twice once both files are loaded: as a credit
+ * on the card statement, and as a debit on the bank export. Counted naively
+ * that inflates income by the payment and double-counts the spending — once as
+ * the original charges, again as the payment covering them. Neither side is a
+ * real flow, so both are excluded.
+ */
+const TRANSFER_PATTERNS = [
+  /payment\s+thank\s*you/i,
+  /automatic\s+payment/i,
+  /\bautopay\b/i,
+  /\bepay\b/i,
+  /credit\s+crd/i,
+  /card\s+payment/i,
+  /online\s+transfer/i,
+  /\btransfer\s+(to|from)\b/i,
+];
+
+export function isTransfer(merchant: string): boolean {
+  return TRANSFER_PATTERNS.some((re) => re.test(merchant));
+}
+
 /** Spend is negative in this app, so its magnitude is what we report. */
-export const spendOf = (t: SessionTransaction) => (t.amount < 0 ? -t.amount : 0);
-export const incomeOf = (t: SessionTransaction) => (t.amount > 0 ? t.amount : 0);
+export const spendOf = (t: SessionTransaction) =>
+  t.amount < 0 && !isTransfer(t.merchant) ? -t.amount : 0;
+export const incomeOf = (t: SessionTransaction) =>
+  t.amount > 0 && !isTransfer(t.merchant) ? t.amount : 0;
 
 export interface CategoryTotal {
   category: string;
@@ -78,12 +105,37 @@ export function monthsCovered(txns: SessionTransaction[]): number {
   return Math.max(months.size, 1);
 }
 
+/**
+ * Months in which money actually moved in the given direction.
+ *
+ * Files rarely cover the same window: a bank export going back to January
+ * alongside a card statement covering June and July would divide two months of
+ * card spending across seven, understating it by more than three times. Since
+ * that average is what the ranking engine reads, each side is averaged over
+ * the months it genuinely spans.
+ */
+function activeMonths(
+  txns: SessionTransaction[],
+  amount: (t: SessionTransaction) => number
+): number {
+  const months = new Set(
+    txns.filter((t) => amount(t) > 0).map((t) => t.occurredOn.slice(0, 7))
+  );
+  return Math.max(months.size, 1);
+}
+
 export interface SessionSummary {
   totalSpend: number;
   totalIncome: number;
   monthlySpend: number;
   transactionCount: number;
+  /** Calendar months any transaction falls in. */
   months: number;
+  /** Months containing spending — the divisor behind `monthlySpend`. */
+  spendMonths: number;
+  /** Months containing income — the divisor behind `monthlyIncome`. */
+  incomeMonths: number;
+  monthlyIncome: number;
   topCategory: CategoryTotal | null;
   /** Total across cards that reported a limit; null when none did. */
   creditLimit: number | null;
@@ -98,6 +150,8 @@ export function summarize(session: SessionState): SessionSummary {
   const totalSpend = txns.reduce((s, t) => s + spendOf(t), 0);
   const totalIncome = txns.reduce((s, t) => s + incomeOf(t), 0);
   const months = monthsCovered(txns);
+  const spendMonths = activeMonths(txns, spendOf);
+  const incomeMonths = activeMonths(txns, incomeOf);
   const cats = categoryTotals(txns);
 
   const withLimits = session.heldCards.filter(
@@ -115,9 +169,12 @@ export function summarize(session: SessionState): SessionSummary {
   return {
     totalSpend,
     totalIncome,
-    monthlySpend: totalSpend / months,
+    monthlySpend: totalSpend / spendMonths,
+    monthlyIncome: totalIncome / incomeMonths,
     transactionCount: txns.length,
     months,
+    spendMonths,
+    incomeMonths,
     topCategory: cats[0] ?? null,
     creditLimit,
     currentBalance,
@@ -149,6 +206,65 @@ export interface Subscription {
 
 const DAY = 86_400_000;
 
+/**
+ * Payment rails that bill per order, never on a cycle.
+ *
+ * `DD*` is DoorDash, `TST*` is Toast, `SQ*` is Square, `CLV*` is Clover — food
+ * ordering and card-present restaurant terminals. Eating at the same place
+ * every Friday for the same amount produces a perfect cadence at a perfect
+ * price, which is indistinguishable from a subscription by shape alone. It
+ * isn't one: nothing renews, and there is nothing to cancel. Recognising the
+ * rail settles it regardless of how many charges line up.
+ */
+const ORDER_RAIL_PREFIXES = [
+  "DD",
+  "TST",
+  "SQ",
+  "CLV",
+  "SPO",
+  "UEP",
+  "GH",
+  "PY",
+  "SNACK",
+  "CHECKLE",
+] as const;
+
+const FOOD_MERCHANT_HINTS = [
+  "doordash",
+  "toast",
+  "grubhub",
+  "ubereats",
+  "uber eats",
+  "seamless",
+  "postmates",
+  "caviar",
+  "restaurant",
+  "pizza",
+  "cafe",
+  "coffee",
+  "kitchen",
+  "grill",
+  "bakery",
+  "deli",
+  "sushi",
+] as const;
+
+/** Categories where charges are per-purchase, not per-cycle. */
+const NEVER_RECURRING_CATEGORIES = new Set(["dining", "groceries"]);
+
+function isPerOrderSpend(merchant: string, category: string): boolean {
+  if (NEVER_RECURRING_CATEGORIES.has(category)) return true;
+
+  // A processor marker appears as a leading token followed by `*`.
+  const marker = merchant.match(/^([A-Z]+)\s*\*/i)?.[1]?.toUpperCase();
+  if (marker && (ORDER_RAIL_PREFIXES as readonly string[]).includes(marker)) {
+    return true;
+  }
+
+  const lower = merchant.toLowerCase();
+  return FOOD_MERCHANT_HINTS.some((hint) => lower.includes(hint));
+}
+
 function median(xs: number[]): number {
   const s = [...xs].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
@@ -176,6 +292,11 @@ export function detectSubscriptions(txns: SessionTransaction[]): Subscription[] 
   const subs: Subscription[] = [];
   for (const [merchant, list] of byMerchant) {
     if (list.length < 2) continue;
+
+    // Settle the payment rail before looking at shape at all: a restaurant
+    // visited on a steady cadence for a steady amount matches every structural
+    // test a subscription does, and is still not one.
+    if (isPerOrderSpend(merchant, list[0].category)) continue;
     const sorted = [...list].sort((a, b) => a.occurredOn.localeCompare(b.occurredOn));
     const amounts = sorted.map(spendOf);
     const typical = median(amounts);
@@ -218,13 +339,9 @@ export function detectSubscriptions(txns: SessionTransaction[]): Subscription[] 
     // norm. Everyday-spend categories are excluded rather than guessed at —
     // a false subscription is worse than a missing one, because the whole
     // point of the list is that every row is worth cancelling.
-    const VOLATILE = new Set([
-      "dining",
-      "groceries",
-      "transport",
-      "shopping",
-      "travel",
-    ]);
+    // Dining and groceries are excluded outright above; what remains here are
+    // categories where recurring billing exists but is not the norm.
+    const VOLATILE = new Set(["transport", "shopping", "travel"]);
     const category = sorted[0].category;
     // A weekly cadence inferred from two points is noise — two visits eight
     // days apart is a habit, not a billing cycle. So the two-charge case is

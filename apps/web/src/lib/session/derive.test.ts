@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { detectSubscriptions, categoryTotals, monthlyTrend } from "./derive";
-import type { SessionTransaction } from "./types";
+import {
+  detectSubscriptions,
+  categoryTotals,
+  monthlyTrend,
+  summarize,
+} from "./derive";
+import { EMPTY_SESSION, type SessionTransaction } from "./types";
 
 let seq = 0;
 function txn(
@@ -121,5 +126,105 @@ describe("detectSubscriptions — weak evidence", () => {
     ]);
     expect(subs).toHaveLength(1);
     expect(subs[0].period).toBe("weekly");
+  });
+});
+
+describe("detectSubscriptions — food is never a subscription", () => {
+  it("ignores DoorDash even at a perfect monthly cadence and price", () => {
+    const subs = detectSubscriptions([
+      txn("DD *DOORDASH BOLLYWOOD", "2026-05-04", -27.64, "dining"),
+      txn("DD *DOORDASH BOLLYWOOD", "2026-06-04", -27.64, "dining"),
+      txn("DD *DOORDASH BOLLYWOOD", "2026-07-04", -27.64, "dining"),
+    ]);
+    expect(subs).toHaveLength(0);
+  });
+
+  it("ignores a Toast terminal charged weekly for the same amount", () => {
+    const subs = detectSubscriptions([
+      txn("TST* CORNER CAFE", "2026-06-01", -12.5, "other"),
+      txn("TST* CORNER CAFE", "2026-06-08", -12.5, "other"),
+      txn("TST* CORNER CAFE", "2026-06-15", -12.5, "other"),
+    ]);
+    expect(subs).toHaveLength(0);
+  });
+
+  it("ignores a merchant whose name reads as food regardless of category", () => {
+    const subs = detectSubscriptions([
+      txn("BLUE BOTTLE COFFEE", "2026-05-02", -18.0, "other"),
+      txn("BLUE BOTTLE COFFEE", "2026-06-02", -18.0, "other"),
+      txn("BLUE BOTTLE COFFEE", "2026-07-02", -18.0, "other"),
+    ]);
+    expect(subs).toHaveLength(0);
+  });
+
+  it("still catches a real subscription that happens to be entertainment", () => {
+    const subs = detectSubscriptions([
+      txn("SPOTIFY USA", "2026-05-05", -11.99, "entertainment"),
+      txn("SPOTIFY USA", "2026-06-05", -11.99, "entertainment"),
+      txn("SPOTIFY USA", "2026-07-05", -11.99, "entertainment"),
+    ]);
+    expect(subs).toHaveLength(1);
+    expect(subs[0].period).toBe("monthly");
+  });
+});
+
+describe("transfers are neither income nor spend", () => {
+  it("excludes credit-card payments from income", () => {
+    // These come from a real Chase bank export loaded alongside the card
+    // statement: counting them as income added $5,561 that was never earned.
+    const cats = categoryTotals([
+      txn("Payment Thank You-Mobile", "2026-07-03", 2992.07, "other"),
+      txn("AUTOMATIC PAYMENT - THANK YOU", "2026-07-03", 869.52, "other"),
+      txn("COFFEE", "2026-07-04", -5, "dining"),
+    ]);
+    expect(cats).toEqual([
+      { category: "dining", total: 5, count: 1, share: 1 },
+    ]);
+  });
+
+  it("excludes the paying side too, so spend is not double counted", () => {
+    const trend = monthlyTrend([
+      txn("CHASE CREDIT CRD EPAY", "2026-07-03", -2992.07, "other"),
+      txn("BOTERO LABS PAYROLL", "2026-07-31", 4660.65, "income"),
+    ]);
+    expect(trend[0].spend).toBe(0);
+    expect(trend[0].income).toBeCloseTo(4660.65, 2);
+  });
+
+  it("leaves ordinary merchants alone", () => {
+    const trend = monthlyTrend([txn("PAYMENT PLAZA DINER", "2026-07-01", -20, "dining")]);
+    expect(trend[0].spend).toBe(20);
+  });
+});
+
+describe("averaging across files with different windows", () => {
+  it("averages spend over months that contain spend, not every month loaded", () => {
+    // A bank export back to January next to a card statement covering June and
+    // July: dividing card spend across seven months understated it 3.5×, and
+    // that average is what the card ranking engine reads.
+    const s = summarize({
+      ...EMPTY_SESSION,
+      transactions: [
+        txn("PAYROLL", "2026-01-31", 4000, "income"),
+        txn("PAYROLL", "2026-02-28", 4000, "income"),
+        txn("PAYROLL", "2026-03-31", 4000, "income"),
+        txn("SHOP", "2026-06-10", -1000, "shopping"),
+        txn("SHOP", "2026-07-10", -1000, "shopping"),
+      ],
+    });
+    expect(s.months).toBe(5);
+    expect(s.spendMonths).toBe(2);
+    expect(s.incomeMonths).toBe(3);
+    expect(s.monthlySpend).toBeCloseTo(1000, 2);
+    expect(s.monthlyIncome).toBeCloseTo(4000, 2);
+  });
+
+  it("never divides by zero when one side is missing", () => {
+    const s = summarize({
+      ...EMPTY_SESSION,
+      transactions: [txn("SHOP", "2026-06-10", -50, "shopping")],
+    });
+    expect(s.monthlyIncome).toBe(0);
+    expect(s.monthlySpend).toBeCloseTo(50, 2);
   });
 });
