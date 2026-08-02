@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Next-card recommendation showed the dollar sign-up bonus as "pts" (#196).**
+  On Recommendations → **Next Card**, the bonus was rendered
+  `{bonus_value.toLocaleString()} pts`, but `bonus_value` is a USD amount
+  (`card_recommendation.py`: *"bonus_value = dollar value of the chosen offer …
+  points/miles at `points_value_cents` per point"*), so a $600 cash bonus
+  displayed as "600 pts" — and contradicted the same card's `explanation` string,
+  which already prints the correct dollar value. This undercut #192 (which fixed
+  the backend to value points at cents). The bonus now renders via
+  `formatCurrency`. The adjacent "Score" figure — also dollar-denominated
+  (`score = bonus_value + ongoing_value − first_year_fee + credit_value`) — is now
+  shown as currency and relabeled "1st-yr value", matching the Portfolio/Spending
+  tabs (which already use `formatCurrency`) and PRD FR4's "you'd earn ~$X" framing.
+  Frontend-only; no backend/schema change.
 - **Explore cards page rendered zero results (#123 regression).** The web
   `CardBonusSearchResult` type and the `/explore` page read the card page window
   from `data.cards`, but the `GET /card-bonuses` endpoint returns it under
