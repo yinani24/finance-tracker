@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import type { Card } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
-import { Plus, CreditCard, Building2, Pencil, Trash2 } from "lucide-react";
+import { Plus, CreditCard, Check, ArrowRight, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import {
   Dialog,
@@ -203,27 +203,37 @@ export default function CardsPage() {
                 {creditAccounts.map((acct) => (
                   <div
                     key={`plaid-${acct.id}`}
-                    className="bg-card rounded-lg border border-border p-5 flex items-start gap-4"
+                    className="panel-link"
+                    tabIndex={0}
                   >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-link" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-medium text-sm text-card-foreground truncate">
+                    <div className="panel">
+                      <div className="panel-head">
+                        <span className="font-medium text-[15px] text-card-foreground truncate">
                           {acct.name}
-                        </p>
-                        <span className="flex-shrink-0 inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                          ✓ Linked
                         </span>
+                        <ArrowRight className="hover-arrow w-4 h-4 flex-shrink-0 text-muted" />
                       </div>
-                      <p className="text-xs text-muted truncate">
-                        {acct.institution_name || "Credit Card"}
-                      </p>
-                      <p className="mt-2 text-sm font-mono tabular-nums text-card-foreground">
-                        {formatCurrency(Math.abs(acct.balance))}
-                        <span className="text-muted"> balance</span>
-                      </p>
+                      <div className="panel-body">
+                        <div className="panel-row">
+                          <span className="panel-label">Issuer</span>
+                          <span className="panel-value truncate">
+                            {acct.institution_name || "Credit Card"}
+                          </span>
+                        </div>
+                        <div className="panel-row">
+                          <span className="panel-label">Balance</span>
+                          <span className="panel-value font-mono font-medium">
+                            {formatCurrency(Math.abs(acct.balance))}
+                          </span>
+                        </div>
+                        <div className="panel-row">
+                          <span className="panel-label">Status</span>
+                          <span className="inline-flex items-center gap-1 text-success text-[13px]">
+                            <Check className="w-3.5 h-3.5" />
+                            Linked via Plaid
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}

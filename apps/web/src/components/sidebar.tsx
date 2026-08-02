@@ -153,14 +153,14 @@ export function Sidebar() {
 
       {/* Search affordance — mirrors the dashboard-app convention of a
           command-palette row pinned above the nav. */}
-      <div className="px-2 pt-2">
+      <div className="pt-2">
         <button
           type="button"
           title="Search"
           className={cn(
-            "w-full flex items-center rounded-lg text-sm text-muted",
+            "w-full flex items-center text-sm text-muted",
             "motion-base hover:bg-accent/50 hover:text-card-foreground",
-            collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+            collapsed ? "justify-center p-2.5" : "gap-3 px-4 py-2.5"
           )}
         >
           <Search className="w-5 h-5 flex-shrink-0" />
@@ -175,7 +175,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav className="flex-1 p-2 space-y-1">
+      <nav className="flex-1 py-2 space-y-0.5">
         {navItems.map(({ href, label, icon: Icon, section }, i) => {
           const active = pathname.startsWith(href);
           // Start a labelled group whenever the section changes, so the nav
@@ -187,7 +187,7 @@ export function Sidebar() {
               {startsSection &&
                 (section ? (
                   !collapsed && (
-                    <div className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <div className="px-4 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                       {section}
                     </div>
                   )
@@ -200,8 +200,8 @@ export function Sidebar() {
                 data-active={active}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "nav-item flex items-center rounded-lg text-sm font-medium",
-                  collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5",
+                  "nav-item flex items-center text-sm font-medium",
+                  collapsed ? "justify-center p-2.5" : "gap-3 px-4 py-2.5",
                   active
                     ? "text-sidebar-accent-foreground"
                     : "text-muted hover:text-card-foreground"

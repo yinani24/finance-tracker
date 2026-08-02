@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Lightbulb,
+  ArrowRight,
 } from "lucide-react";
 import { InsightsWidget } from "@/components/insights-widget";
 import Link from "next/link";
@@ -126,30 +127,45 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recommendations.recommendations.slice(0, 5).map((rec, i) => (
-              <div key={rec.card.cardId} className="rounded-lg border border-border p-4">
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <div className="flex items-start gap-2 min-w-0">
-                    <span className="text-xs font-mono text-muted mt-0.5">
-                      {i + 1}.
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm text-card-foreground truncate">
+              <Link
+                key={rec.card.cardId}
+                href="/cards/recommendations"
+                className="panel-link"
+              >
+                <div className="panel">
+                  <div className="panel-head">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs font-mono text-muted">
+                        {i + 1}.
+                      </span>
+                      <span className="font-medium text-[15px] text-card-foreground truncate">
                         {rec.card.name}
-                      </p>
-                      <p className="text-xs text-muted">
+                      </span>
+                    </span>
+                    <ArrowRight className="hover-arrow w-4 h-4 flex-shrink-0 text-muted" />
+                  </div>
+                  <div className="panel-body">
+                    <div className="panel-row">
+                      <span className="panel-label">Issuer</span>
+                      <span className="panel-value truncate">
                         {rec.card.issuer}
-                        {rec.card.annualFee
-                          ? ` · $${rec.card.annualFee}/yr`
-                          : " · no annual fee"}
-                      </p>
+                      </span>
+                    </div>
+                    <div className="panel-row">
+                      <span className="panel-label">Annual fee</span>
+                      <span className="panel-value font-mono">
+                        {rec.card.annualFee ? `$${rec.card.annualFee}` : "None"}
+                      </span>
+                    </div>
+                    <div className="panel-row">
+                      <span className="panel-label">Est. first-year value</span>
+                      <span className="mono-chip !bg-success/10 !text-success">
+                        ~${Math.round(rec.score).toLocaleString()}
+                      </span>
                     </div>
                   </div>
-                  <span className="whitespace-nowrap text-xs font-mono bg-success/10 text-success px-2 py-0.5 rounded">
-                    ~${Math.round(rec.score).toLocaleString()} · 1st yr
-                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">{rec.explanation}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
