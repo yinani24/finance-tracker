@@ -163,6 +163,17 @@ export default function DashboardPage() {
                         ~${Math.round(rec.score).toLocaleString()}
                       </span>
                     </div>
+                    {rec.approval_label && (
+                      <div className="panel-row">
+                        <span className="panel-label">Approval odds</span>
+                        <span
+                          className="mono-chip capitalize"
+                          title={rec.approval_reason ?? undefined}
+                        >
+                          {rec.approval_label}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
