@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Native View Transitions for route changes: the OLD page cross-fades into
+  // the new one at the browser level, which is what makes switching sections
+  // feel continuous rather than a content swap.
+  experimental: { viewTransition: true },
   // Allow Next dev to serve assets/HMR to a tunnel origin (ngrok/Cloudflare) used
   // for testing Plaid OAuth banks locally over HTTPS. Without this, Next dev rejects
   // the tunnel host as "Unauthorized" and the client never hydrates. Comma-separated.
