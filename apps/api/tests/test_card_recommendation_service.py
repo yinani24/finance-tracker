@@ -862,3 +862,258 @@ class TestOfferCreditValue:
         (res,) = CardRecommendationService().recommend_next_card(profile, [], [card])
         # $100 bonus (10k pts @1c) + ongoing - $0 fee + $400 offer credit
         assert res["score"] > 400.0
+
+
+class TestOptimalCardCombination:
+    """Multi-card combination — the optimal SET of cards (held + new) that
+    maximizes total first-year value (rec-engine slice 5, #185, PRD Decision #1).
+
+    Reuses the real curated Amex Gold ``cardId``
+    (``cafe43d37256bec116dff4be6cced2cf``: dining 4, groceries 4, travel 3) so
+    the routing shares the exact ``_category_rate`` lookup slice 4 uses.
+    """
+
+    GOLD_ID = "cafe43d37256bec116dff4be6cced2cf"
+
+    def _gold(self, fee=250, offer=True):
+        card = {
+            "cardId": self.GOLD_ID, "name": "Gold", "issuer": "AMERICAN_EXPRESS",
+            "network": "AMERICAN_EXPRESS", "annualFee": fee, "isAnnualFeeWaived": False,
+            "universalCashbackPercent": 1, "currency": "USD", "credits": [],
+            "discontinued": False, "offers": [],
+        }
+        if offer:
+            card["offers"] = [
+                {"spend": 500, "amount": [{"amount": 100, "currency": "USD"}],
+                 "days": 90, "credits": []}
+            ]
+        return card
+
+    def _flat(self, name, issuer="BANKF", pct=2, fee=0, card_id=None, offers=None,
+              waived=False):
+        return {
+            "cardId": card_id or f"flat-{name.lower().replace(' ', '-')}",
+            "name": name, "issuer": issuer, "network": "VISA", "annualFee": fee,
+            "isAnnualFeeWaived": waived, "universalCashbackPercent": pct,
+            "currency": "USD", "credits": [], "discontinued": False,
+            "offers": offers or [],
+        }
+
+    @staticmethod
+    def _held(card):
+        return {
+            "name": card["name"], "issuer": card["issuer"],
+            "network": card.get("network", "VISA"),
+            "annual_fee": card.get("annualFee", 0),
+        }
+
+    @staticmethod
+    def _profile(breakdown, avg=None):
+        return {
+            "avg_monthly_spend": sum(breakdown.values()) if avg is None else avg,
+            "category_breakdown": breakdown,
+            "top_merchants": [],
+        }
+
+    # (a) Baseline routing = Σ best-held-per-category, no candidate to add.
+    def test_baseline_routes_each_category_to_best_held(self):
+        service = CardRecommendationService()
+        gold, flat = self._gold(offer=False), self._flat("Flat Two", pct=2)
+        available = [gold, flat]  # both held → candidate pool empty
+        user_cards = [self._held(gold), self._held(flat)]
+        profile = self._profile({"dining": 500.0, "shopping": 300.0})
+
+        res = service.optimal_card_combination(profile, user_cards, available)
+
+        # dining: Gold 4% → 500×12×4% = 240; shopping (uncurated for Gold → flat
+        # 1%) loses to Flat Two's 2% → 300×12×2% = 72. Baseline = 312.
+        assert res["baseline_first_year_value"] == 312.0
+        assert res["recommended_new_cards"] == []
+        assert res["projected_first_year_value"] == 312.0
+        routing = {r["category"]: r for r in res["per_category_routing"]}
+        assert routing["dining"]["card"]["name"] == "Gold"
+        assert routing["dining"]["rate"] == 4
+        assert routing["shopping"]["card"]["name"] == "Flat Two"
+        assert all(r["is_new"] is False for r in res["per_category_routing"])
+
+    # (b) Held card already best in every spent category ⇒ recommend nothing.
+    def test_already_optimal_recommends_nothing(self):
+        service = CardRecommendationService()
+        gold = self._gold(offer=False)  # held, dining 4%
+        # A weaker flat-2% candidate with a fee and no achievable bonus: can't
+        # beat Gold's dining 4% and its fee sinks its marginal value.
+        weak = self._flat("Weak", pct=2, fee=95, offers=[
+            {"spend": 999999, "amount": [{"amount": 500, "currency": "USD"}],
+             "days": 30, "credits": []}
+        ])
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(profile, [self._held(gold)], [gold, weak])
+
+        assert res["recommended_new_cards"] == []
+        assert res["baseline_first_year_value"] == 480.0  # 1000×12×4%
+        assert res["projected_first_year_value"] == res["baseline_first_year_value"]
+
+    # (c) Candidate winning a high-spend category clears its fee ⇒ recommended,
+    #     with categories_won + a rationale naming the category.
+    def test_candidate_winning_category_is_recommended(self):
+        service = CardRecommendationService()
+        flat1 = self._flat("Flat One", pct=1, fee=0)
+        gold = self._gold(fee=250, offer=True)  # dining 4%, $100 bonus
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(
+            profile, [self._held(flat1)], [flat1, gold]
+        )
+
+        # baseline: flat1 dining 1% = 120. Adding Gold: earn_delta 480−120=360,
+        # +$100 bonus, −$250 fee ⇒ Δ = 210.
+        assert res["baseline_first_year_value"] == 120.0
+        assert len(res["recommended_new_cards"]) == 1
+        rec = res["recommended_new_cards"][0]
+        assert rec["name"] == "Gold"
+        assert rec["categories_won"] == ["dining"]
+        assert rec["marginal_value"] == 210.0
+        assert "dining" in rec["rationale"]
+        assert res["projected_first_year_value"] == 330.0  # 120 + 210
+        # Routing now lands dining on the new card.
+        routing = {r["category"]: r for r in res["per_category_routing"]}
+        assert routing["dining"]["card"]["name"] == "Gold"
+        assert routing["dining"]["is_new"] is True
+
+    # (d) Candidate whose Δ_earn < fee (and no bonus) is NOT recommended.
+    def test_candidate_not_worth_the_fee_is_dropped(self):
+        service = CardRecommendationService()
+        flat1 = self._flat("Flat One", pct=1, fee=0)
+        # Flat 2% but a $95 fee and an unachievable bonus at this tiny spend.
+        pricey = self._flat("Pricey Two", pct=2, fee=95, offers=[
+            {"spend": 100000, "amount": [{"amount": 300, "currency": "USD"}],
+             "days": 30, "credits": []}
+        ])
+        profile = self._profile({"dining": 100.0})  # $100/mo
+
+        res = service.optimal_card_combination(
+            profile, [self._held(flat1)], [flat1, pricey]
+        )
+
+        # earn_delta = (2%−1%) on $1,200/yr = $12, bonus 0, fee $95 ⇒ Δ = −83.
+        assert res["recommended_new_cards"] == []
+
+    # (e) Multi-tier candidate: the smaller ACHIEVABLE tier's bonus is credited
+    #     (card not dropped because its top tier is out of reach).
+    def test_multitier_smaller_achievable_bonus_credited(self):
+        service = CardRecommendationService()
+        flat1 = self._flat("Flat One", pct=1, fee=0)
+        tiered = self._flat("Tiered", pct=1, fee=0, offers=[
+            {"spend": 20000, "amount": [{"amount": 900, "currency": "USD"}],
+             "days": 90, "credits": []},   # unachievable at $1k/mo
+            {"spend": 2000, "amount": [{"amount": 200, "currency": "USD"}],
+             "days": 180, "credits": []},  # achievable
+        ])
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(
+            profile, [self._held(flat1)], [flat1, tiered]
+        )
+
+        assert len(res["recommended_new_cards"]) == 1
+        rec = res["recommended_new_cards"][0]
+        assert rec["name"] == "Tiered"
+        # Wins no category (ties flat1 at 1%, loses the name tie-break), so its
+        # whole marginal value is the smaller achievable tier's $200 bonus.
+        assert rec["categories_won"] == []
+        assert rec["marginal_value"] == 200.0
+
+    # (f) A waived first-year fee is treated as $0 (isAnnualFeeWaived).
+    def test_waived_fee_uses_zero_first_year_fee(self):
+        service = CardRecommendationService()
+        flat1 = self._flat("Flat One", pct=1, fee=0)
+        # Flat 3% but a $550 fee waived year one; no bonus.
+        waived = self._flat("Waived Three", pct=3, fee=550, waived=True)
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(
+            profile, [self._held(flat1)], [flat1, waived]
+        )
+
+        # earn_delta = (3%−1%) on $12k = $240; fee counts as $0 (waived) ⇒ Δ=240.
+        # Were the $550 fee charged, Δ would be −310 and it'd be dropped.
+        assert len(res["recommended_new_cards"]) == 1
+        assert res["recommended_new_cards"][0]["name"] == "Waived Three"
+        assert res["recommended_new_cards"][0]["marginal_value"] == 240.0
+
+    # (g) Tie-break among equal-Δ candidates: lower first-year fee before name.
+    def test_tie_break_prefers_lower_fee_then_name(self):
+        service = CardRecommendationService()
+        flat1 = self._flat("Flat One", pct=1, fee=0)
+        # Both net Δ = 120 for dining, but differ on fee. "Zzz" has fee 0;
+        # "Aaa" earns the same net via a $50 bonus offset by a $50 fee. Lower
+        # fee must win even though "Aaa" sorts earlier by name.
+        zzz = self._flat("Zzz", pct=2, fee=0)
+        aaa = self._flat("Aaa", pct=2, fee=50, offers=[
+            {"spend": 500, "amount": [{"amount": 50, "currency": "USD"}],
+             "days": 90, "credits": []}
+        ])
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(
+            profile, [self._held(flat1)], [flat1, zzz, aaa], max_new_cards=1
+        )
+
+        assert len(res["recommended_new_cards"]) == 1
+        assert res["recommended_new_cards"][0]["name"] == "Zzz"
+
+    # (h) Empty spend profile ⇒ baseline 0, nothing recommended, no crash.
+    def test_empty_profile_is_graceful(self):
+        service = CardRecommendationService()
+        gold = self._gold()
+        empty = {"avg_monthly_spend": 0.0, "category_breakdown": {}, "top_merchants": []}
+
+        res = service.optimal_card_combination(empty, [], [gold])
+
+        assert res["baseline_first_year_value"] == 0.0
+        assert res["projected_first_year_value"] == 0.0
+        assert res["recommended_new_cards"] == []
+        assert res["per_category_routing"] == []
+
+    # (h2) Empty wallet WITH real spend ⇒ recommends the best starter card.
+    def test_empty_wallet_with_spend_recommends_starter(self):
+        service = CardRecommendationService()
+        flat1 = self._flat("Flat One", pct=1, fee=0)
+        gold = self._gold(fee=250, offer=True)  # dining 4% + $100 bonus
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(profile, [], [flat1, gold])
+
+        assert res["baseline_first_year_value"] == 0.0
+        assert len(res["recommended_new_cards"]) == 1
+        assert res["recommended_new_cards"][0]["name"] == "Gold"
+        assert res["recommended_new_cards"][0]["marginal_value"] == 330.0
+        routing = {r["category"]: r for r in res["per_category_routing"]}
+        assert routing["dining"]["card"]["name"] == "Gold"
+        assert routing["dining"]["is_new"] is True
+
+    # (i) Owned and discontinued cards are excluded from the candidate pool.
+    def test_owned_and_discontinued_excluded_from_candidates(self):
+        service = CardRecommendationService()
+        gold = self._gold(offer=False)  # held
+        # A discontinued 5%-dining card with a huge achievable bonus: it would
+        # dominate if considered, so its absence proves the exclusion.
+        ghost = self._flat("Ghost", pct=5, fee=0, offers=[
+            {"spend": 500, "amount": [{"amount": 5000, "currency": "USD"}],
+             "days": 90, "credits": []}
+        ])
+        ghost["discontinued"] = True
+        # A live but not-worth-it flat-2% candidate with a fee and no bonus.
+        weak = self._flat("Weak Two", pct=2, fee=95)
+        profile = self._profile({"dining": 1000.0})
+
+        res = service.optimal_card_combination(
+            profile, [self._held(gold)], [gold, ghost, weak]
+        )
+
+        names = {r["name"] for r in res["recommended_new_cards"]}
+        assert "Ghost" not in names   # discontinued excluded
+        assert "Gold" not in names    # owned excluded
+        assert res["recommended_new_cards"] == []
+        assert res["baseline_first_year_value"] == 480.0  # owned Gold still routes

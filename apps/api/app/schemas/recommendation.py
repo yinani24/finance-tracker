@@ -98,3 +98,39 @@ class PortfolioResponse(BaseModel):
     # response stays back-compatible for any consumer that reads only `cards`.
     category_assignments: List[CategoryAssignment] = []
     spending_profile: SpendingProfileRead
+
+
+class RoutedCategory(BaseModel):
+    """A spending category routed to its best card across the combined wallet
+    (held + any recommended-new). ``is_new`` flags a routing that lands on a
+    recommended card the user doesn't yet hold; ``rate`` is that card's
+    per-category earn as a percent-equivalent."""
+
+    category: str
+    card: BestHeldCard
+    is_new: bool
+    rate: float
+
+
+class RecommendedNewCard(BaseModel):
+    """A new card the combination recommends applying for. ``marginal_value`` is
+    its first-year value delta (extra earn it wins + sign-up bonus + credits −
+    first-year fee); ``categories_won`` are the spend categories it becomes the
+    best card for."""
+
+    name: str
+    issuer: str
+    marginal_value: float
+    categories_won: List[str]
+    rationale: str
+
+
+class CombinationResponse(BaseModel):
+    """Optimal SET of cards (held + new) maximizing total first-year value
+    (recommendation-engine slice 5, PRD Decision #1)."""
+
+    recommended_new_cards: List[RecommendedNewCard]
+    per_category_routing: List[RoutedCategory]
+    baseline_first_year_value: float
+    projected_first_year_value: float
+    spending_profile: SpendingProfileRead
