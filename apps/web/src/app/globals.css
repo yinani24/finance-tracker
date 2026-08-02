@@ -389,17 +389,6 @@
   .page-enter {
     animation: page-enter var(--dur-page) var(--ease-composio) both;
   }
-  /* Children rise in sequence behind the page fade. Capped at 6 so a long
-     list never accumulates a visible delay. */
-  .page-enter > * > :nth-child(-n + 6) {
-    animation: section-rise var(--dur-page) var(--ease-composio) both;
-  }
-  .page-enter > * > :nth-child(1) { animation-delay: 20ms; }
-  .page-enter > * > :nth-child(2) { animation-delay: 55ms; }
-  .page-enter > * > :nth-child(3) { animation-delay: 90ms; }
-  .page-enter > * > :nth-child(4) { animation-delay: 120ms; }
-  .page-enter > * > :nth-child(5) { animation-delay: 145ms; }
-  .page-enter > * > :nth-child(6) { animation-delay: 165ms; }
 }
 
 @keyframes page-enter {
@@ -521,4 +510,43 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hover-arrow { transition: none; }
+}
+
+
+/* ── Route transitions (native View Transitions API) ────────────────────────
+   The browser snapshots the outgoing page and cross-fades it into the incoming
+   one, so a section change reads as one continuous motion instead of old
+   content vanishing and new content animating in on its own. */
+::view-transition-old(root) {
+  animation: vt-out 160ms var(--ease-composio) both;
+}
+::view-transition-new(root) {
+  animation: vt-in var(--dur-page) var(--ease-composio) both;
+}
+@keyframes vt-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.996); }
+}
+@keyframes vt-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.996); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}
+
+
+/* ── Type scale ─────────────────────────────────────────────────────────────
+   Matched to the reference dashboard: 16px/24px body, 24px/32px semibold page
+   titles, and mono figures at a slightly tighter tracking so columns line up. */
+@layer base {
+  body {
+    font-size: 16px;
+    line-height: 24px;
+  }
+  h1 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; line-height: 26px; font-weight: 600; letter-spacing: -0.005em; }
+  h3 { font-size: 15px; line-height: 22px; font-weight: 600; }
+  .font-mono, code, kbd, pre { letter-spacing: -0.01em; }
 }
