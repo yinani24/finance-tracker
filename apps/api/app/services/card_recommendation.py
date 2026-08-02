@@ -92,37 +92,80 @@ class CardRecommendationService:
             months_to_hit = min_spend / avg_monthly_spend
             if months_to_hit > bonus_days / 30:
                 continue
-            val = CardRecommendationService._bonus_value_usd(offer, points_value_cents)
+            val = CardRecommendationService._bonus_value_usd(
+                offer, points_value_cents, card.get("currency")
+            )
             if best_val is None or val > best_val:
                 best = (offer, months_to_hit)
                 best_val = val
         return best
 
     @staticmethod
-    def _bonus_value_usd(offer: dict, points_value_cents: float = 1.0) -> float:
+    def _amount_is_dollars(amount_currency: Optional[str], card_currency: Optional[str]) -> bool:
+        """Decide whether a bonus ``amount`` entry is denominated in dollars.
+
+        The upstream dataset denominates a bonus ``amount`` by the **card's**
+        top-level ``currency`` (cash cards → ``"USD"``; points/miles cards → a
+        program like ``"CHASE"``/``"AMEX_MR"``). The per-amount ``currency``
+        field is present on only ~11 of 179 cards, so a field-less amount must
+        inherit the card's denomination — otherwise a genuine dollar bonus on a
+        ``currency: "USD"`` cashback card is mis-read as points and valued ~100×
+        too low (issue #201; the bonus-path sibling of the #192 credit fix).
+
+        Rule: an explicit ``"USD"`` tag is dollars; any explicit non-USD tag is
+        points; a field-less amount inherits ``card_currency`` (dollars only
+        when the card itself is ``"USD"``). ``card_currency=None`` is
+        "unknown" — a field-less amount then falls back to the legacy points
+        treatment so bare unit calls without card context are unaffected.
+        """
+        if amount_currency == "USD":
+            return True
+        if amount_currency is not None:
+            return False
+        return card_currency == "USD"
+
+    @staticmethod
+    def _bonus_value_usd(
+        offer: dict,
+        points_value_cents: float = 1.0,
+        card_currency: Optional[str] = None,
+    ) -> float:
         """Value a sign-up bonus in **dollars**.
 
-        Each entry in ``offer["amount"]`` is either a cashback bonus
-        (``currency == "USD"``, valued at face value) or a points/miles bonus
-        (no ``currency`` field, valued at ``points_value_cents`` per point).
+        Each entry in ``offer["amount"]`` is either a cashback bonus (dollars,
+        taken at face value) or a points/miles bonus (valued at
+        ``points_value_cents`` per point). Denomination follows
+        ``_amount_is_dollars``: an explicit ``currency`` on the amount wins,
+        otherwise a field-less amount inherits ``card_currency`` (so a
+        field-less amount on a ``currency: "USD"`` card is dollars, not points).
         """
         total = 0.0
         for a in offer.get("amount", []):
             amount = a.get("amount", 0)
-            if a.get("currency") == "USD":
+            if CardRecommendationService._amount_is_dollars(
+                a.get("currency"), card_currency
+            ):
                 total += float(amount)
             else:
                 total += float(amount) * points_value_cents / 100.0
         return total
 
     @staticmethod
-    def _bonus_points(offer: dict) -> float:
-        """Sum of raw point/mile amounts (non-USD entries) for display."""
+    def _bonus_points(offer: dict, card_currency: Optional[str] = None) -> float:
+        """Sum of raw point/mile amounts for display.
+
+        Excludes any amount that ``_amount_is_dollars`` classifies as dollars,
+        so a field-less amount on a ``currency: "USD"`` card is **not** counted
+        as points (which otherwise renders bogus "(250 pts @ 1.0¢)" copy for a
+        "$250 back" bonus — issue #201).
+        """
         return float(
             sum(
                 a.get("amount", 0)
                 for a in offer.get("amount", [])
-                if a.get("currency") != "USD"
+                if not CardRecommendationService._amount_is_dollars(
+                    a.get("currency"), card_currency
+                )
             )
         )
 
@@ -286,8 +329,9 @@ class CardRecommendationService:
             offer, months_to_hit = selected
 
             # 4. Bonus value (in dollars) and 5. spend terms of the chosen offer
-            bonus_val = self._bonus_value_usd(offer, points_value_cents)
-            bonus_points = self._bonus_points(offer)
+            card_currency = card.get("currency")
+            bonus_val = self._bonus_value_usd(offer, points_value_cents, card_currency)
+            bonus_points = self._bonus_points(offer, card_currency)
             min_spend: float = float(offer.get("spend", 0))
             bonus_days: int = int(offer.get("days", 30))
 
