@@ -42,6 +42,25 @@ class CardRecommendationService:
         return f"{name.lower()}|{issuer.upper()}"
 
     @staticmethod
+    def _category_rate(card: dict, category: str) -> float:
+        """Per-category ongoing-earn rate for ``card`` in ``category``, as a
+        percent-equivalent.
+
+        The single source of truth for the category earn lookup, shared by
+        ``_ongoing_value`` (first-year earn) and ``best_card_per_category``
+        (per-category "which card to use") so the two can never drift. Reads the
+        curated rate from ``_CATEGORY_RATES`` (keyed by ``cardId``) and falls
+        back to the card's flat ``universalCashbackPercent`` for any category the
+        card doesn't curate — and for any card absent from the table (including a
+        bare owned-card dict with no ``cardId``, which resolves to its flat rate,
+        defaulting to 0 when unknown).
+        """
+        flat_pct = float(card.get("universalCashbackPercent", 0))
+        card_id = card.get("cardId")
+        rates = _CATEGORY_RATES.get(card_id, {}) if card_id else {}
+        return float(rates.get(category, flat_pct))
+
+    @staticmethod
     def _best_achievable_offer(
         card: dict,
         avg_monthly_spend: float,
@@ -180,7 +199,7 @@ class CardRecommendationService:
         total = 0.0
         covered = 0.0
         for category, monthly in category_breakdown.items():
-            rate = rates.get(category, flat_pct)
+            rate = CardRecommendationService._category_rate(card, category)
             total += monthly * 12 * float(rate) / 100.0
             covered += monthly
 
@@ -452,3 +471,103 @@ class CardRecommendationService:
             )
 
         return output
+
+    def best_card_per_category(
+        self,
+        profile: dict,
+        user_cards: List[dict],
+        available_cards: List[dict],
+    ) -> List[dict]:
+        """For each category the user actually spends in, pick the held card
+        that earns the most there — the "use THIS card for dining, THAT one for
+        groceries" guidance of PRD User Story 2.
+
+        Pure function (no DB), so it stays inside the engine's cache-determinism
+        contract. Reuses the exact same ``_card_key`` match + per-category rate
+        lookup (``_category_rate``) that ``analyze_portfolio`` / ``_ongoing_value``
+        use, so the "which card to use" answer can't diverge from the earn model.
+
+        Returns ``[{category, best_card: {name, issuer}, rate, rationale}]`` for
+        every internal category with positive spend in ``category_breakdown``,
+        emitted in deterministic (sorted-category) order.
+
+        Tie-break (documented, stable for the inputs-hash cache): highest
+        per-category rate, then lowest annual fee, then case-insensitive name.
+        """
+        category_breakdown: Dict[str, float] = profile.get("category_breakdown", {}) or {}
+
+        # Same available-card lookup analyze_portfolio builds.
+        available_by_key: Dict[str, dict] = {}
+        for ac in available_cards:
+            k = self._card_key(ac.get("name", ""), ac.get("issuer", ""))
+            available_by_key[k] = ac
+
+        # Resolve each held card to the dict used for the rate lookup: the
+        # matched dataset entry (carries ``cardId`` + curated rates) when known,
+        # else the bare owned-card dict (flat ``universalCashbackPercent`` only,
+        # i.e. 0 when the user stored no rate). Carry display name/issuer/fee
+        # from the user's own record so output is stable regardless of match.
+        resolved: List[dict] = []
+        for uc in user_cards:
+            key = self._card_key(uc.get("name", ""), uc.get("issuer", ""))
+            matched = available_by_key.get(key)
+            rate_card = matched if matched is not None else uc
+            name = uc.get("name") or (matched or {}).get("name", "Card")
+            issuer = uc.get("issuer") or (matched or {}).get("issuer", "")
+            annual_fee = float(
+                (matched or {}).get("annualFee", uc.get("annual_fee", 0)) or 0
+            )
+            resolved.append(
+                {"rate_card": rate_card, "name": name, "issuer": issuer, "annual_fee": annual_fee}
+            )
+
+        if not resolved:
+            return []
+
+        assignments: List[dict] = []
+        for category in sorted(category_breakdown):
+            if category_breakdown.get(category, 0) <= 0:
+                continue
+
+            ranked = sorted(
+                resolved,
+                key=lambda r: (
+                    -self._category_rate(r["rate_card"], category),
+                    r["annual_fee"],
+                    r["name"].lower(),
+                ),
+            )
+            winner = ranked[0]
+            winner_rate = self._category_rate(winner["rate_card"], category)
+            next_rate = (
+                self._category_rate(ranked[1]["rate_card"], category)
+                if len(ranked) > 1
+                else winner_rate
+            )
+
+            if len(ranked) == 1:
+                rationale = (
+                    f"Use {winner['name']} for {category} — {winner_rate:g}% "
+                    f"(your only card)."
+                )
+            elif next_rate < winner_rate:
+                rationale = (
+                    f"Use {winner['name']} for {category} — {winner_rate:g}% "
+                    f"vs {next_rate:g}% on your other cards."
+                )
+            else:
+                rationale = (
+                    f"Use {winner['name']} for {category} — {winner_rate:g}% "
+                    f"(ties your other cards; lowest-fee card wins)."
+                )
+
+            assignments.append(
+                {
+                    "category": category,
+                    "best_card": {"name": winner["name"], "issuer": winner["issuer"]},
+                    "rate": winner_rate,
+                    "rationale": rationale,
+                }
+            )
+
+        return assignments
