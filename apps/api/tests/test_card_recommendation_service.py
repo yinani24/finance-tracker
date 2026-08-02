@@ -592,3 +592,152 @@ class TestCategoryAwareEarn:
         assert len(result) == 1
         # dining 4% on $12k = $480 (vs the old flat 1% = $120).
         assert result[0]["estimated_annual_value"] == 480.0
+
+
+class TestBestCardPerCategory:
+    """Per-category "best held card" assignment (#177, PRD User Story 2).
+
+    Uses the real curated Amex Gold ``cardId``
+    (``cafe43d37256bec116dff4be6cced2cf``: dining 4, groceries 4, travel 3) so
+    the assignment shares the exact rate lookup ``_ongoing_value`` uses.
+    """
+
+    GOLD_ID = "cafe43d37256bec116dff4be6cced2cf"
+
+    def _gold(self):
+        return {
+            "cardId": self.GOLD_ID, "name": "Gold", "issuer": "AMERICAN_EXPRESS",
+            "network": "AMERICAN_EXPRESS", "annualFee": 250, "universalCashbackPercent": 1,
+            "credits": [], "discontinued": False, "offers": [],
+        }
+
+    def _flat(self, name="Flat Two", issuer="BANKF", pct=2, fee=0, card_id=None):
+        return {
+            "cardId": card_id or f"flat-{name.lower().replace(' ', '-')}",
+            "name": name, "issuer": issuer, "network": "VISA", "annualFee": fee,
+            "universalCashbackPercent": pct, "credits": [], "discontinued": False,
+            "offers": [],
+        }
+
+    @staticmethod
+    def _held(card):
+        return {
+            "name": card["name"], "issuer": card["issuer"],
+            "network": card.get("network", "VISA"),
+            "annual_fee": card.get("annualFee", 0),
+        }
+
+    def test_dining_strong_card_wins_dining_flat_wins_elsewhere(self):
+        service = CardRecommendationService()
+        gold, flat = self._gold(), self._flat(pct=2)
+        available = [gold, flat]
+        user_cards = [self._held(gold), self._held(flat)]
+        profile = {
+            "avg_monthly_spend": 1000.0,
+            "category_breakdown": {"dining": 500.0, "groceries": 200.0, "shopping": 300.0},
+            "top_merchants": [],
+        }
+        assignments = service.best_card_per_category(profile, user_cards, available)
+        by_cat = {a["category"]: a for a in assignments}
+
+        # Gold's curated 4% beats the flat 2% for dining and groceries.
+        assert by_cat["dining"]["best_card"]["name"] == "Gold"
+        assert by_cat["dining"]["rate"] == 4
+        assert by_cat["groceries"]["best_card"]["name"] == "Gold"
+        # Shopping isn't curated for Gold → its flat 1% loses to the flat 2% card.
+        assert by_cat["shopping"]["best_card"]["name"] == "Flat Two"
+        assert by_cat["shopping"]["rate"] == 2
+        # Rationale names the winner + both rates.
+        assert "Gold" in by_cat["dining"]["rationale"]
+        assert "4%" in by_cat["dining"]["rationale"]
+
+    def test_zeroed_category_is_dropped(self):
+        service = CardRecommendationService()
+        gold = self._gold()
+        profile = {
+            "avg_monthly_spend": 500.0,
+            "category_breakdown": {"dining": 500.0, "shopping": 0.0},
+            "top_merchants": [],
+        }
+        assignments = service.best_card_per_category(profile, [self._held(gold)], [gold])
+        cats = {a["category"] for a in assignments}
+        assert cats == {"dining"}  # zero-spend 'shopping' excluded
+
+    def test_flat_only_wallet_assigns_deterministically(self):
+        """No curated rates anywhere → the higher flat-cashback card wins, and
+        the assignment is still produced (fallback path)."""
+        service = CardRecommendationService()
+        a = self._flat(name="Three", issuer="BANKA", pct=3, card_id="flat-a")
+        b = self._flat(name="One", issuer="BANKB", pct=1, card_id="flat-b")
+        available = [a, b]
+        user_cards = [self._held(a), self._held(b)]
+        profile = {
+            "avg_monthly_spend": 400.0,
+            "category_breakdown": {"dining": 400.0},
+            "top_merchants": [],
+        }
+        assignments = service.best_card_per_category(profile, user_cards, available)
+        assert len(assignments) == 1
+        assert assignments[0]["best_card"]["name"] == "Three"
+        assert assignments[0]["rate"] == 3
+
+    def test_tie_breaks_to_lower_fee_then_name(self):
+        service = CardRecommendationService()
+        # Same 2% rate, different fees → lower fee wins.
+        cheap = self._flat(name="Cheap", issuer="BANKC", pct=2, fee=0, card_id="flat-cheap")
+        pricey = self._flat(name="Pricey", issuer="BANKP", pct=2, fee=95, card_id="flat-pricey")
+        available = [pricey, cheap]  # order shouldn't matter
+        user_cards = [self._held(pricey), self._held(cheap)]
+        profile = {
+            "avg_monthly_spend": 300.0,
+            "category_breakdown": {"dining": 300.0},
+            "top_merchants": [],
+        }
+        assignments = service.best_card_per_category(profile, user_cards, available)
+        assert assignments[0]["best_card"]["name"] == "Cheap"
+
+        # Same rate AND same fee → alphabetical by name.
+        alpha = self._flat(name="Alpha", issuer="BANKX", pct=2, fee=0, card_id="flat-alpha")
+        zeta = self._flat(name="Zeta", issuer="BANKZ", pct=2, fee=0, card_id="flat-zeta")
+        assignments2 = service.best_card_per_category(
+            profile, [self._held(zeta), self._held(alpha)], [zeta, alpha]
+        )
+        assert assignments2[0]["best_card"]["name"] == "Alpha"
+
+    def test_categories_sorted_and_shape(self):
+        service = CardRecommendationService()
+        gold = self._gold()
+        profile = {
+            "avg_monthly_spend": 900.0,
+            "category_breakdown": {"travel": 300.0, "dining": 300.0, "groceries": 300.0},
+            "top_merchants": [],
+        }
+        assignments = service.best_card_per_category(profile, [self._held(gold)], [gold])
+        assert [a["category"] for a in assignments] == ["dining", "groceries", "travel"]
+        for a in assignments:
+            assert set(a) == {"category", "best_card", "rate", "rationale"}
+            assert set(a["best_card"]) == {"name", "issuer"}
+
+    def test_empty_wallet_returns_no_assignments(self):
+        service = CardRecommendationService()
+        profile = {
+            "avg_monthly_spend": 500.0,
+            "category_breakdown": {"dining": 500.0},
+            "top_merchants": [],
+        }
+        assert service.best_card_per_category(profile, [], []) == []
+
+    def test_unmatched_held_card_falls_back_to_zero_rate(self):
+        """A held card absent from the dataset earns its flat rate (0 for a bare
+        owned-card record) — still deterministic, never crashes."""
+        service = CardRecommendationService()
+        unknown = {"name": "Store Card", "issuer": "STOREBANK", "annual_fee": 0}
+        profile = {
+            "avg_monthly_spend": 200.0,
+            "category_breakdown": {"dining": 200.0},
+            "top_merchants": [],
+        }
+        assignments = service.best_card_per_category(profile, [unknown], [])
+        assert len(assignments) == 1
+        assert assignments[0]["best_card"]["name"] == "Store Card"
+        assert assignments[0]["rate"] == 0

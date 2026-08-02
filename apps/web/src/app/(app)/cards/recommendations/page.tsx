@@ -77,7 +77,7 @@ function NextCardTab() {
             <div>
               <span className="text-muted">Bonus:</span>{" "}
               <span className="font-mono font-medium text-card-foreground">
-                {rec.bonus_value.toLocaleString()} pts
+                {formatCurrency(rec.bonus_value)}
               </span>
             </div>
             <div>
@@ -87,9 +87,9 @@ function NextCardTab() {
               </span>
             </div>
             <div>
-              <span className="text-muted">Score:</span>{" "}
+              <span className="text-muted">1st-yr value:</span>{" "}
               <span className="font-mono text-card-foreground">
-                {rec.score.toLocaleString()}
+                {formatCurrency(rec.score)}
               </span>
             </div>
           </div>
