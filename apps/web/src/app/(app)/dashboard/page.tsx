@@ -1,7 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getAccounts, getTransactions, getGoals, getNextCardRecommendations } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getAccounts,
+  getTransactions,
+  getGoals,
+  getNextCardRecommendations,
+  getPreferences,
+  updatePreferences,
+} from "@/lib/api";
+import type { UserPreference } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
 import {
   TrendingUp,
@@ -65,6 +73,18 @@ export default function DashboardPage() {
     queryKey: ["recommendations", "next-card"],
     queryFn: getNextCardRecommendations,
   });
+  const { data: prefs } = useQuery({
+    queryKey: ["preferences"],
+    queryFn: getPreferences,
+  });
+  const queryClient = useQueryClient();
+  const prefsMutation = useMutation({
+    mutationFn: (data: Partial<UserPreference>) => updatePreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["preferences"] });
+      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+    },
+  });
 
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
   const totalIncome = transactions
@@ -118,12 +138,34 @@ export default function DashboardPage() {
               <Lightbulb className="w-5 h-5 text-muted-foreground" />
               <h2 className="font-semibold text-card-foreground">Top Card Picks</h2>
             </div>
-            <Link
-              href="/cards/recommendations"
-              className="text-sm text-muted hover:text-card-foreground motion-base"
-            >
-              View all &rarr;
-            </Link>
+            <div className="flex items-center gap-3">
+              {/* Credit standing lives with what it affects: it re-ranks these
+                  picks by expected value. Optional — blank ranks on value. */}
+              <label className="flex items-center gap-2 text-xs text-muted">
+                Credit
+                <select
+                  value={prefs?.credit_score_band ?? ""}
+                  onChange={(e) =>
+                    prefsMutation.mutate({
+                      credit_score_band: e.target.value || null,
+                    })
+                  }
+                  className="border border-input bg-background text-foreground px-2 py-1 text-xs motion-base focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
+                >
+                  <option value="">Not set</option>
+                  <option value="excellent">Excellent (740+)</option>
+                  <option value="good">Good (670–739)</option>
+                  <option value="fair">Fair (580–669)</option>
+                  <option value="poor">Poor (&lt;580)</option>
+                </select>
+              </label>
+              <Link
+                href="/cards/recommendations"
+                className="text-sm text-muted hover:text-card-foreground motion-base"
+              >
+                View all &rarr;
+              </Link>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recommendations.recommendations.slice(0, 5).map((rec, i) => (

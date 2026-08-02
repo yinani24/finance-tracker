@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deliberately not ported — when the heuristic finds nothing the parser returns an
   empty result with an explicit error for the UI. 58 vitest tests mirror the
   Python suites.
+- **Portfolio tab now renders per-category "best held card" guidance (#183).**
+  The `/recommendations/portfolio` response already carried `category_assignments`
+  (added backend-side in #181 / #177), but `PortfolioTab` dropped it. Added a
+  "Which card to use where" section below the per-card analysis: one row per
+  spent-in category showing the human-readable category, the winning held card
+  (name + issuer), its per-category earn rate (percent), and the rationale.
+  Delivers PRD User Story 2 ("which of my cards to use for dining vs. groceries").
+  Types (`BestHeldCard`, `CategoryAssignment`, `PortfolioResponse.category_assignments`)
+  added to `apps/web/src/lib/types.ts`; empty/legacy snapshots render nothing (no crash).
 - **Data-architecture & product-evolution plan (`docs/prd/data-architecture-and-evolution.md`).**
   Documents today's real data flow (Plaid + statement import → dedup → enrichment →
   spending profile → recommendation engine) and an honest limitations list; surveys
@@ -33,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   richer card data). Planning doc only — no application code changed.
 
 ### Fixed
+- **Insights "Snooze" silently failed with HTTP 422 (#200).** The Insights page
+  built the snooze target with `new Date().toISOString()` and sent the full
+  datetime (e.g. `"2026-08-23T14:23:45.123Z"`), but `SnoozeRequest.until` is a
+  bare `date`; Pydantic v2 rejects a datetime with a non-zero time component, so
+  every click 422'd and the insight was never snoozed — with no error UI, it
+  failed silently. The frontend now sends a date-only string (`.slice(0, 10)`).
+  Also re-keyed the Insights effort badge's `EFFORT_LABELS` to the backend enum
+  (`low`/`medium`/`high`); it was keyed on a stale vocabulary
+  (`one_click`/`quick`/`moderate`/`heavy`), so every badge fell through to the
+  raw enum string. Added a hermetic Pydantic regression test pinning the
+  date-only snooze contract.
 - **Cashback sign-up bonuses were valued at ~1% of face value (#201).**
   `card_recommendation.py`'s `_bonus_value_usd`/`_bonus_points` decided a bonus
   amount's denomination purely from the amount's own `currency` field, but the

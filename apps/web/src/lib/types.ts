@@ -200,8 +200,24 @@ export interface CardAnalysis {
   alternatives: AlternativeCard[];
 }
 
+export interface BestHeldCard {
+  name: string;
+  issuer: string;
+}
+
+export interface CategoryAssignment {
+  category: string;
+  best_card: BestHeldCard;
+  // Winning card's per-category earn, as a percent-equivalent (e.g. 4 => 4%).
+  rate: number;
+  rationale: string;
+}
+
 export interface PortfolioResponse {
   cards: CardAnalysis[];
+  // Additive: per-category "best held card" guidance. Backend defaults to []
+  // so legacy/empty snapshots stay back-compatible.
+  category_assignments: CategoryAssignment[];
   spending_profile: SpendingProfile;
 }
 
