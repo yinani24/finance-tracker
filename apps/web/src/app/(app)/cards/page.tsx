@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import type { Card } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
-import { Plus, CreditCard, Building2, Pencil, Trash2 } from "lucide-react";
+import { Plus, CreditCard, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import {
   Dialog,
@@ -22,6 +22,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+// Each linked card gets a different alloy so a wallet reads as distinct
+// physical objects rather than repeated tiles.
+const METAL_ALLOYS = [
+  "",                       // champagne gold (default)
+  "metal-card--obsidian",
+  "metal-card--platinum",
+  "metal-card--sapphire",
+] as const;
 
 export default function CardsPage() {
   const queryClient = useQueryClient();
@@ -200,30 +209,45 @@ export default function CardsPage() {
                 Linked via Plaid
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {creditAccounts.map((acct) => (
-                  <div
-                    key={`plaid-${acct.id}`}
-                    className="bg-card rounded-lg border border-border p-5 flex items-start gap-4"
-                  >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-link" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-medium text-sm text-card-foreground truncate">
+                {creditAccounts.map((acct, i) => (
+                  <div key={`plaid-${acct.id}`} className="space-y-2">
+                    {/* The card itself, rendered as a physical metal object. */}
+                    <div
+                      tabIndex={0}
+                      aria-label={`${acct.name}, linked`}
+                      className={`metal-card ${METAL_ALLOYS[i % METAL_ALLOYS.length]}`}
+                    >
+                      <div className="metal-row">
+                        <span className="text-[11px] font-semibold tracking-widest uppercase opacity-80">
+                          {acct.institution_name || "Credit"}
+                        </span>
+                        <span className="metal-chip" aria-hidden="true" />
+                      </div>
+                      <div className="metal-pan">
+                        •••• •••• ••••{" "}
+                        {(acct.external_account_id || "0000").slice(-4)}
+                      </div>
+                      <div className="metal-foot">
+                        <span className="text-[11px] font-medium uppercase tracking-[0.08em] truncate">
                           {acct.name}
-                        </p>
-                        <span className="flex-shrink-0 inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                          ✓ Linked
+                        </span>
+                        <span className="text-right flex-shrink-0">
+                          <span className="block text-[9px] uppercase tracking-[0.12em] opacity-70">
+                            Balance
+                          </span>
+                          <span className="block font-mono text-sm font-bold tabular-nums">
+                            {formatCurrency(Math.abs(acct.balance))}
+                          </span>
                         </span>
                       </div>
-                      <p className="text-xs text-muted truncate">
-                        {acct.institution_name || "Credit Card"}
-                      </p>
-                      <p className="mt-2 text-sm font-mono tabular-nums text-card-foreground">
-                        {formatCurrency(Math.abs(acct.balance))}
-                        <span className="text-muted"> balance</span>
-                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 px-0.5">
+                      <span className="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                        ✓ Linked
+                      </span>
+                      <span className="text-xs text-muted truncate">
+                        via Plaid
+                      </span>
                     </div>
                   </div>
                 ))}

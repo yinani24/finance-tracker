@@ -25,7 +25,7 @@
   --popover-foreground: #17171a;
   --primary: #2323dc; /* royal-blue accent */
   --primary-hover: #1c1cb0;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #20170A; /* dark ink on gold */
   --link: #2323dc; /* blue text; diverges from --primary on dark only */
   --secondary: #efede7;
   --secondary-foreground: #17171a;
@@ -77,27 +77,27 @@
  */
 .dark {
   color-scheme: dark;
-  --background: #171717; /* app canvas — neutral near-black */
-  --foreground: #fbfbfb; /* oklch(0.985 0 0) — primary text */
-  --card: #1f1f1f; /* one step up from the canvas */
+  --background: #0E1116; /* obsidian — cool near-black, the metal ground */
+  --foreground: #E8E6E1; /* platinum */
+  --card: #161B22; /* graphite — one step up from obsidian */
   --card-foreground: #fbfbfb;
   --border: rgba(255, 255, 255, 0.1); /* hairline white overlay */
   --muted: #a1a1a1; /* secondary body text — 7.1:1 on the canvas */
   --muted-foreground: #8a8a8a; /* labels / subtle icons — 5.3:1 */
-  --accent: #2e2e2e; /* raised fill: active nav, hovers */
+  --accent: #232B36; /* raised graphite: active nav, hovers */
   --accent-foreground: #fbfbfb;
-  --popover: #1f1f1f;
+  --popover: #161B22;
   --popover-foreground: #fbfbfb;
-  --primary: #4b4bf0; /* royal blue, brightened for dark */
-  --primary-hover: #5f5ff5; /* hover brightens rather than darkens */
-  --primary-foreground: #ffffff;
-  --link: #8f8ffa; /* blue *text* — the fill blue is too dark to read small */
-  --secondary: #2e2e2e;
+  --primary: #C8A96A; /* champagne gold — the metal accent */
+  --primary-hover: #DCC088; /* hover lifts toward polished gold */
+  --primary-foreground: #20170A; /* dark ink on gold */
+  --link: #DCC088; /* champagne reads well as text on obsidian */
+  --secondary: #232B36;
   --secondary-foreground: #fbfbfb;
-  --success: #3ecf8e;
+  --success: #46C08E; /* mint */
   --success-foreground: #06130c;
   --warning: #f5a524;
-  --destructive: #f0616d;
+  --destructive: #E5484D; /* ember */
   --overlay: rgba(0, 0, 0, 0.65);
   --input: rgba(255, 255, 255, 0.1);
   --ring: #5c5cf5;
@@ -430,4 +430,96 @@
   .page-enter {
     animation: none !important;
   }
+}
+/* ── Metal Wallet: the signature element ────────────────────────────────────
+   A credit card rendered as a physical metal object rather than a coloured
+   rectangle. The brushed gradient plus a sheen that sweeps on hover is what
+   makes this product look like it is about premium cards, not spreadsheets. */
+.metal-card {
+  position: relative;
+  aspect-ratio: 1.586 / 1;      /* ISO/IEC 7810 ID-1 — a real card's ratio */
+  max-width: 380px;             /* keep it card-sized, not billboard-sized */
+  border-radius: 14px;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #241a0b;
+  background: linear-gradient(
+    135deg,
+    #f3e3be 0%, #d9bc81 22%, #b7965a 48%, #e5ce98 68%, #a6853f 100%
+  );
+  box-shadow:
+    0 18px 40px -18px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+/* Sheen: a highlight band parked off-canvas that sweeps across on hover. */
+.metal-card::after {
+  content: "";
+  position: absolute;
+  inset: -40% -60%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    72deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.55) 48%,
+    rgba(255, 255, 255, 0) 58%
+  );
+  transform: translateX(-30%);
+  transition: transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.metal-card:hover::after,
+.metal-card:focus-visible::after { transform: translateX(38%); }
+
+/* Variants: each network/tier gets its own alloy. */
+.metal-card--platinum {
+  background: linear-gradient(
+    135deg, #e9edf2 0%, #c3ccd6 25%, #9fa9b5 50%, #dfe5ec 70%, #8e99a6 100%
+  );
+  color: #1b2027;
+}
+.metal-card--sapphire {
+  background: linear-gradient(
+    135deg, #2b4a7e 0%, #16294a 30%, #3358a0 52%, #12203c 72%, #28457d 100%
+  );
+  color: #dfe8f7;
+  box-shadow:
+    0 18px 40px -18px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.metal-card--obsidian {
+  background: linear-gradient(
+    135deg, #3a3f47 0%, #1c2026 28%, #4a5057 52%, #16191e 74%, #333940 100%
+  );
+  color: #e8e6e1;
+  box-shadow:
+    0 18px 40px -18px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* The EMV chip. */
+.metal-chip {
+  width: 40px; height: 30px; border-radius: 6px; position: relative; z-index: 3;
+  background: linear-gradient(135deg, #f6e6b8, #c9a55f);
+  box-shadow: inset 0 0 0 1px rgba(120, 90, 30, 0.4);
+}
+.metal-chip::before {
+  content: ""; position: absolute; inset: 5px 7px;
+  border: 1px solid rgba(120, 90, 30, 0.5); border-radius: 3px;
+}
+/* Embossed card number — the raised-digit look of a real card. */
+.metal-pan {
+  position: relative; z-index: 3;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 1rem; letter-spacing: 0.16em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.35), 0 -1px 0 rgba(0,0,0,0.15);
+}
+.metal-row { position: relative; z-index: 3; display: flex; justify-content: space-between; align-items: flex-start; }
+.metal-foot { position: relative; z-index: 3; display: flex; justify-content: space-between; align-items: flex-end; gap: 0.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .metal-card::after { transition: none; }
 }
