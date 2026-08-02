@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +14,23 @@ from app.main import create_app
 from app.models.user import User
 
 TEST_DATABASE_URL = settings.test_database_url
+
+
+def month_first_before_today(months_ago: int) -> date:
+    """First day of the calendar month ``months_ago`` months before today.
+
+    Fixtures that seed transactions and then assert on the recommendation /
+    spending-profile lookback window must stay *inside* that window as the wall
+    clock advances. Hardcoded absolute dates silently age out of the 6-month
+    lookback and turn the trunk red (see #220 — the Jan-2026 seed dates dropped
+    out of range once "today" reached August 2026). Anchoring seed dates to
+    ``date.today()`` keeps them window-relative and time-independent.
+
+    ``months_ago`` must be less than the lookback (6) so the date is always in
+    range; pass 0 for the current month.
+    """
+    total = date.today().year * 12 + (date.today().month - 1) - months_ago
+    return date(total // 12, total % 12 + 1, 1)
 
 
 @pytest.fixture(autouse=True)
