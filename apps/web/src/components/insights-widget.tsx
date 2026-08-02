@@ -28,10 +28,10 @@ export function InsightsWidget() {
     <div className="bg-card rounded-xl border border-border p-6 mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
+          <Sparkles className="w-5 h-5 text-link" />
           <h2 className="font-semibold text-card-foreground">Insights</h2>
           {summary && summary.unread_count > 0 && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-link">
               {summary.unread_count} new
             </span>
           )}

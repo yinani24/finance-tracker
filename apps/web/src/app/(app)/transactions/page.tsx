@@ -102,7 +102,7 @@ export default function TransactionsPage() {
         </h1>
         <p className="text-sm text-muted mt-1">
           {isLoading ? (
-            <span className="inline-block h-4 w-24 bg-muted rounded animate-pulse align-middle" />
+            <span className="inline-block h-4 w-24 bg-accent rounded animate-pulse align-middle" />
           ) : (
             <>
               <span className="font-mono tabular-nums">
@@ -190,19 +190,19 @@ export default function TransactionsPage() {
                     className="border-b border-border last:border-0 animate-pulse"
                   >
                     <td className="px-5 py-3">
-                      <div className="h-4 w-20 bg-muted rounded" />
+                      <div className="h-4 w-20 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3">
-                      <div className="h-4 w-28 bg-muted rounded" />
+                      <div className="h-4 w-28 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3">
-                      <div className="h-5 w-16 bg-muted rounded" />
+                      <div className="h-5 w-16 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3">
-                      <div className="h-4 w-24 bg-muted rounded" />
+                      <div className="h-4 w-24 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3 flex justify-end">
-                      <div className="h-4 w-16 bg-muted rounded" />
+                      <div className="h-4 w-16 bg-accent rounded" />
                     </td>
                   </tr>
                 ))

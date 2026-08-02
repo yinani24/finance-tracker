@@ -137,7 +137,7 @@ export default function CardDetailPage() {
     return (
       <div className="max-w-3xl mx-auto">
         {backLink}
-        <div className="mt-6 h-8 w-64 bg-muted rounded animate-pulse" />
+        <div className="mt-6 h-8 w-64 bg-accent rounded animate-pulse" />
         <div className="mt-4 h-40 bg-card rounded-xl border border-border animate-pulse" />
       </div>
     );

@@ -15,7 +15,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    /*
+     * Dark is the product's default look. `enableSystem` stays on so the
+     * Settings "System" option keeps working and light remains fully
+     * switchable — it only means "system" is *selectable*, not that it is the
+     * fallback; that is what `defaultTheme` decides. `disableTransitionOnChange`
+     * stops the motion system from cross-fading every token on a theme flip.
+     */
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem
+      disableTransitionOnChange
+    >
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ThemeProvider>
   );

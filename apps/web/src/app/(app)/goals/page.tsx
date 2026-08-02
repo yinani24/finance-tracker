@@ -175,15 +175,15 @@ export default function GoalsPage() {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="space-y-2">
-                  <div className="h-4 w-36 bg-muted rounded" />
-                  <div className="h-3 w-24 bg-muted rounded" />
+                  <div className="h-4 w-36 bg-accent rounded" />
+                  <div className="h-3 w-24 bg-accent rounded" />
                 </div>
                 <div className="text-right space-y-2">
-                  <div className="h-4 w-32 bg-muted rounded ml-auto" />
-                  <div className="h-3 w-20 bg-muted rounded ml-auto" />
+                  <div className="h-4 w-32 bg-accent rounded ml-auto" />
+                  <div className="h-3 w-20 bg-accent rounded ml-auto" />
                 </div>
               </div>
-              <div className="w-full bg-muted rounded-full h-2" />
+              <div className="w-full bg-accent rounded-full h-2" />
             </div>
           ))}
         </div>
@@ -223,7 +223,7 @@ export default function GoalsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="w-full bg-border rounded-full h-2">
+                <div className="w-full bg-accent rounded-full h-2">
                   <div
                     className={`rounded-full h-2 transition-all ${pct >= 100 ? "bg-success" : "bg-chart-1"}`}
                     style={{ width: `${pct}%` }}

@@ -85,13 +85,13 @@ export function StatementImport() {
           type="file"
           accept=".csv,.pdf,text/csv,application/pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-sm text-foreground file:mr-3 file:rounded-lg file:border file:border-input file:bg-background file:px-3 file:py-2 file:text-sm file:text-foreground hover:file:bg-muted/10"
+          className="text-sm text-foreground file:mr-3 file:rounded-lg file:border file:border-input file:bg-background file:px-3 file:py-2 file:text-sm file:text-foreground hover:file:bg-accent"
         />
 
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 motion-base"
+          className="rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-hover motion-base"
         >
           {mutation.isPending ? "Importing…" : "Import"}
         </button>

@@ -25,10 +25,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    /*
+     * `dark` is the server-rendered default so the very first paint is already
+     * dark; next-themes' pre-hydration script replaces it with a stored `light`
+     * preference before anything is painted, so neither theme flashes.
+     */
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full flex overflow-hidden">
         <Providers>
