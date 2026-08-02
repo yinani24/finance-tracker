@@ -12,7 +12,17 @@ export type ScoreBand = "excellent" | "good" | "fair" | "poor";
 /** A card the user says they already hold. */
 export interface HeldCard {
   id: string;
+  /** Display label, e.g. "Chase Sapphire Preferred ••3146". */
   name: string;
+  /**
+   * The product name on its own, e.g. "Sapphire Preferred".
+   *
+   * The card dataset is keyed on product name + issuer, and the display label
+   * carries an issuer prefix and the last four, so matching on `name` fails and
+   * every earn rate comes back 0. Kept separate rather than parsed back out at
+   * each call site.
+   */
+  productName?: string;
   issuer?: string;
   /** Credit limit, in dollars. Drives utilization. */
   creditLimit?: number;

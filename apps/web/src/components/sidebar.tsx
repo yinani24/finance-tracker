@@ -7,6 +7,7 @@ import {
   Wallet,
   Receipt,
   PieChart,
+  Sparkle,
   WalletCards,
   PanelLeftClose,
   PanelLeftOpen,
@@ -33,6 +34,7 @@ const navItems = [
     icon: PieChart,
     section: "Optimize",
   },
+  { href: "/insights", label: "Insights", icon: Sparkle, section: "Optimize" },
   { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
 ];
 

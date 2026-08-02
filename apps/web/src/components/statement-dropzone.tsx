@@ -74,6 +74,7 @@ export function useStatementIngest() {
             : named
               ? addCard({
                   name: label,
+                  productName: meta.cardName,
                   issuer: meta.issuer,
                   creditLimit: meta.creditLimit,
                   currentBalance: meta.currentBalance,

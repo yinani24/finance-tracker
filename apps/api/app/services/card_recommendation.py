@@ -659,6 +659,13 @@ class CardRecommendationService:
                     "best_card": {"name": winner["name"], "issuer": winner["issuer"]},
                     "rate": winner_rate,
                     "rationale": rationale,
+                    # Every held card's rate in this category, so a caller can
+                    # price the gap between the card actually used and the
+                    # winner rather than only being told which card wins.
+                    "card_rates": {
+                        r["name"]: self._category_rate(r["rate_card"], category)
+                        for r in resolved
+                    },
                 }
             )
 

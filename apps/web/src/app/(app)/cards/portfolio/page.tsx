@@ -48,7 +48,8 @@ export default function PortfolioPage() {
           cats.map((c) => [c.category, c.total / summary.months])
         ),
         held_cards: session.heldCards.map((c) => ({
-          name: c.name,
+          // The dataset is keyed on the product name, not the display label.
+          name: c.productName ?? c.name,
           issuer: c.issuer,
         })),
       }),
