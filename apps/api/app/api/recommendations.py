@@ -31,6 +31,19 @@ def get_portfolio(
     return service.get_recommendations(user_id, "portfolio_gap")
 
 
+@router.get("/combination")
+def get_combination(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+) -> dict:
+    """Optimal SET of cards (held + new) that maximizes total first-year value
+    (recommendation-engine slice 5, #185). Routes each spending category to its
+    best card across held + candidate-new cards and recommends the new card(s)
+    whose marginal first-year value is positive."""
+    service = RecommendationSnapshotService(db)
+    return service.get_recommendations(user_id, "combination")
+
+
 @router.get("/spending-profile")
 def get_spending_profile(
     db: Session = Depends(get_db),
@@ -82,4 +95,5 @@ def refresh_recommendations(
     service.invalidate(user_id)
     service.get_recommendations(user_id, "next_card")
     service.get_recommendations(user_id, "portfolio_gap")
+    service.get_recommendations(user_id, "combination")
     return {"status": "refreshed"}
