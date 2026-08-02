@@ -4,6 +4,12 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from app.services.approval_odds import (
+    ApprovalProfile,
+    estimate_approval_odds,
+    odds_label,
+)
+
 # Curated per-category ongoing-earn rates, keyed by upstream ``cardId`` (see
 # ``app/data/card_category_rates.json`` and its README). Loaded once at import,
 # DB-free, mirroring how ``card_bonuses`` stays a pure fetch/query layer. Keys
@@ -293,6 +299,7 @@ class CardRecommendationService:
         available_cards: List[dict],
         max_results: int = 10,
         points_value_cents: float = 1.0,
+        approval_profile: ApprovalProfile | None = None,
     ) -> List[dict]:
         """
         Rank available cards by sign-up bonus achievability.
@@ -421,7 +428,16 @@ class CardRecommendationService:
             )
 
         # 7. Sort by score descending, return top N
-        results.sort(key=lambda r: r["score"], reverse=True)
+        # Rank by EXPECTED value: headline first-year value discounted by the
+        # estimated chance of approval. With no credit profile every card scores
+        # odds 1.0, so this reduces exactly to the previous ranking.
+        for r in results:
+            odds, reason = estimate_approval_odds(r["card"], approval_profile)
+            r["approval_odds"] = odds
+            r["approval_label"] = odds_label(odds) if reason else None
+            r["approval_reason"] = reason
+            r["expected_value"] = round(r["score"] * odds, 2)
+        results.sort(key=lambda r: r["expected_value"], reverse=True)
         return results[:max_results]
 
     def analyze_portfolio(
