@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Data-architecture & product-evolution plan (`docs/prd/data-architecture-and-evolution.md`).**
+  Documents today's real data flow (Plaid + statement import → dedup → enrichment →
+  spending profile → recommendation engine) and an honest limitations list; surveys
+  competitors (Range, Arta, Monarch, Copilot, Ramp, Mercury) and the MCP
+  financial-data landscape; evaluates ingestion options (Plaid vs alternative
+  aggregators vs an MCP-based approach) with a recommendation; and lays out a
+  phased backend→frontend evolution (merchant normalization → real classification
+  provider → trajectory analysis → a read-first finance-tracker MCP server →
+  richer card data). Planning doc only — no application code changed.
+
 ### Fixed
 - **Next-card recommendation showed the dollar sign-up bonus as "pts" (#196).**
   On Recommendations → **Next Card**, the bonus was rendered
