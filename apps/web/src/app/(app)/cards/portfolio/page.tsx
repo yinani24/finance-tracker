@@ -6,6 +6,12 @@ import { formatCurrency } from "@/lib/format";
 import { Lightbulb, AlertTriangle, CheckCircle } from "lucide-react";
 import { RefreshRecommendationsButton } from "@/components/refresh-recommendations-button";
 
+/** "food_and_drink" -> "Food and drink" — shared with the spending-profile view. */
+function formatCategoryName(category: string): string {
+  const words = category.replace(/_/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function PortfolioTab() {
   const { data, isLoading } = useQuery({
     queryKey: ["recommendations", "portfolio"],
