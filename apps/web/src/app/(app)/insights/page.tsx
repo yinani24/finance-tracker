@@ -45,7 +45,7 @@ function formatImpact(oneTime: number, annual: number): string {
 
 function EffortBadge({ effort }: { effort: string }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-muted/30 px-2 py-0.5 text-xs text-muted">
+    <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs text-muted">
       {EFFORT_LABELS[effort] ?? effort}
     </span>
   );
@@ -95,7 +95,7 @@ function InsightRow({ insight }: { insight: Insight }) {
             </span>
             <EffortBadge effort={insight.effort} />
             {!insight.seen_at && (
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+              <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs text-link">
                 New
               </span>
             )}
@@ -117,21 +117,21 @@ function InsightRow({ insight }: { insight: Insight }) {
         <button
           onClick={() => actedMut.mutate()}
           disabled={actedMut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
         >
           <CheckCircle className="w-3.5 h-3.5" /> Mark done
         </button>
         <button
           onClick={() => snoozeMut.mutate(7)}
           disabled={snoozeMut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
         >
           <Clock className="w-3.5 h-3.5" /> Snooze 7d
         </button>
         <button
           onClick={() => dismissMut.mutate()}
           disabled={dismissMut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-muted/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
         >
           <XCircle className="w-3.5 h-3.5" /> Dismiss
         </button>
@@ -151,7 +151,7 @@ function InsightRow({ insight }: { insight: Insight }) {
       </div>
 
       {expanded && dataPoints.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-muted/10 p-4 md:grid-cols-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-accent p-4 md:grid-cols-3">
           {dataPoints.map((dp, i) => (
             <div key={i}>
               <p className="text-xs text-muted">{dp.label}</p>
@@ -187,7 +187,7 @@ export default function InsightsPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       <div className="mb-6 flex items-center gap-3">
-        <Sparkles className="w-5 h-5 text-primary" />
+        <Sparkles className="w-5 h-5 text-link" />
         <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
       </div>
 

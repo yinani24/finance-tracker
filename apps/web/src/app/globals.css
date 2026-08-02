@@ -26,11 +26,14 @@
   --primary: #2323dc; /* royal-blue accent */
   --primary-hover: #1c1cb0;
   --primary-foreground: #ffffff;
+  --link: #2323dc; /* blue text; diverges from --primary on dark only */
   --secondary: #efede7;
   --secondary-foreground: #17171a;
   --success: #1f9d57; /* positive / active green */
   --success-foreground: #ffffff;
+  --warning: #b45309; /* caution / underperforming */
   --destructive: #dc2626; /* semantic red for negative / spend */
+  --overlay: rgba(23, 23, 26, 0.15); /* modal scrim */
   --input: #e7e5e0;
   --ring: #2323dc; /* blue focus ring */
   --chart-1: #2323dc;
@@ -61,43 +64,56 @@
   --dur-slow: 250ms; /* the longest we ever go */
 }
 
-/* Tasteful dark version of the same system: near-black canvas, same blue accent. */
+/*
+ * Dark theme — the default. Values are measured from Composio's project
+ * dashboard interior: a neutral (not blue-tinted) near-black canvas, a short
+ * three-step lightness ramp for elevation, hairline white-overlay borders and
+ * a brightened royal blue. Surfaces are flat: depth comes from background
+ * lightness, never from shadow.
+ *
+ *   canvas   oklch(0.159 0 0)  #171717
+ *   surface                    #1f1f1f   (cards, sidebar, top bar, popovers)
+ *   raised   oklch(0.269 0 0)  #2e2e2e   (active nav fill, hovers, skeletons)
+ */
 .dark {
   color-scheme: dark;
-  --background: #0c0c0f;
-  --foreground: #f5f5f7;
-  --card: #141418;
-  --card-foreground: #f5f5f7;
-  --border: #26262c;
-  --muted: #9ca3af;
-  --muted-foreground: #6b7280;
-  --accent: #26262c;
-  --accent-foreground: #f5f5f7;
-  --popover: #141418;
-  --popover-foreground: #f5f5f7;
-  --primary: #4b4bf0; /* brighter blue for contrast on dark */
-  --primary-hover: #3a3ad8;
+  --background: #171717; /* app canvas — neutral near-black */
+  --foreground: #fbfbfb; /* oklch(0.985 0 0) — primary text */
+  --card: #1f1f1f; /* one step up from the canvas */
+  --card-foreground: #fbfbfb;
+  --border: rgba(255, 255, 255, 0.1); /* hairline white overlay */
+  --muted: #a1a1a1; /* secondary body text — 7.1:1 on the canvas */
+  --muted-foreground: #8a8a8a; /* labels / subtle icons — 5.3:1 */
+  --accent: #2e2e2e; /* raised fill: active nav, hovers */
+  --accent-foreground: #fbfbfb;
+  --popover: #1f1f1f;
+  --popover-foreground: #fbfbfb;
+  --primary: #4b4bf0; /* royal blue, brightened for dark */
+  --primary-hover: #5f5ff5; /* hover brightens rather than darkens */
   --primary-foreground: #ffffff;
-  --secondary: #26262c;
-  --secondary-foreground: #f5f5f7;
-  --success: #35c07a;
+  --link: #8f8ffa; /* blue *text* — the fill blue is too dark to read small */
+  --secondary: #2e2e2e;
+  --secondary-foreground: #fbfbfb;
+  --success: #3ecf8e;
   --success-foreground: #06130c;
+  --warning: #f5a524;
   --destructive: #f0616d;
-  --input: #26262c;
-  --ring: #4b4bf0;
+  --overlay: rgba(0, 0, 0, 0.65);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #5c5cf5;
   --chart-1: #6b6bf5;
   --chart-2: #a78bfa;
   --chart-3: #22d3ee;
-  --chart-4: #fbbf24;
-  --chart-5: #35c07a;
-  --sidebar: #141418;
-  --sidebar-foreground: #f5f5f7;
+  --chart-4: #f5a524;
+  --chart-5: #3ecf8e;
+  --sidebar: #1f1f1f;
+  --sidebar-foreground: #fbfbfb;
   --sidebar-primary: #4b4bf0;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #26262c;
-  --sidebar-accent-foreground: #f5f5f7;
-  --sidebar-border: #26262c;
-  --sidebar-ring: #4b4bf0;
+  --sidebar-accent: #2e2e2e;
+  --sidebar-accent-foreground: #fbfbfb;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #5c5cf5;
 }
 
 @theme inline {
@@ -134,6 +150,9 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-hover: var(--primary-hover);
   --color-primary: var(--primary);
+  --color-link: var(--link);
+  --color-overlay: var(--overlay);
+  --color-warning: var(--warning);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-popover-foreground: var(--popover-foreground);

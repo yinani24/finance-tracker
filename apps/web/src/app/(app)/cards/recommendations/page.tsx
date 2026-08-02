@@ -77,7 +77,7 @@ function NextCardTab() {
             <div>
               <span className="text-muted">Bonus:</span>{" "}
               <span className="font-mono font-medium text-card-foreground">
-                {formatCurrency(rec.bonus_value)}
+                {rec.bonus_value.toLocaleString()} pts
               </span>
             </div>
             <div>
@@ -87,9 +87,9 @@ function NextCardTab() {
               </span>
             </div>
             <div>
-              <span className="text-muted">1st-yr value:</span>{" "}
+              <span className="text-muted">Score:</span>{" "}
               <span className="font-mono text-card-foreground">
-                {formatCurrency(rec.score)}
+                {rec.score.toLocaleString()}
               </span>
             </div>
           </div>
@@ -133,7 +133,7 @@ function PortfolioTab() {
 
   const statusIcon = {
     good: <CheckCircle className="w-5 h-5 text-success" />,
-    underperforming: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+    underperforming: <AlertTriangle className="w-5 h-5 text-warning" />,
     costing_money: <AlertTriangle className="w-5 h-5 text-destructive" />,
   };
 
@@ -263,7 +263,7 @@ function SpendingTab() {
       {dining && (
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center gap-3">
-            <Utensils className="w-5 h-5 text-amber-500" />
+            <Utensils className="w-5 h-5 text-warning" />
             <div>
               <p className="text-sm text-muted">You dine out about</p>
               <p className="text-2xl font-semibold text-card-foreground">
@@ -303,7 +303,7 @@ function SpendingTab() {
                   {formatCurrency(cat.monthly_avg)}/mo
                 </span>
               </div>
-              <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
+              <div className="h-2 rounded-full bg-accent overflow-hidden">
                 <div
                   className="h-full rounded-full bg-success"
                   style={{
@@ -383,7 +383,7 @@ export default function RecommendationsPage() {
 
       <div
         role="tablist"
-        className="segmented segmented-equal flex gap-1 mb-6 bg-muted/15 rounded-full p-1"
+        className="segmented segmented-equal flex gap-1 mb-6 bg-accent/60 rounded-full p-1"
         style={
           {
             "--tab-count": TABS.length,
