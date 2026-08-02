@@ -3,24 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Wallet,
-  ArrowLeftRight,
+  House,
+  Landmark,
+  Receipt,
   Target,
-  CreditCard,
+  WalletCards,
   Settings,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
-  ChevronsUpDown,
   Sparkles,
   ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
-import { getMe, getAccounts } from "@/lib/api";
+import { getMe } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -32,10 +31,10 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "Overview" },
-  { href: "/accounts", label: "Accounts", icon: Wallet, section: "Overview" },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight, section: "Overview" },
-  { href: "/cards", label: "Cards", icon: CreditCard, section: "Optimize" },
+  { href: "/dashboard", label: "Dashboard", icon: House, section: "Overview" },
+  { href: "/accounts", label: "Accounts", icon: Landmark, section: "Overview" },
+  { href: "/transactions", label: "Transactions", icon: Receipt, section: "Overview" },
+  { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
   { href: "/goals", label: "Goals", icon: Target, section: "Optimize" },
   { href: "/settings", label: "Settings", icon: Settings, section: null },
 ];
@@ -77,14 +76,6 @@ export function Sidebar() {
       return !prev;
     });
   }
-
-  // The switcher shows the primary linked account; falls back to the app name
-  // when nothing is connected yet.
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: getAccounts,
-  });
-  const primaryAccount = accounts[0]?.institution_name || accounts[0]?.name || "Finance Tracker";
 
   const displayName = appUser?.full_name || (user ? getDisplayName(user) : "");
   const initials = user ? getInitials(displayName) : "";
@@ -162,29 +153,6 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Context switcher pinned below the brand, as in the reference: avatar,
-          a small "Account" caption, the current name, and a swap affordance. */}
-      {!collapsed && (
-        <button
-          type="button"
-          title="Switch account"
-          className="w-full flex items-center gap-3 px-4 py-3 border-b border-border text-left motion-base hover:bg-accent/50"
-        >
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
-            {primaryAccount.slice(0, 1).toUpperCase()}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
-              Account
-            </span>
-            <span className="block truncate text-sm font-medium text-card-foreground">
-              {primaryAccount}
-            </span>
-          </span>
-          <ChevronsUpDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-        </button>
-      )}
-
       {/* Search affordance — mirrors the dashboard-app convention of a
           command-palette row pinned above the nav. */}
       <div className="pt-2">
@@ -197,7 +165,7 @@ export function Sidebar() {
             collapsed ? "justify-center p-2.5" : "gap-3 px-4 py-2.5"
           )}
         >
-          <Search className="w-5 h-5 flex-shrink-0" />
+          <Search className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
           {!collapsed && (
             <>
               <span className="truncate">Search</span>
@@ -241,7 +209,7 @@ export function Sidebar() {
                     : "text-muted hover:text-card-foreground"
                 )}
               >
-                <Icon className="nav-icon w-5 h-5 flex-shrink-0" />
+                <Icon className="nav-icon w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
                 {!collapsed && <span className="truncate">{label}</span>}
               </Link>
             </div>
