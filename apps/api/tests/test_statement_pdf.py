@@ -120,3 +120,32 @@ class TestParsePdf:
                     parse_pdf(b"%PDF-1.4 fake")
         finally:
             settings.anthropic_api_key = original
+
+
+class TestCreditSignHandling:
+    """#203: only the heuristic path flips signs; the LLM path is already
+    normalized by its system prompt, so flipping again inverted every spend."""
+
+    def test_llm_path_is_not_sign_flipped_for_credit_accounts(self):
+        # Model returns OUR convention already: purchase negative, payment positive.
+        items = [
+            {"date": "2026-07-01", "description": "COFFEE BAR", "amount": -8.56},
+            {"date": "2026-07-02", "description": "PAYMENT THANK YOU", "amount": 100.0},
+        ]
+        with patch(
+            "app.services.statement_pdf.extract_text", return_value="no date-led lines"
+        ), patch(
+            "app.services.statement_pdf._heuristic_rows", return_value=([], [])
+        ), patch(
+            "app.services.statement_pdf._llm_extract_rows", return_value=items
+        ):
+            rows, _ = parse_pdf(b"%PDF-1.4 fake", is_credit=True)
+        by = {r.merchant: r.signed_amount for r in rows}
+        assert by["COFFEE BAR"] == -8.56       # stays spend
+        assert by["PAYMENT THANK YOU"] == 100.0  # stays credit
+
+    def test_heuristic_path_still_flips_for_credit_accounts(self):
+        text = "Opening/Closing Date 06/05/26 - 07/04/26\n06/06 SQ *COFFEE BAR 8.56\n"
+        with patch("app.services.statement_pdf.extract_text", return_value=text):
+            rows, _ = parse_pdf(b"%PDF-1.4 fake", is_credit=True)
+        assert rows[0].signed_amount == -8.56
