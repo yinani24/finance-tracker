@@ -209,7 +209,7 @@ export function Chat() {
       <div className="border-t border-border px-4 py-3">
         <form
           onSubmit={handleSubmit}
-          className="flex items-end gap-3 bg-accent/50 rounded-xl px-4 py-2.5 focus-within:bg-accent transition-colors"
+          className="flex items-end gap-3 bg-accent/50 rounded-xl px-4 py-2.5 focus-within:bg-accent motion-base"
         >
           <textarea
             ref={inputRef}

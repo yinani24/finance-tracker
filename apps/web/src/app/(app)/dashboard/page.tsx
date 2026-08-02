@@ -119,7 +119,7 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/cards/recommendations"
-              className="text-sm text-muted hover:text-card-foreground transition-colors"
+              className="text-sm text-muted hover:text-card-foreground motion-base"
             >
               View all &rarr;
             </Link>

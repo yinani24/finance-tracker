@@ -73,7 +73,7 @@ export default function CardsPage() {
             }
           }}
         >
-          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors active:translate-y-px">
+          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover motion-base active:translate-y-px">
             <Plus className="w-4 h-4" />
             Add Card
           </DialogTrigger>
@@ -106,7 +106,7 @@ export default function CardsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Chase Sapphire Preferred"
                   />
                 </div>
@@ -117,7 +117,7 @@ export default function CardsPage() {
                   <select
                     value={network}
                     onChange={(e) => setNetwork(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                   >
                     <option value="visa">Visa</option>
                     <option value="mastercard">Mastercard</option>
@@ -134,7 +134,7 @@ export default function CardsPage() {
                     step="1"
                     value={annualFee}
                     onChange={(e) => setAnnualFee(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="0"
                   />
                 </div>
@@ -150,7 +150,7 @@ export default function CardsPage() {
                 type="submit"
                 form="add-card-form"
                 disabled={mutation.isPending}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 transition-colors active:translate-y-px"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
               >
                 {mutation.isPending ? "Adding..." : "Add Card"}
               </button>
@@ -185,7 +185,7 @@ export default function CardsPage() {
             Add a card manually or connect via Plaid in{" "}
             <Link
               href="/settings"
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
+              className="underline underline-offset-2 hover:text-foreground motion-base"
             >
               Settings
             </Link>
@@ -295,7 +295,7 @@ function ManualCardItem({ card }: { card: Card }) {
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-5">
+    <div className="card-interactive bg-card rounded-lg border border-border p-5">
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
           <CreditCard className="w-5 h-5 text-primary" />
@@ -325,7 +325,7 @@ function ManualCardItem({ card }: { card: Card }) {
           >
             <DialogTrigger
               aria-label="Edit card"
-              className="p-1.5 rounded-md text-muted hover:bg-accent hover:text-card-foreground transition-colors"
+              className="p-1.5 rounded-md text-muted hover:bg-accent hover:text-card-foreground motion-base"
             >
               <Pencil className="w-4 h-4" />
             </DialogTrigger>
@@ -354,7 +354,7 @@ function ManualCardItem({ card }: { card: Card }) {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
-                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                       placeholder="e.g. Chase Sapphire Preferred"
                     />
                   </div>
@@ -365,7 +365,7 @@ function ManualCardItem({ card }: { card: Card }) {
                     <select
                       value={network}
                       onChange={(e) => setNetwork(e.target.value)}
-                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     >
                       <option value="visa">Visa</option>
                       <option value="mastercard">Mastercard</option>
@@ -382,7 +382,7 @@ function ManualCardItem({ card }: { card: Card }) {
                       step="1"
                       value={annualFee}
                       onChange={(e) => setAnnualFee(e.target.value)}
-                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                       placeholder="0"
                     />
                   </div>
@@ -398,7 +398,7 @@ function ManualCardItem({ card }: { card: Card }) {
                   type="submit"
                   form={`edit-card-form-${card.id}`}
                   disabled={editMutation.isPending}
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 transition-colors active:translate-y-px"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
                 >
                   {editMutation.isPending ? "Saving..." : "Save Changes"}
                 </button>
@@ -409,7 +409,7 @@ function ManualCardItem({ card }: { card: Card }) {
             type="button"
             aria-label="Delete card"
             onClick={() => setConfirmingDelete(true)}
-            className="p-1.5 rounded-md text-muted hover:bg-accent hover:text-destructive transition-colors"
+            className="p-1.5 rounded-md text-muted hover:bg-accent hover:text-destructive motion-base"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -423,7 +423,7 @@ function ManualCardItem({ card }: { card: Card }) {
               type="button"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
-              className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-md text-sm font-medium hover:bg-destructive/20 disabled:opacity-50 transition-colors"
+              className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-md text-sm font-medium hover:bg-destructive/20 disabled:opacity-50 motion-base"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </button>
@@ -431,7 +431,7 @@ function ManualCardItem({ card }: { card: Card }) {
               type="button"
               onClick={() => setConfirmingDelete(false)}
               disabled={deleteMutation.isPending}
-              className="px-3 py-1.5 rounded-md text-sm font-medium text-muted hover:bg-accent hover:text-card-foreground transition-colors"
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-muted hover:bg-accent hover:text-card-foreground motion-base"
             >
               Cancel
             </button>
