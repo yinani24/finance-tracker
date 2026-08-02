@@ -61,10 +61,6 @@ export default function TransactionsPage() {
     queryFn: getAccounts,
   });
 
-  const categories = [
-    ...new Set(transactions.map((t) => t.category).filter(Boolean)),
-  ].sort();
-
   const accountMap = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
 
   const filtered = search
@@ -141,18 +137,30 @@ export default function TransactionsPage() {
             </option>
           ))}
         </select>
-        <select
-          value={filterCategory ?? ""}
-          onChange={(e) => setFilterCategory(e.target.value || undefined)}
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
-        >
-          <option value="">All Categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c!}>
-              {c}
-            </option>
-          ))}
-        </select>
+      </div>
+
+      {/* Segmented pill filters — the taxonomy is a small fixed set, so a
+          visible toggle row beats a dropdown that hides every option. */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-6">
+        {[null, ...TAXONOMY_CATEGORIES].map((c) => {
+          const active = c === null ? !filterCategory : filterCategory === c;
+          return (
+            <button
+              key={c ?? "all"}
+              type="button"
+              onClick={() => setFilterCategory(c ?? undefined)}
+              data-active={active}
+              className={
+                "rounded-full px-3 py-1.5 text-xs font-medium capitalize motion-base " +
+                (active
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted hover:bg-accent/50 hover:text-card-foreground")
+              }
+            >
+              {c ?? "All"}
+            </button>
+          );
+        })}
       </div>
 
       {recategorize.isError && (
