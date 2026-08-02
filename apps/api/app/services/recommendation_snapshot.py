@@ -92,9 +92,9 @@ class RecommendationSnapshotService:
         # Check cache
         existing = self.snapshot_repo.get(user_id, rec_type)
         if existing and existing.inputs_hash == current_hash:
-            result_key = "recommendations" if rec_type == "next_card" else "cards"
+            cached = json.loads(existing.results_json)
             return {
-                result_key: json.loads(existing.results_json),
+                **self._shape_payload(rec_type, cached),
                 "spending_profile": self._profile_to_read(profile),
             }
 
@@ -106,30 +106,57 @@ class RecommendationSnapshotService:
         }
 
         if rec_type == "next_card":
-            results = self.rec_service.recommend_next_card(
+            # Cached as a bare list of recommendations (unchanged shape).
+            to_cache: object = self.rec_service.recommend_next_card(
                 profile_dict,
                 user_cards,
                 available_cards,
                 points_value_cents=settings.points_value_cents,
             )
-            result_key = "recommendations"
         else:
-            results = self.rec_service.analyze_portfolio(
-                profile_dict, user_cards, available_cards
-            )
-            result_key = "cards"
+            # Portfolio: cache the per-card analyses AND the per-category "best
+            # held card" assignments as one blob, so both survive a cache hit
+            # (which returns the stored blob verbatim without recomputing). The
+            # two are computed from the same profile/cards, so they stay
+            # consistent. See _shape_payload for how this is unwrapped on read.
+            to_cache = {
+                "cards": self.rec_service.analyze_portfolio(
+                    profile_dict, user_cards, available_cards
+                ),
+                "category_assignments": self.rec_service.best_card_per_category(
+                    profile_dict, user_cards, available_cards
+                ),
+            }
 
         self.snapshot_repo.upsert(
             user_id=user_id,
             rec_type=rec_type,
-            results_json=json.dumps(results),
+            results_json=json.dumps(to_cache),
             inputs_hash=current_hash,
         )
 
         return {
-            result_key: results,
+            **self._shape_payload(rec_type, to_cache),
             "spending_profile": self._profile_to_read(profile),
         }
+
+    @staticmethod
+    def _shape_payload(rec_type: str, cached: object) -> Dict:
+        """Shape a cached blob into the response body (minus ``spending_profile``).
+
+        Used identically on the cache-hit and cold paths so the two can't drift
+        (the double-nesting class of bug). ``next_card`` snapshots store a bare
+        list under ``recommendations``; ``portfolio_gap`` snapshots store the
+        combined ``{"cards", "category_assignments"}`` dict and are returned
+        spread. A legacy portfolio snapshot cached as a bare list (before
+        ``category_assignments`` existed) is wrapped defensively so a pre-existing
+        cache entry never crashes on read; it refreshes on the next input change.
+        """
+        if rec_type == "next_card":
+            return {"recommendations": cached}
+        if isinstance(cached, list):
+            return {"cards": cached, "category_assignments": []}
+        return dict(cached)  # type: ignore[arg-type]
 
     def invalidate(self, user_id: int) -> None:
         for rec_type in ("next_card", "portfolio_gap"):

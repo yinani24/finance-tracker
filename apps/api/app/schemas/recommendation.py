@@ -76,6 +76,25 @@ class CardAnalysis(BaseModel):
     alternatives: List[AlternativeCard]
 
 
+class BestHeldCard(BaseModel):
+    name: str
+    issuer: str
+
+
+class CategoryAssignment(BaseModel):
+    """Which held card to reach for in a given spending category (PRD User
+    Story 2). ``rate`` is the winning card's per-category earn as a
+    percent-equivalent."""
+
+    category: str
+    best_card: BestHeldCard
+    rate: float
+    rationale: str
+
+
 class PortfolioResponse(BaseModel):
     cards: List[CardAnalysis]
+    # Additive: per-category "best held card" assignments. Defaults to [] so the
+    # response stays back-compatible for any consumer that reads only `cards`.
+    category_assignments: List[CategoryAssignment] = []
     spending_profile: SpendingProfileRead
