@@ -182,14 +182,8 @@ export default function CardsPage() {
           <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-sm font-medium text-muted">No cards yet.</p>
           <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
-            Add a card manually or connect via Plaid in{" "}
-            <Link
-              href="/settings"
-              className="underline underline-offset-2 hover:text-foreground motion-base"
-            >
-              Settings
-            </Link>
-            .
+            Add a card manually, or import a statement to detect the cards you
+            already use.
           </p>
         </div>
       ) : (

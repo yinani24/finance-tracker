@@ -8,7 +8,6 @@ import {
   Receipt,
   Target,
   WalletCards,
-  Settings,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -25,7 +24,6 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: Receipt, section: "Overview" },
   { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
   { href: "/goals", label: "Goals", icon: Target, section: "Optimize" },
-  { href: "/settings", label: "Settings", icon: Settings, section: null },
 ];
 
 
