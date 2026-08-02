@@ -355,3 +355,33 @@ class TestRulesProvider:
         # Plaid-sourced rows keep their upstream category (mapped to our
         # taxonomy); merchant rules only fill in when there is none.
         assert self._cat("STARBUCKS #1122", plaid_category="travel") == "travel"
+
+
+class TestProcessorAndBoundaryRules:
+    def _cat(self, merchant):
+        (r,) = RulesProvider().enrich(
+            [EnrichmentInput(merchant=merchant, amount=-10.0)]
+        )
+        return r.category
+
+    def test_processor_prefix_rescues_unknown_merchant(self):
+        # We've never heard of these restaurants, but the processor tells us.
+        assert self._cat("TST* CHONG QING XIAO MIAN San Francisco CA") == "dining"
+        assert self._cat("SQ *THE NOSH BOX San Francisco CA") == "dining"
+        assert self._cat("IC* COSTCO BY INSTACART") == "groceries"
+        assert self._cat("BAYWHEE*2 RIDES HELP.LYFT.COM CA") == "transport"
+
+    def test_known_merchant_keyword_beats_processor(self):
+        # DD* is dining, but an explicit keyword still decides first.
+        assert self._cat("DD *DOORDASH APPLEBEES 855-431-0459 CA") == "dining"
+
+    def test_word_boundary_prevents_substring_false_positive(self):
+        # "mobil" (the gas brand) must NOT match "...-Mobile", which had been
+        # filing credit-card payments under transport.
+        assert self._cat("Payment Thank You-Mobile") != "transport"
+
+    def test_prefix_keyword_matches_name_run_onto_digits(self):
+        assert self._cat("AMERICAN AIR0017412354781 FORT WORTH TX") == "travel"
+
+    def test_unknown_still_falls_back_to_other(self):
+        assert self._cat("ZZZQQ HOLDINGS LLC") == "other"
