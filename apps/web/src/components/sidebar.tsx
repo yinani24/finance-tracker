@@ -12,6 +12,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -28,12 +29,12 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/accounts", label: "Accounts", icon: Wallet },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { href: "/goals", label: "Goals", icon: Target },
-  { href: "/cards", label: "Cards", icon: CreditCard },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "Overview" },
+  { href: "/accounts", label: "Accounts", icon: Wallet, section: "Overview" },
+  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight, section: "Overview" },
+  { href: "/cards", label: "Cards", icon: CreditCard, section: "Optimize" },
+  { href: "/goals", label: "Goals", icon: Target, section: "Optimize" },
+  { href: "/settings", label: "Settings", icon: Settings, section: null },
 ];
 
 function getInitials(name: string): string {
@@ -150,27 +151,66 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Search affordance — mirrors the dashboard-app convention of a
+          command-palette row pinned above the nav. */}
+      <div className="px-2 pt-2">
+        <button
+          type="button"
+          title="Search"
+          className={cn(
+            "w-full flex items-center rounded-lg text-sm text-muted",
+            "motion-base hover:bg-accent/50 hover:text-card-foreground",
+            collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+          )}
+        >
+          <Search className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="truncate">Search</span>
+              <kbd className="ml-auto rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                ⌘K
+              </kbd>
+            </>
+          )}
+        </button>
+      </div>
+
       <nav className="flex-1 p-2 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, section }, i) => {
           const active = pathname.startsWith(href);
+          // Start a labelled group whenever the section changes, so the nav
+          // reads as grouped areas rather than one flat list.
+          const prev = i > 0 ? navItems[i - 1].section : undefined;
+          const startsSection = section !== prev;
           return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              data-active={active}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "nav-item flex items-center rounded-lg text-sm font-medium",
-                collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5",
-                active
-                  ? "text-sidebar-accent-foreground"
-                  : "text-muted hover:text-card-foreground"
-              )}
-            >
-              <Icon className="nav-icon w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </Link>
+            <div key={href}>
+              {startsSection &&
+                (section ? (
+                  !collapsed && (
+                    <div className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {section}
+                    </div>
+                  )
+                ) : (
+                  <div className="my-2 border-t border-border" />
+                ))}
+              <Link
+                href={href}
+                title={collapsed ? label : undefined}
+                data-active={active}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "nav-item flex items-center rounded-lg text-sm font-medium",
+                  collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5",
+                  active
+                    ? "text-sidebar-accent-foreground"
+                    : "text-muted hover:text-card-foreground"
+                )}
+              >
+                <Icon className="nav-icon w-5 h-5 flex-shrink-0" />
+                {!collapsed && <span className="truncate">{label}</span>}
+              </Link>
+            </div>
           );
         })}
       </nav>
