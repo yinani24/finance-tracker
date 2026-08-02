@@ -31,10 +31,9 @@ const ENGINE_TABS = [
 ] as const;
 
 const EFFORT_LABELS: Record<string, string> = {
-  one_click: "1-click",
-  quick: "Quick",
-  moderate: "Moderate",
-  heavy: "Heavy",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
 };
 
 function formatImpact(oneTime: number, annual: number): string {
@@ -68,7 +67,9 @@ function InsightRow({ insight }: { insight: Insight }) {
     mutationFn: (days: number) => {
       const until = new Date();
       until.setDate(until.getDate() + days);
-      return snoozeInsight(insight.id, until.toISOString());
+      // Backend SnoozeRequest.until is a bare `date`; Pydantic v2 rejects a
+      // datetime with a non-zero time component (422). Send date-only.
+      return snoozeInsight(insight.id, until.toISOString().slice(0, 10));
     },
     onSuccess: invalidate,
   });

@@ -8,8 +8,6 @@ import {
   Receipt,
   Target,
   WalletCards,
-  Settings,
-  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -17,17 +15,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
-import { useQuery } from "@tanstack/react-query";
-import { getMe } from "@/lib/api";
 import { useState, useEffect } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -36,34 +24,14 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: Receipt, section: "Overview" },
   { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
   { href: "/goals", label: "Goals", icon: Target, section: "Optimize" },
-  { href: "/settings", label: "Settings", icon: Settings, section: null },
 ];
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
-function getDisplayName(user: { user_metadata?: Record<string, unknown>; email?: string | null }): string {
-  return (user.user_metadata?.full_name as string) ??
-    user.email?.split("@")[0] ??
-    "User";
-}
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const { data: appUser } = useQuery({
-    queryKey: ["me"],
-    queryFn: getMe,
-    enabled: !!user,
-  });
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -77,8 +45,6 @@ export function Sidebar() {
     });
   }
 
-  const displayName = appUser?.full_name || (user ? getDisplayName(user) : "");
-  const initials = user ? getInitials(displayName) : "";
 
   return (
     <aside
@@ -235,56 +201,6 @@ export function Sidebar() {
         </Link>
       )}
 
-      <div className="p-2 border-t border-border">
-        {user && (
-          <Popover>
-            <PopoverTrigger
-              className={cn(
-                "w-full flex items-center rounded-lg motion-base hover:bg-accent/50 cursor-pointer",
-                collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
-              )}
-            >
-              <Avatar size="sm">
-                <AvatarFallback className="text-[10px] font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              {!collapsed && (
-                <div className="min-w-0 text-left">
-                  <div className="text-sm font-medium text-card-foreground truncate">
-                    {displayName}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {user.email}
-                  </div>
-                </div>
-              )}
-            </PopoverTrigger>
-            <PopoverContent side="top" align="start" sideOffset={8} className="w-56 p-1">
-              <div className="px-3 py-2">
-                <p className="text-sm font-medium truncate">{displayName}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-              </div>
-              <Separator />
-              <Link
-                href="/settings"
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-popover-foreground hover:bg-accent motion-base"
-              >
-                <Settings className="w-4 h-4" />
-                Settings
-              </Link>
-              <Separator />
-              <button
-                onClick={signOut}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10 motion-base"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign out
-              </button>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
     </aside>
   );
 }

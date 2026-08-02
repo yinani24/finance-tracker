@@ -1,10 +1,13 @@
 import json
 from datetime import date, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.models.insight import Insight
+from app.schemas.insight import SnoozeRequest
 
 
 def _create_insight(db: Session, user_id: int, **overrides) -> Insight:
@@ -86,6 +89,18 @@ def test_snooze(client: TestClient, db_session: Session, seed_user):
     resp = client.post(f"/insights/{row.id}/snooze", json={"until": until})
     assert resp.status_code == 200
     assert resp.json()["status"] == "snoozed"
+
+
+def test_snooze_request_rejects_datetime_accepts_date():
+    """Regression for #200: the frontend once sent a full ISO datetime
+    (`toISOString()`), which Pydantic v2 rejects for a bare `date` field with a
+    non-zero time component → HTTP 422 and a silently-failing snooze button. The
+    wire contract is date-only; this pins it so it can't regress."""
+    # A datetime string with a non-zero time component must be rejected.
+    with pytest.raises(ValidationError):
+        SnoozeRequest(until="2026-08-23T14:23:45.123Z")
+    # A date-only string is accepted and parses to the expected `date`.
+    assert SnoozeRequest(until="2026-08-23").until == date(2026, 8, 23)
 
 
 def test_acted_on(client: TestClient, db_session: Session, seed_user):

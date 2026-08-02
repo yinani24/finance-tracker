@@ -19,6 +19,7 @@ function PortfolioTab() {
   }
 
   const cards = data?.cards ?? [];
+  const assignments = data?.category_assignments ?? [];
 
   if (cards.length === 0) {
     return (
@@ -113,6 +114,50 @@ function PortfolioTab() {
           )}
         </div>
       ))}
+
+      {assignments.length > 0 && (
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="font-semibold text-card-foreground mb-1">
+            Which card to use where
+          </h3>
+          <p className="text-xs text-muted mb-4">
+            The best card you already hold for each category you spend in.
+          </p>
+          <div className="space-y-3">
+            {assignments.map((a) => (
+              <div
+                key={a.category}
+                className="flex items-start justify-between gap-3 text-sm"
+              >
+                <div>
+                  <span className="text-card-foreground font-medium">
+                    {formatCategoryName(a.category)}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {a.rationale}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-card-foreground">
+                    {a.best_card.name}
+                  </span>
+                  {a.best_card.issuer && (
+                    <span className="text-muted ml-2 text-xs">
+                      {a.best_card.issuer}
+                    </span>
+                  )}
+                  <div className="font-mono text-xs text-success mt-0.5">
+                    {a.rate.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                    %
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
