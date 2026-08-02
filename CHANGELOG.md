@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   richer card data). Planning doc only — no application code changed.
 
 ### Fixed
+- **Cashback sign-up bonuses were valued at ~1% of face value (#201).**
+  `card_recommendation.py`'s `_bonus_value_usd`/`_bonus_points` decided a bonus
+  amount's denomination purely from the amount's own `currency` field, but the
+  upstream dataset denominates a bonus by the **card's** top-level `currency`
+  (cash cards → `"USD"`; points cards → a program like `"CHASE"`). That field is
+  present on only ~11 of 179 cards, so a field-less amount always fell to the
+  points branch — a `$250` cash bonus on a `currency: "USD"` card scored `$2.50`
+  (and its rationale read "(250 pts @ 1.0¢)"). 32 cashback cards were affected,
+  dropping $250–$750 of first-year value each and pushing cashback cards below
+  points cards regardless of spend. A field-less amount now inherits the card's
+  currency (dollars only when the card is `"USD"`); explicit per-amount currency
+  tags still win, so the 11 tagged bonuses and all points cards are unchanged.
+  This is the bonus-path sibling of the #192 credit-path fix. Backend-only.
 - **Next-card recommendation showed the dollar sign-up bonus as "pts" (#196).**
   On Recommendations → **Next Card**, the bonus was rendered
   `{bonus_value.toLocaleString()} pts`, but `bonus_value` is a USD amount
