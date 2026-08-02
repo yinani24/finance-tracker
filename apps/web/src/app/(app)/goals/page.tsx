@@ -57,7 +57,7 @@ export default function GoalsPage() {
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger className="flex items-center gap-2 bg-foreground text-background px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity active:translate-y-px">
+          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover motion-base active:translate-y-px">
             <Plus className="w-4 h-4" />
             New Goal
           </DialogTrigger>
@@ -93,7 +93,7 @@ export default function GoalsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Emergency Fund"
                   />
                 </div>
@@ -104,7 +104,7 @@ export default function GoalsPage() {
                   <select
                     value={goalType}
                     onChange={(e) => setGoalType(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                   >
                     <option value="savings">Savings</option>
                     <option value="spending">Spending Limit</option>
@@ -121,7 +121,7 @@ export default function GoalsPage() {
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     required
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="10000"
                   />
                 </div>
@@ -133,7 +133,7 @@ export default function GoalsPage() {
                     type="date"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                   />
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function GoalsPage() {
                 Monthly recurring goal
               </label>
               {mutation.isError && (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   Failed to create goal. Please try again.
                 </p>
               )}
@@ -157,7 +157,7 @@ export default function GoalsPage() {
                 type="submit"
                 form="add-goal-form"
                 disabled={mutation.isPending}
-                className="bg-foreground text-background px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
               >
                 {mutation.isPending ? "Creating..." : "Create Goal"}
               </button>
@@ -175,15 +175,15 @@ export default function GoalsPage() {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="space-y-2">
-                  <div className="h-4 w-36 bg-muted rounded" />
-                  <div className="h-3 w-24 bg-muted rounded" />
+                  <div className="h-4 w-36 bg-accent rounded" />
+                  <div className="h-3 w-24 bg-accent rounded" />
                 </div>
                 <div className="text-right space-y-2">
-                  <div className="h-4 w-32 bg-muted rounded ml-auto" />
-                  <div className="h-3 w-20 bg-muted rounded ml-auto" />
+                  <div className="h-4 w-32 bg-accent rounded ml-auto" />
+                  <div className="h-3 w-20 bg-accent rounded ml-auto" />
                 </div>
               </div>
-              <div className="w-full bg-muted rounded-full h-2" />
+              <div className="w-full bg-accent rounded-full h-2" />
             </div>
           ))}
         </div>
@@ -200,7 +200,7 @@ export default function GoalsPage() {
             return (
               <div
                 key={goal.id}
-                className="bg-card rounded-xl border border-border p-6"
+                className="card-interactive bg-card rounded-xl border border-border p-6"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div>
@@ -223,9 +223,9 @@ export default function GoalsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="w-full bg-border rounded-full h-2">
+                <div className="w-full bg-accent rounded-full h-2">
                   <div
-                    className={`rounded-full h-2 transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-chart-1"}`}
+                    className={`rounded-full h-2 transition-all ${pct >= 100 ? "bg-success" : "bg-chart-1"}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>

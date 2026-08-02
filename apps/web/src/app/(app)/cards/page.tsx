@@ -73,7 +73,7 @@ export default function CardsPage() {
             }
           }}
         >
-          <DialogTrigger className="flex items-center gap-2 bg-foreground text-background px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity active:translate-y-px">
+          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover motion-base active:translate-y-px">
             <Plus className="w-4 h-4" />
             Add Card
           </DialogTrigger>
@@ -106,7 +106,7 @@ export default function CardsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Chase Sapphire Preferred"
                   />
                 </div>
@@ -117,7 +117,7 @@ export default function CardsPage() {
                   <select
                     value={network}
                     onChange={(e) => setNetwork(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                   >
                     <option value="visa">Visa</option>
                     <option value="mastercard">Mastercard</option>
@@ -134,13 +134,13 @@ export default function CardsPage() {
                     step="1"
                     value={annualFee}
                     onChange={(e) => setAnnualFee(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="0"
                   />
                 </div>
               </div>
               {mutation.isError && (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   Failed to add card. Please try again.
                 </p>
               )}
@@ -150,7 +150,7 @@ export default function CardsPage() {
                 type="submit"
                 form="add-card-form"
                 disabled={mutation.isPending}
-                className="bg-foreground text-background px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
               >
                 {mutation.isPending ? "Adding..." : "Add Card"}
               </button>
@@ -164,14 +164,16 @@ export default function CardsPage() {
           {[...Array(2)].map((_, i) => (
             <div
               key={i}
-              className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-6 animate-pulse"
+              className="bg-card rounded-lg border border-border p-5 animate-pulse"
             >
-              <div className="flex justify-between items-start mb-8">
-                <div className="h-3 w-16 bg-slate-700 rounded" />
-                <div className="w-8 h-8 bg-slate-700 rounded" />
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-accent" />
+                <div className="flex-1">
+                  <div className="h-4 w-40 bg-accent rounded mb-2" />
+                  <div className="h-3 w-24 bg-accent rounded mb-3" />
+                  <div className="h-4 w-28 bg-accent rounded" />
+                </div>
               </div>
-              <div className="h-5 w-40 bg-slate-700 rounded mb-2" />
-              <div className="h-4 w-28 bg-slate-700 rounded" />
             </div>
           ))}
         </div>
@@ -183,7 +185,7 @@ export default function CardsPage() {
             Add a card manually or connect via Plaid in{" "}
             <Link
               href="/settings"
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
+              className="underline underline-offset-2 hover:text-foreground motion-base"
             >
               Settings
             </Link>
@@ -201,19 +203,27 @@ export default function CardsPage() {
                 {creditAccounts.map((acct) => (
                   <div
                     key={`plaid-${acct.id}`}
-                    className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-6 text-white"
+                    className="bg-card rounded-lg border border-border p-5 flex items-start gap-4"
                   >
-                    <div className="flex justify-between items-start mb-8">
-                      <div className="text-xs font-medium tracking-widest uppercase opacity-70">
-                        {acct.institution_name || "Credit Card"}
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-link" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-medium text-sm text-card-foreground truncate">
+                          {acct.name}
+                        </p>
+                        <span className="flex-shrink-0 inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                          ✓ Linked
+                        </span>
                       </div>
-                      <Building2 className="w-6 h-6 opacity-40" />
-                    </div>
-                    <div className="text-base font-semibold tracking-tight mb-1">
-                      {acct.name}
-                    </div>
-                    <div className="text-sm font-mono tabular-nums opacity-60">
-                      Balance: {formatCurrency(Math.abs(acct.balance))}
+                      <p className="text-xs text-muted truncate">
+                        {acct.institution_name || "Credit Card"}
+                      </p>
+                      <p className="mt-2 text-sm font-mono tabular-nums text-card-foreground">
+                        {formatCurrency(Math.abs(acct.balance))}
+                        <span className="text-muted"> balance</span>
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -285,10 +295,22 @@ function ManualCardItem({ card }: { card: Card }) {
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-xl p-6 text-white">
-      <div className="flex justify-between items-start mb-8">
-        <div className="text-xs font-medium tracking-widest uppercase opacity-70">
-          {card.network || "Card"}
+    <div className="card-interactive bg-card rounded-lg border border-border p-5">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <CreditCard className="w-5 h-5 text-link" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-sm text-card-foreground truncate">
+            {card.name}
+          </p>
+          <p className="text-xs text-muted capitalize truncate">
+            {card.network || "Card"}
+          </p>
+          <p className="mt-2 text-sm font-mono tabular-nums text-card-foreground">
+            {formatCurrency(card.annual_fee)}
+            <span className="text-muted"> / yr annual fee</span>
+          </p>
         </div>
         <div className="flex items-center gap-1">
           <Dialog
@@ -303,9 +325,9 @@ function ManualCardItem({ card }: { card: Card }) {
           >
             <DialogTrigger
               aria-label="Edit card"
-              className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-md text-muted hover:bg-accent hover:text-card-foreground motion-base"
             >
-              <Pencil className="w-4 h-4 opacity-70" />
+              <Pencil className="w-4 h-4" />
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
@@ -332,7 +354,7 @@ function ManualCardItem({ card }: { card: Card }) {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
-                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                       placeholder="e.g. Chase Sapphire Preferred"
                     />
                   </div>
@@ -343,7 +365,7 @@ function ManualCardItem({ card }: { card: Card }) {
                     <select
                       value={network}
                       onChange={(e) => setNetwork(e.target.value)}
-                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     >
                       <option value="visa">Visa</option>
                       <option value="mastercard">Mastercard</option>
@@ -360,13 +382,13 @@ function ManualCardItem({ card }: { card: Card }) {
                       step="1"
                       value={annualFee}
                       onChange={(e) => setAnnualFee(e.target.value)}
-                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                      className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                       placeholder="0"
                     />
                   </div>
                 </div>
                 {editMutation.isError && (
-                  <p className="text-sm text-red-500">
+                  <p className="text-sm text-destructive">
                     Failed to save changes. Please try again.
                   </p>
                 )}
@@ -376,7 +398,7 @@ function ManualCardItem({ card }: { card: Card }) {
                   type="submit"
                   form={`edit-card-form-${card.id}`}
                   disabled={editMutation.isPending}
-                  className="bg-foreground text-background px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
                 >
                   {editMutation.isPending ? "Saving..." : "Save Changes"}
                 </button>
@@ -387,27 +409,21 @@ function ManualCardItem({ card }: { card: Card }) {
             type="button"
             aria-label="Delete card"
             onClick={() => setConfirmingDelete(true)}
-            className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-md text-muted hover:bg-accent hover:text-destructive motion-base"
           >
-            <Trash2 className="w-4 h-4 opacity-70" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <div className="text-base font-semibold tracking-tight mb-1">
-        {card.name}
-      </div>
-      <div className="text-sm font-mono tabular-nums opacity-60">
-        Annual fee: {formatCurrency(card.annual_fee)}
-      </div>
       {confirmingDelete && (
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <p className="text-sm opacity-80 mb-3">Delete this card?</p>
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-sm text-muted mb-3">Delete this card?</p>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
-              className="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-500 disabled:opacity-50 transition-colors"
+              className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-md text-sm font-medium hover:bg-destructive/20 disabled:opacity-50 motion-base"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </button>
@@ -415,13 +431,13 @@ function ManualCardItem({ card }: { card: Card }) {
               type="button"
               onClick={() => setConfirmingDelete(false)}
               disabled={deleteMutation.isPending}
-              className="px-3 py-1.5 rounded-md text-sm font-medium opacity-70 hover:opacity-100 hover:bg-white/10 transition-colors"
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-muted hover:bg-accent hover:text-card-foreground motion-base"
             >
               Cancel
             </button>
           </div>
           {deleteMutation.isError && (
-            <p className="text-sm text-red-400 mt-2">
+            <p className="text-sm text-destructive mt-2">
               Failed to delete. Please try again.
             </p>
           )}

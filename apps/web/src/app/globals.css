@@ -4,77 +4,116 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Composio-inspired design system.
+ * Light-theme developer-tool minimalism: warm off-white canvas, white surfaces,
+ * thin warm-grey borders, a royal-blue accent, and monospace tabular numbers.
+ * Almost everything downstream reads from these tokens.
+ */
 :root {
   color-scheme: light;
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --border: #e2e8f0;
-  --muted: #64748b;
-  --muted-foreground: #94a3b8;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --background: #f7f6f3; /* warm off-white app canvas */
+  --foreground: #17171a; /* near-black text */
+  --card: #ffffff; /* surfaces / cards */
+  --card-foreground: #17171a;
+  --border: #e7e5e0; /* thin warm-grey border */
+  --muted: #6b7280; /* muted body text */
+  --muted-foreground: #9ca3af; /* subtle icons / secondary text */
+  --accent: #efede7; /* light warm-grey highlight (active nav, hovers) */
+  --accent-foreground: #17171a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0f172a;
-  --primary-foreground: #f8fafc;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --destructive: #ef4444;
-  --input: #e2e8f0;
-  --ring: #94a3b8;
-  --chart-1: #3b82f6;
+  --popover-foreground: #17171a;
+  --primary: #2323dc; /* royal-blue accent */
+  --primary-hover: #1c1cb0;
+  --primary-foreground: #ffffff;
+  --link: #2323dc; /* blue text; diverges from --primary on dark only */
+  --secondary: #efede7;
+  --secondary-foreground: #17171a;
+  --success: #1f9d57; /* positive / active green */
+  --success-foreground: #ffffff;
+  --warning: #b45309; /* caution / underperforming */
+  --destructive: #dc2626; /* semantic red for negative / spend */
+  --overlay: rgba(23, 23, 26, 0.15); /* modal scrim */
+  --input: #e7e5e0;
+  --ring: #2323dc; /* blue focus ring */
+  --chart-1: #2323dc;
   --chart-2: #8b5cf6;
   --chart-3: #06b6d4;
   --chart-4: #f59e0b;
-  --chart-5: #10b981;
-  --radius: 0.625rem;
+  --chart-5: #1f9d57;
+  --radius: 0.625rem; /* ~10px cards */
   --sidebar-width: 256px;
   --sidebar-collapsed-width: 64px;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #0f172a;
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #94a3b8;
+  --sidebar-foreground: #17171a;
+  --sidebar-primary: #2323dc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efede7;
+  --sidebar-accent-foreground: #17171a;
+  --sidebar-border: #e7e5e0;
+  --sidebar-ring: #2323dc;
+
+  /*
+   * Motion foundation (Composio-derived).
+   * `--ease-composio` is the house curve; everything interactive references it
+   * so the whole app can be retuned from these four declarations.
+   */
+  --ease-composio: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 150ms; /* hover, active, highlight — the default */
+  --dur-page: 220ms; /* route-level enter animations */
+  --dur-slow: 250ms; /* the longest we ever go */
 }
 
+/*
+ * Dark theme — the default. Values are measured from Composio's project
+ * dashboard interior: a neutral (not blue-tinted) near-black canvas, a short
+ * three-step lightness ramp for elevation, hairline white-overlay borders and
+ * a brightened royal blue. Surfaces are flat: depth comes from background
+ * lightness, never from shadow.
+ *
+ *   canvas   oklch(0.159 0 0)  #171717
+ *   surface                    #1f1f1f   (cards, sidebar, top bar, popovers)
+ *   raised   oklch(0.269 0 0)  #2e2e2e   (active nav fill, hovers, skeletons)
+ */
 .dark {
   color-scheme: dark;
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
-  --border: #27272a;
-  --muted: #a1a1aa;
-  --muted-foreground: #71717a;
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #09090b;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --destructive: #ef4444;
-  --input: #27272a;
-  --ring: #52525b;
-  --chart-1: #60a5fa;
+  --background: #171717; /* app canvas — neutral near-black */
+  --foreground: #fbfbfb; /* oklch(0.985 0 0) — primary text */
+  --card: #1f1f1f; /* one step up from the canvas */
+  --card-foreground: #fbfbfb;
+  --border: rgba(255, 255, 255, 0.1); /* hairline white overlay */
+  --muted: #a1a1a1; /* secondary body text — 7.1:1 on the canvas */
+  --muted-foreground: #8a8a8a; /* labels / subtle icons — 5.3:1 */
+  --accent: #2e2e2e; /* raised fill: active nav, hovers */
+  --accent-foreground: #fbfbfb;
+  --popover: #1f1f1f;
+  --popover-foreground: #fbfbfb;
+  --primary: #4b4bf0; /* royal blue, brightened for dark */
+  --primary-hover: #5f5ff5; /* hover brightens rather than darkens */
+  --primary-foreground: #ffffff;
+  --link: #8f8ffa; /* blue *text* — the fill blue is too dark to read small */
+  --secondary: #2e2e2e;
+  --secondary-foreground: #fbfbfb;
+  --success: #3ecf8e;
+  --success-foreground: #06130c;
+  --warning: #f5a524;
+  --destructive: #f0616d;
+  --overlay: rgba(0, 0, 0, 0.65);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #5c5cf5;
+  --chart-1: #6b6bf5;
   --chart-2: #a78bfa;
   --chart-3: #22d3ee;
-  --chart-4: #fbbf24;
-  --chart-5: #34d399;
-  --sidebar: #18181b;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #fafafa;
-  --sidebar-primary-foreground: #09090b;
-  --sidebar-accent: #27272a;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #27272a;
-  --sidebar-ring: #52525b;
+  --chart-4: #f5a524;
+  --chart-5: #3ecf8e;
+  --sidebar: #1f1f1f;
+  --sidebar-foreground: #fbfbfb;
+  --sidebar-primary: #4b4bf0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2e2e2e;
+  --sidebar-accent-foreground: #fbfbfb;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #5c5cf5;
 }
 
 @theme inline {
@@ -109,7 +148,13 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-primary: var(--primary);
+  --color-link: var(--link);
+  --color-overlay: var(--overlay);
+  --color-warning: var(--warning);
+  --color-success-foreground: var(--success-foreground);
+  --color-success: var(--success);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -149,5 +194,240 @@
   td[data-currency],
   [data-currency] {
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Keyboard focus is never animated away and never suppressed — the ring uses
+   * the existing token so it reads correctly in both themes.
+   */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion utilities
+ *
+ * Composio's feel is crisp and quick rather than flashy: one curve, one short
+ * duration, applied consistently. These classes are the only place a duration
+ * or curve is hard-coded — everything else composes them.
+ * ------------------------------------------------------------------------ */
+
+@layer components {
+  /* The house transition. Covers the properties we actually animate. */
+  .motion-base {
+    transition-property: color, background-color, border-color, opacity,
+      transform, box-shadow;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-composio);
+  }
+
+  /* Affordances (chevrons, row actions) that fade up on hover of a parent. */
+  .motion-fade {
+    transition: opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  /*
+   * Sidebar nav item. The active fill and the left indicator are pseudo
+   * elements so they can animate independently of the label's colour shift,
+   * and so no layout is disturbed when the state flips.
+   */
+  .nav-item {
+    position: relative;
+    isolation: isolate;
+    transition: color var(--dur-fast) var(--ease-composio);
+  }
+
+  /* Animated fill: scales+fades in behind the content. */
+  .nav-item::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-color: var(--sidebar-accent);
+    opacity: 0;
+    transform: scale(0.97);
+    transition: opacity var(--dur-fast) var(--ease-composio),
+      transform var(--dur-fast) var(--ease-composio);
+  }
+
+  .nav-item:hover::before {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  .nav-item[data-active="true"]::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Left accent bar: grows out from the vertical centre. */
+  .nav-item::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 2px;
+    height: 60%;
+    border-radius: 999px;
+    background-color: var(--sidebar-primary);
+    transform: translateY(-50%) scaleY(0);
+    transform-origin: center;
+    opacity: 0;
+    transition: transform var(--dur-fast) var(--ease-composio),
+      opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  .nav-item[data-active="true"]::after {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+  }
+
+  /* Icons sit at reduced weight until the item is hovered or active. */
+  .nav-item .nav-icon {
+    opacity: 0.7;
+    transition: opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  .nav-item:hover .nav-icon,
+  .nav-item[data-active="true"] .nav-icon {
+    opacity: 1;
+  }
+
+  /*
+   * Segmented control (Cards tab strip). The active pill is a single absolutely
+   * positioned element whose left/width are driven by the active tab's
+   * measurements, so it slides between tabs instead of snapping.
+   */
+  .segmented {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .segmented-indicator {
+    position: absolute;
+    z-index: -1;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    border-radius: 999px;
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    transition: left var(--dur-fast) var(--ease-composio),
+      width var(--dur-fast) var(--ease-composio),
+      opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  /* Before the first measurement lands there is nothing to slide to. */
+  .segmented-indicator[data-ready="false"] {
+    opacity: 0;
+    transition: none;
+  }
+
+  /*
+   * Equal-width variant. When every tab is `flex-1` the indicator's geometry is
+   * pure arithmetic, so it needs no measurement — just `--tab-count` and
+   * `--tab-index`. `--seg-pad` and `--seg-gap` must match the container's
+   * padding and gap utilities.
+   */
+  .segmented-equal {
+    --seg-pad: 0.25rem;
+    --seg-gap: 0.25rem;
+    --seg-w: calc(
+      (100% - 2 * var(--seg-pad) - (var(--tab-count) - 1) * var(--seg-gap)) /
+        var(--tab-count)
+    );
+  }
+
+  .segmented-equal .segmented-indicator {
+    width: var(--seg-w);
+    left: calc(
+      var(--seg-pad) + var(--tab-index) * (var(--seg-w) + var(--seg-gap))
+    );
+  }
+
+  .segmented-item {
+    position: relative;
+    transition: color var(--dur-fast) var(--ease-composio),
+      opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  /*
+   * Row hover for tables and list items. A background shift only — Composio is
+   * flat, so no shadow and no movement.
+   */
+  .row-interactive {
+    transition: background-color var(--dur-fast) var(--ease-composio);
+  }
+
+  /*
+   * Card hover. Deliberately restrained: the border gains emphasis, nothing
+   * else. No shadow bloom — Composio's surfaces are flat.
+   */
+  .card-interactive {
+    transition: border-color var(--dur-fast) var(--ease-composio),
+      background-color var(--dur-fast) var(--ease-composio),
+      transform var(--dur-fast) var(--ease-composio);
+  }
+
+  .card-interactive:hover {
+    border-color: color-mix(in oklab, var(--ring) 35%, var(--border));
+  }
+
+  /*
+   * The single-pixel lift is reserved for cards that are themselves clickable,
+   * so the movement always corresponds to a real affordance. Panels that merely
+   * *contain* controls get the border emphasis only.
+   */
+  a.card-interactive:hover,
+  button.card-interactive:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Route content enter animation — see app/(app)/layout.tsx. */
+  .page-enter {
+    animation: page-enter var(--dur-page) var(--ease-composio) both;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Accessibility: every animation above is decoration, so honour the OS
+ * preference by collapsing it to an instant state change. Focus rings and
+ * colour tokens are untouched, so the UI stays fully legible and navigable.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .nav-item::before,
+  .nav-item::after {
+    transform: none !important;
+  }
+
+  a.card-interactive:hover,
+  button.card-interactive:hover {
+    transform: none !important;
+  }
+
+  .page-enter {
+    animation: none !important;
   }
 }

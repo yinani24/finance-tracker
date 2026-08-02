@@ -28,17 +28,17 @@ export function InsightsWidget() {
     <div className="bg-card rounded-xl border border-border p-6 mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
+          <Sparkles className="w-5 h-5 text-link" />
           <h2 className="font-semibold text-card-foreground">Insights</h2>
           {summary && summary.unread_count > 0 && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-link">
               {summary.unread_count} new
             </span>
           )}
         </div>
         <Link
           href="/insights"
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-card-foreground transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-muted hover:text-card-foreground motion-base"
         >
           View all <ArrowRight className="w-3.5 h-3.5" />
         </Link>
@@ -58,7 +58,7 @@ export function InsightsWidget() {
           <Link
             key={ins.id}
             href="/insights"
-            className="block rounded-lg border border-border p-4 hover:border-primary/40 transition-colors"
+            className="block rounded-lg border border-border p-4 hover:border-primary/40 motion-base"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

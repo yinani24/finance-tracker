@@ -50,7 +50,7 @@ function NextCardTab() {
       {recs.map((rec) => (
         <div
           key={rec.card.cardId}
-          className="bg-card rounded-xl border border-border p-6"
+          className="card-interactive bg-card rounded-xl border border-border p-6"
         >
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -66,7 +66,7 @@ function NextCardTab() {
                 href={rec.card.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-card-foreground transition-colors"
+                className="text-muted-foreground hover:text-card-foreground motion-base"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
@@ -132,9 +132,9 @@ function PortfolioTab() {
   }
 
   const statusIcon = {
-    good: <CheckCircle className="w-5 h-5 text-emerald-500" />,
-    underperforming: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-    costing_money: <AlertTriangle className="w-5 h-5 text-red-500" />,
+    good: <CheckCircle className="w-5 h-5 text-success" />,
+    underperforming: <AlertTriangle className="w-5 h-5 text-warning" />,
+    costing_money: <AlertTriangle className="w-5 h-5 text-destructive" />,
   };
 
   return (
@@ -172,7 +172,7 @@ function PortfolioTab() {
             <div>
               <span className="text-muted">Net:</span>{" "}
               <span
-                className={`font-mono font-medium ${card.net_value >= 0 ? "text-emerald-500" : "text-red-500"}`}
+                className={`font-mono font-medium ${card.net_value >= 0 ? "text-success" : "text-destructive"}`}
               >
                 {formatCurrency(card.net_value)}
               </span>
@@ -204,7 +204,7 @@ function PortfolioTab() {
                       <span className="text-muted">
                         Fee: {formatCurrency(alt.card.annualFee)}
                       </span>
-                      <span className="text-emerald-500 font-mono">
+                      <span className="text-success font-mono">
                         Net: {formatCurrency(alt.net_value)}
                       </span>
                     </div>
@@ -263,7 +263,7 @@ function SpendingTab() {
       {dining && (
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center gap-3">
-            <Utensils className="w-5 h-5 text-amber-500" />
+            <Utensils className="w-5 h-5 text-warning" />
             <div>
               <p className="text-sm text-muted">You dine out about</p>
               <p className="text-2xl font-semibold text-card-foreground">
@@ -303,9 +303,9 @@ function SpendingTab() {
                   {formatCurrency(cat.monthly_avg)}/mo
                 </span>
               </div>
-              <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
+              <div className="h-2 rounded-full bg-accent overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-emerald-500"
+                  className="h-full rounded-full bg-success"
                   style={{
                     width: `${Math.max(2, (cat.monthly_avg / maxSpend) * 100)}%`,
                   }}
@@ -345,6 +345,14 @@ function SpendingTab() {
   );
 }
 
+// Presentational tab descriptors. The ids are the same union the state already
+// used; listing them here just lets the sliding indicator derive its index.
+const TABS = [
+  { id: "next-card", label: "Next Card", icon: TrendingUp },
+  { id: "portfolio", label: "Portfolio Analysis", icon: Lightbulb },
+  { id: "spending", label: "Spending Profile", icon: PieChart },
+] as const;
+
 export default function RecommendationsPage() {
   const [tab, setTab] = useState<"next-card" | "portfolio" | "spending">(
     "next-card",
@@ -364,7 +372,7 @@ export default function RecommendationsPage() {
         <button
           onClick={() => refreshMutation.mutate()}
           disabled={refreshMutation.isPending}
-          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent/50 motion-base disabled:opacity-50"
         >
           <RefreshCw
             className={`w-4 h-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
@@ -373,40 +381,39 @@ export default function RecommendationsPage() {
         </button>
       </div>
 
-      <div className="flex gap-1 mb-6 bg-muted/30 rounded-lg p-1">
-        <button
-          onClick={() => setTab("next-card")}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
-            tab === "next-card"
-              ? "bg-card text-card-foreground shadow-sm"
-              : "text-muted hover:text-card-foreground"
-          }`}
-        >
-          <TrendingUp className="w-4 h-4" />
-          Next Card
-        </button>
-        <button
-          onClick={() => setTab("portfolio")}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
-            tab === "portfolio"
-              ? "bg-card text-card-foreground shadow-sm"
-              : "text-muted hover:text-card-foreground"
-          }`}
-        >
-          <Lightbulb className="w-4 h-4" />
-          Portfolio Analysis
-        </button>
-        <button
-          onClick={() => setTab("spending")}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
-            tab === "spending"
-              ? "bg-card text-card-foreground shadow-sm"
-              : "text-muted hover:text-card-foreground"
-          }`}
-        >
-          <PieChart className="w-4 h-4" />
-          Spending Profile
-        </button>
+      <div
+        role="tablist"
+        className="segmented segmented-equal flex gap-1 mb-6 bg-accent/60 rounded-full p-1"
+        style={
+          {
+            "--tab-count": TABS.length,
+            "--tab-index": TABS.findIndex((t) => t.id === tab),
+          } as React.CSSProperties
+        }
+      >
+        <span aria-hidden="true" className="segmented-indicator" />
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const active = tab === id;
+          return (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={active}
+              data-active={active}
+              onClick={() => setTab(id)}
+              className={`segmented-item flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-full ${
+                active
+                  ? "text-card-foreground"
+                  : "text-muted hover:text-card-foreground"
+              }`}
+            >
+              <Icon
+                className={`w-4 h-4 motion-fade ${active ? "opacity-100" : "opacity-70"}`}
+              />
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "next-card" ? (

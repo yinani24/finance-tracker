@@ -59,7 +59,7 @@ export default function AccountsPage() {
           </h1>
           <p className="text-sm text-muted mt-1">
             {isLoading ? (
-              <span className="inline-block h-4 w-28 bg-muted rounded animate-pulse align-middle" />
+              <span className="inline-block h-4 w-28 bg-accent rounded animate-pulse align-middle" />
             ) : (
               <>
                 Total balance:{" "}
@@ -71,7 +71,7 @@ export default function AccountsPage() {
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger className="flex items-center gap-2 bg-foreground text-background px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity active:translate-y-px">
+          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover motion-base active:translate-y-px">
             <Plus className="w-4 h-4" />
             Add Account
           </DialogTrigger>
@@ -105,7 +105,7 @@ export default function AccountsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Chase Checking"
                   />
                 </div>
@@ -116,7 +116,7 @@ export default function AccountsPage() {
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                   >
                     {ACCOUNT_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -133,7 +133,7 @@ export default function AccountsPage() {
                     type="text"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Chase"
                   />
                 </div>
@@ -146,13 +146,13 @@ export default function AccountsPage() {
                     step="0.01"
                     value={balance}
                     onChange={(e) => setBalance(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="0.00"
                   />
                 </div>
               </div>
               {mutation.isError && (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   Failed to create account. Please try again.
                 </p>
               )}
@@ -162,7 +162,7 @@ export default function AccountsPage() {
                 type="submit"
                 form="add-account-form"
                 disabled={mutation.isPending}
-                className="bg-foreground text-background px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
               >
                 {mutation.isPending ? "Creating..." : "Create Account"}
               </button>
@@ -179,13 +179,13 @@ export default function AccountsPage() {
               className="bg-card rounded-xl border border-border p-5 flex items-center justify-between animate-pulse"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-muted" />
+                <div className="w-10 h-10 rounded-lg bg-accent" />
                 <div className="space-y-2">
-                  <div className="h-4 w-32 bg-muted rounded" />
-                  <div className="h-3 w-48 bg-muted rounded" />
+                  <div className="h-4 w-32 bg-accent rounded" />
+                  <div className="h-3 w-48 bg-accent rounded" />
                 </div>
               </div>
-              <div className="h-5 w-24 bg-muted rounded" />
+              <div className="h-5 w-24 bg-accent rounded" />
             </div>
           ))}
         </div>
@@ -194,7 +194,7 @@ export default function AccountsPage() {
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="bg-card rounded-xl border border-border p-5 flex items-center justify-between"
+              className="card-interactive bg-card rounded-xl border border-border p-5 flex items-center justify-between"
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
@@ -213,7 +213,7 @@ export default function AccountsPage() {
                 </div>
               </div>
               <span
-                className={`text-base font-mono font-medium tabular-nums ${account.balance >= 0 ? "text-card-foreground" : "text-red-500"}`}
+                className={`text-base font-mono font-medium tabular-nums ${account.balance >= 0 ? "text-card-foreground" : "text-destructive"}`}
               >
                 {formatCurrency(account.balance)}
               </span>

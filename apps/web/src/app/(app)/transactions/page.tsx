@@ -102,7 +102,7 @@ export default function TransactionsPage() {
         </h1>
         <p className="text-sm text-muted mt-1">
           {isLoading ? (
-            <span className="inline-block h-4 w-24 bg-muted rounded animate-pulse align-middle" />
+            <span className="inline-block h-4 w-24 bg-accent rounded animate-pulse align-middle" />
           ) : (
             <>
               <span className="font-mono tabular-nums">
@@ -124,7 +124,7 @@ export default function TransactionsPage() {
             placeholder="Search merchants..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
           />
         </div>
         <select
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
           onChange={(e) =>
             setFilterAccount(e.target.value ? Number(e.target.value) : undefined)
           }
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
         >
           <option value="">All Accounts</option>
           {accounts.map((a) => (
@@ -144,7 +144,7 @@ export default function TransactionsPage() {
         <select
           value={filterCategory ?? ""}
           onChange={(e) => setFilterCategory(e.target.value || undefined)}
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
         >
           <option value="">All Categories</option>
           {categories.map((c) => (
@@ -156,7 +156,7 @@ export default function TransactionsPage() {
       </div>
 
       {recategorize.isError && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-500">
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
           Couldn&apos;t update the category. Please try again.
         </div>
       )}
@@ -190,26 +190,26 @@ export default function TransactionsPage() {
                     className="border-b border-border last:border-0 animate-pulse"
                   >
                     <td className="px-5 py-3">
-                      <div className="h-4 w-20 bg-muted rounded" />
+                      <div className="h-4 w-20 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3">
-                      <div className="h-4 w-28 bg-muted rounded" />
+                      <div className="h-4 w-28 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3">
-                      <div className="h-5 w-16 bg-muted rounded" />
+                      <div className="h-5 w-16 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3">
-                      <div className="h-4 w-24 bg-muted rounded" />
+                      <div className="h-4 w-24 bg-accent rounded" />
                     </td>
                     <td className="px-5 py-3 flex justify-end">
-                      <div className="h-4 w-16 bg-muted rounded" />
+                      <div className="h-4 w-16 bg-accent rounded" />
                     </td>
                   </tr>
                 ))
               : paged.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-border last:border-0 hover:bg-accent/30 transition-colors"
+                    className="row-interactive border-b border-border last:border-0 hover:bg-accent/30"
                   >
                     <td className="px-5 py-3 text-sm text-muted font-mono tabular-nums">
                       {t.occurred_on}
@@ -228,7 +228,7 @@ export default function TransactionsPage() {
                             category: e.target.value,
                           })
                         }
-                        className="border border-input bg-background text-foreground rounded-lg px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors disabled:opacity-50 disabled:cursor-wait"
+                        className="border border-input bg-background text-foreground rounded-lg px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base disabled:opacity-50 disabled:cursor-wait"
                       >
                         {TAXONOMY_CATEGORIES.map((c) => (
                           <option key={c} value={c} className="capitalize">
@@ -241,7 +241,7 @@ export default function TransactionsPage() {
                       {accountMap[t.account_id] || `#${t.account_id}`}
                     </td>
                     <td
-                      className={`px-5 py-3 text-sm font-mono font-medium tabular-nums text-right ${t.is_income ? "text-emerald-500" : "text-card-foreground"}`}
+                      className={`px-5 py-3 text-sm font-mono font-medium tabular-nums text-right ${t.is_income ? "text-success" : "text-card-foreground"}`}
                     >
                       {t.is_income ? "+" : "-"}
                       {formatCurrency(Math.abs(t.amount))}
@@ -267,7 +267,7 @@ export default function TransactionsPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
-              className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="motion-base px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -277,7 +277,7 @@ export default function TransactionsPage() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages}
-              className="px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="motion-base px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Next
             </button>

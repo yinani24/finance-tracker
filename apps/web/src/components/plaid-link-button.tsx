@@ -85,13 +85,13 @@ export function PlaidLinkButton() {
       <button
         onClick={() => open()}
         disabled={!ready || loading}
-        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover motion-base disabled:opacity-50"
       >
         <Link2 className="w-4 h-4" />
         {loading ? "Connecting..." : "Connect Bank Account"}
       </button>
       {error && (
-        <p className="text-red-500 text-xs mt-2">{error}</p>
+        <p className="text-destructive text-xs mt-2">{error}</p>
       )}
     </div>
   );

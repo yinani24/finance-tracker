@@ -121,6 +121,52 @@ class TestRecommendationSnapshotService:
         assert first["recommendations"][0]["bonus_value"] == 200.0
         assert second["recommendations"][0]["bonus_value"] == 500.0
 
+    @patch(
+        "app.services.recommendation_snapshot._fetch_cards",
+        return_value=[
+            {
+                "cardId": "card-freedom", "name": "Freedom Unlimited", "issuer": "CHASE",
+                "network": "VISA", "currency": "USD", "isBusiness": False, "annualFee": 0,
+                "isAnnualFeeWaived": False, "universalCashbackPercent": 1.5,
+                "url": "https://example.com", "imageUrl": "/f.png", "credits": [],
+                "offers": [
+                    {"spend": 500, "amount": [{"amount": 20000}], "days": 90, "credits": []}
+                ],
+                "discontinued": False,
+            }
+        ],
+    )
+    def test_portfolio_category_assignments_survive_cache_hit(
+        self, mock_fetch, db_session: Session, seed_user: User
+    ):
+        """Portfolio responses carry ``category_assignments`` (#177), and the
+        combined blob must return identically on a cache hit — the second read
+        must NOT double-nest the cached dict under ``cards`` (regression guard
+        for the two-return-site cache trap)."""
+        from app.services.recommendation_snapshot import RecommendationSnapshotService
+
+        _seed_data(db_session, seed_user)  # seeds a Freedom Unlimited / CHASE card
+        service = RecommendationSnapshotService(db_session)
+
+        with patch.object(
+            service.snapshot_repo, "upsert", wraps=service.snapshot_repo.upsert
+        ) as spy_upsert:
+            first = service.get_recommendations(seed_user.id, "portfolio_gap")
+            second = service.get_recommendations(seed_user.id, "portfolio_gap")
+
+        # Computed once; the second read is a cache hit (no recompute/upsert).
+        assert spy_upsert.call_count == 1
+        for result in (first, second):
+            # ``cards`` stays a flat list — never {"cards": {"cards": [...]}}.
+            assert isinstance(result["cards"], list)
+            assert isinstance(result["category_assignments"], list)
+            assert "spending_profile" in result
+        # Seeded spend lands in 'shopping' → an assignment exists for it.
+        assert "shopping" in {a["category"] for a in first["category_assignments"]}
+        # Cold path and cache-hit path yield the identical payload.
+        assert first["cards"] == second["cards"]
+        assert first["category_assignments"] == second["category_assignments"]
+
     @patch("app.services.recommendation_snapshot._fetch_cards", return_value=MOCK_CARDS)
     def test_invalidate_forces_recompute(self, mock_fetch, db_session: Session, seed_user: User):
         from app.services.recommendation_snapshot import RecommendationSnapshotService
