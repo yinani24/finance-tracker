@@ -57,7 +57,7 @@ export default function GoalsPage() {
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger className="flex items-center gap-2 bg-foreground text-background px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity active:translate-y-px">
+          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors active:translate-y-px">
             <Plus className="w-4 h-4" />
             New Goal
           </DialogTrigger>
@@ -147,7 +147,7 @@ export default function GoalsPage() {
                 Monthly recurring goal
               </label>
               {mutation.isError && (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   Failed to create goal. Please try again.
                 </p>
               )}
@@ -157,7 +157,7 @@ export default function GoalsPage() {
                 type="submit"
                 form="add-goal-form"
                 disabled={mutation.isPending}
-                className="bg-foreground text-background px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity active:translate-y-px"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 transition-colors active:translate-y-px"
               >
                 {mutation.isPending ? "Creating..." : "Create Goal"}
               </button>
@@ -225,7 +225,7 @@ export default function GoalsPage() {
                 </div>
                 <div className="w-full bg-border rounded-full h-2">
                   <div
-                    className={`rounded-full h-2 transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-chart-1"}`}
+                    className={`rounded-full h-2 transition-all ${pct >= 100 ? "bg-success" : "bg-chart-1"}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
