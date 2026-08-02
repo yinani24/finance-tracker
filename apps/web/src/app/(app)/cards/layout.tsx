@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Lightbulb, Wallet } from "lucide-react";
+import { Lightbulb, Wallet, Compass } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +10,12 @@ import { cn } from "@/lib/utils";
 // Recommendations ranks what to get next, and Portfolio is the cards you
 // actually hold and how well they fit your spending. "Your cards" folded into
 // Portfolio — holding a card and judging it are the same question.
+// Recommendations leads: it is the answer the product exists to give, and it
+// is what a freshly-uploaded statement should land on. Portfolio is the
+// context for that answer, and Explore — browsing the whole dataset — sits
+// last, since it is the one surface you reach for deliberately rather than
+// arrive at.
 const TABS = [
-  { href: "/cards/explore", label: "Explore", icon: Compass, exact: false },
   {
     href: "/cards/recommendations",
     label: "Recommendations",
@@ -19,6 +23,7 @@ const TABS = [
     exact: false,
   },
   { href: "/cards/portfolio", label: "Portfolio", icon: Wallet, exact: false },
+  { href: "/cards/explore", label: "Explore", icon: Compass, exact: false },
 ] as const;
 
 // Module-level so the measurement callback below depends on nothing but the
