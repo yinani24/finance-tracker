@@ -58,7 +58,12 @@ class TestComputeProfile:
 
         from app.services.spending_profile import compute_profile
 
-        profile = compute_profile(db_session, seed_user.id, lookback_months=6)
+        # Pin ``today`` so the fixed Jan/Feb-2026 seed dates stay inside the
+        # 6-month lookback regardless of the wall clock (see #220). Matches the
+        # window used by the window-slide tests below.
+        profile = compute_profile(
+            db_session, seed_user.id, lookback_months=6, today=date(2026, 2, 28)
+        )
 
         assert profile.avg_monthly_spend > 0
         categories = json.loads(profile.category_breakdown_json)
@@ -89,7 +94,11 @@ class TestComputeProfile:
 
         from app.services.spending_profile import compute_profile
 
-        profile = compute_profile(db_session, seed_user.id, lookback_months=6)
+        # Pin ``today`` so the fixed Jan/Feb-2026 seed dates stay inside the
+        # 6-month lookback regardless of the wall clock (see #220).
+        profile = compute_profile(
+            db_session, seed_user.id, lookback_months=6, today=date(2026, 2, 28)
+        )
         counts = json.loads(profile.category_counts_json)
         # 3 food-and-drink txns, 1 travel, 1 groceries (income excluded).
         assert counts["food and drink"] == 3
