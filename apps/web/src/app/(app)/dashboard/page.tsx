@@ -1,42 +1,39 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import {
-  getAccounts,
-  getTransactions,
-  getGoals,
-  getNextCardRecommendations,
-  getPreferences,
-  updatePreferences,
-} from "@/lib/api";
-import type { UserPreference } from "@/lib/types";
-import { formatCurrency } from "@/lib/format";
-import {
-  TrendingUp,
   TrendingDown,
   Wallet,
-  Target,
-  ArrowUpRight,
-  ArrowDownRight,
+  Gauge,
+  Receipt,
   Lightbulb,
   ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
-import { InsightsWidget } from "@/components/insights-widget";
-import Link from "next/link";
+import { postStatelessRecommendations } from "@/lib/api";
+import { formatCurrency } from "@/lib/format";
+import { useSession } from "@/lib/session/session-context";
+import { summarize, categoryTotals, topMerchants } from "@/lib/session/derive";
+import { StatementDropzone } from "@/components/statement-dropzone";
 
 function StatCard({
   label,
   value,
   icon: Icon,
   trend,
+  hint,
 }: {
   label: string;
   value: string;
   icon: React.ElementType;
   trend?: "up" | "down" | "neutral";
+  hint?: string;
 }) {
   return (
-    <div className="bg-card rounded-xl border border-border p-6">
+    <div className="border border-border p-6">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-muted">{label}</span>
         <Icon className="w-5 h-5 text-muted-foreground" />
@@ -45,98 +42,179 @@ function StatCard({
         <span className="text-2xl font-semibold tracking-tight text-card-foreground font-mono">
           {value}
         </span>
-        {trend === "up" && (
-          <ArrowUpRight className="w-4 h-4 text-success mb-1" />
-        )}
+        {trend === "up" && <ArrowUpRight className="w-4 h-4 text-success mb-1" />}
         {trend === "down" && (
           <ArrowDownRight className="w-4 h-4 text-destructive mb-1" />
         )}
       </div>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
 
 export default function DashboardPage() {
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: getAccounts,
-  });
-  const { data: transactions = [] } = useQuery({
-    queryKey: ["transactions"],
-    queryFn: () => getTransactions(),
-  });
-  const { data: goals = [] } = useQuery({
-    queryKey: ["goals"],
-    queryFn: getGoals,
-  });
+  const { session, ready, setCredit } = useSession();
+  const summary = useMemo(() => summarize(session), [session]);
+  const cats = useMemo(() => categoryTotals(session.transactions), [session.transactions]);
+  const merchants = useMemo(
+    () => topMerchants(session.transactions, 6),
+    [session.transactions]
+  );
+
+  const hasData = ready && session.transactions.length > 0;
+
+  // Ranking runs server-side against the public card dataset, but only on the
+  // aggregates below — no merchant, date or amount detail is transmitted, and
+  // nothing is stored.
   const { data: recommendations } = useQuery({
-    queryKey: ["recommendations", "next-card"],
-    queryFn: getNextCardRecommendations,
-  });
-  const { data: prefs } = useQuery({
-    queryKey: ["preferences"],
-    queryFn: getPreferences,
-  });
-  const queryClient = useQueryClient();
-  const prefsMutation = useMutation({
-    mutationFn: (data: Partial<UserPreference>) => updatePreferences(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["preferences"] });
-      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
-    },
+    queryKey: [
+      "recommendations",
+      "stateless",
+      summary.monthlySpend,
+      cats.map((c) => `${c.category}:${Math.round(c.total)}`).join(","),
+      session.credit.scoreBand,
+      session.heldCards.length,
+    ],
+    enabled: hasData,
+    queryFn: () =>
+      postStatelessRecommendations({
+        avg_monthly_spend: summary.monthlySpend,
+        category_breakdown: Object.fromEntries(
+          cats.map((c) => [c.category, c.total / summary.months])
+        ),
+        held_cards: session.heldCards.map((c) => ({
+          name: c.name,
+          issuer: c.issuer,
+        })),
+        credit_score_band: session.credit.scoreBand ?? null,
+        recent_card_applications: session.credit.recentApplications ?? null,
+      }),
   });
 
-  const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
-  const totalIncome = transactions
-    .filter((t) => t.is_income)
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
-    .filter((t) => !t.is_income)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  if (ready && !hasData) {
+    return (
+      <div className="p-8 max-w-3xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-card-foreground">Dashboard</h1>
+          <p className="text-sm text-muted mt-1">
+            Drop a statement and this fills in — nothing to set up first.
+          </p>
+        </div>
+        <StatementDropzone />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-card-foreground">
-          Dashboard
-        </h1>
-        <p className="text-sm text-muted mt-1">Your financial overview</p>
+        <h1 className="text-2xl font-semibold text-card-foreground">Dashboard</h1>
+        <p className="text-sm text-muted mt-1">
+          {summary.transactionCount} transactions
+          {summary.periodStart && summary.periodEnd
+            ? ` · ${summary.periodStart} to ${summary.periodEnd}`
+            : ""}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          label="Net Worth"
-          value={formatCurrency(netWorth)}
-          icon={Wallet}
-          trend="up"
-        />
-        <StatCard
-          label="Income"
-          value={formatCurrency(totalIncome)}
-          icon={TrendingUp}
-          trend="up"
-        />
-        <StatCard
-          label="Expenses"
-          value={formatCurrency(totalExpenses)}
+          label="Monthly spend"
+          value={formatCurrency(summary.monthlySpend)}
           icon={TrendingDown}
-          trend="down"
+          hint={
+            summary.months > 1 ? `Averaged over ${summary.months} months` : undefined
+          }
         />
         <StatCard
-          label="Active Goals"
-          value={String(goals.length)}
-          icon={Target}
+          label="Total spend"
+          value={formatCurrency(summary.totalSpend)}
+          icon={Receipt}
+        />
+        <StatCard
+          label="Top category"
+          value={summary.topCategory ? summary.topCategory.category : "—"}
+          icon={Wallet}
+          hint={
+            summary.topCategory
+              ? `${formatCurrency(summary.topCategory.total)} · ${Math.round(
+                  summary.topCategory.share * 100
+                )}% of spend`
+              : undefined
+          }
+        />
+        <StatCard
+          label="Utilization"
+          value={
+            summary.utilization != null
+              ? `${Math.round(summary.utilization * 100)}%`
+              : "—"
+          }
+          icon={Gauge}
+          trend={summary.utilization != null && summary.utilization > 0.3 ? "down" : undefined}
+          hint={
+            summary.creditLimit
+              ? `${formatCurrency(summary.currentBalance ?? 0)} of ${formatCurrency(summary.creditLimit)}`
+              : undefined
+          }
         />
       </div>
 
-      <InsightsWidget />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <section className="border border-border p-6">
+          <h2 className="font-semibold text-card-foreground mb-4">Where it goes</h2>
+          <div className="space-y-3">
+            {cats.slice(0, 6).map((c) => (
+              <div key={c.category}>
+                <div className="flex items-baseline justify-between text-sm">
+                  <span className="capitalize text-card-foreground">{c.category}</span>
+                  <span className="font-mono tabular-nums text-muted">
+                    {formatCurrency(c.total)}
+                  </span>
+                </div>
+                <div className="mt-1 h-1 w-full bg-accent">
+                  <div
+                    className="h-1 bg-primary motion-base"
+                    style={{ width: `${Math.max(c.share * 100, 1)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Link
+            href="/transactions"
+            className="mt-5 inline-flex items-center gap-1 text-sm text-muted hover:text-card-foreground motion-base"
+          >
+            All transactions <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+
+        <section className="border border-border p-6">
+          <h2 className="font-semibold text-card-foreground mb-4">Top merchants</h2>
+          <table className="w-full text-sm">
+            <tbody>
+              {merchants.map((m) => (
+                <tr key={m.merchant} className="border-b border-border last:border-0">
+                  <td className="py-2 pr-3 text-card-foreground">{m.merchant}</td>
+                  <td className="py-2 text-right text-xs text-muted-foreground font-mono tabular-nums">
+                    {m.count}×
+                  </td>
+                  <td className="py-2 pl-3 text-right font-mono tabular-nums text-card-foreground">
+                    {formatCurrency(m.total)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </div>
 
       {recommendations?.recommendations && recommendations.recommendations.length > 0 && (
-        <div className="bg-card rounded-xl border border-border p-6 mb-8">
+        <div className="border border-border p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Lightbulb className="w-5 h-5 text-muted-foreground" />
-              <h2 className="font-semibold text-card-foreground">Top Card Picks</h2>
+              <h2 className="font-semibold text-card-foreground">Top card picks</h2>
             </div>
             <div className="flex items-center gap-3">
               {/* Credit standing lives with what it affects: it re-ranks these
@@ -144,10 +222,15 @@ export default function DashboardPage() {
               <label className="flex items-center gap-2 text-xs text-muted">
                 Credit
                 <select
-                  value={prefs?.credit_score_band ?? ""}
+                  value={session.credit.scoreBand ?? ""}
                   onChange={(e) =>
-                    prefsMutation.mutate({
-                      credit_score_band: e.target.value || null,
+                    setCredit({
+                      scoreBand: (e.target.value || undefined) as
+                        | "excellent"
+                        | "good"
+                        | "fair"
+                        | "poor"
+                        | undefined,
                     })
                   }
                   className="border border-input bg-background text-foreground px-2 py-1 text-xs motion-base focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
@@ -168,18 +251,12 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recommendations.recommendations.slice(0, 5).map((rec, i) => (
-              <Link
-                key={rec.card.cardId}
-                href="/cards/recommendations"
-                className="panel-link"
-              >
+            {recommendations.recommendations.slice(0, 4).map((rec, i) => (
+              <Link key={rec.card.cardId} href="/cards/recommendations" className="panel-link">
                 <div className="panel">
                   <div className="panel-head">
                     <span className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-mono text-muted">
-                        {i + 1}.
-                      </span>
+                      <span className="text-xs font-mono text-muted">{i + 1}.</span>
                       <span className="font-medium text-[15px] text-card-foreground truncate">
                         {rec.card.name}
                       </span>
@@ -189,9 +266,7 @@ export default function DashboardPage() {
                   <div className="panel-body">
                     <div className="panel-row">
                       <span className="panel-label">Issuer</span>
-                      <span className="panel-value truncate">
-                        {rec.card.issuer}
-                      </span>
+                      <span className="panel-value truncate">{rec.card.issuer}</span>
                     </div>
                     <div className="panel-row">
                       <span className="panel-label">Annual fee</span>
@@ -223,8 +298,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      {/* AI Financial Assistant removed from the dashboard for now.
-          Component kept at @/components/chat — re-add <Chat /> to restore. */}
     </div>
   );
 }

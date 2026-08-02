@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   House,
-  Landmark,
+  Wallet,
   Receipt,
-  Target,
+  PieChart,
   WalletCards,
   PanelLeftClose,
   PanelLeftOpen,
@@ -18,12 +18,22 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
+// Spending profile is a destination in its own right, not a tab buried under
+// Cards: it is the analysis the card advice is derived from, and it is what the
+// user reads on its own. Goals were removed — nothing in the statement-driven
+// flow fed them. Accounts became Income, the other half of the picture that a
+// card statement can't show.
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: House, section: "Overview" },
-  { href: "/accounts", label: "Accounts", icon: Landmark, section: "Overview" },
   { href: "/transactions", label: "Transactions", icon: Receipt, section: "Overview" },
+  { href: "/income", label: "Income", icon: Wallet, section: "Overview" },
+  {
+    href: "/spending-profile",
+    label: "Spending profile",
+    icon: PieChart,
+    section: "Optimize",
+  },
   { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
-  { href: "/goals", label: "Goals", icon: Target, section: "Optimize" },
 ];
 
 

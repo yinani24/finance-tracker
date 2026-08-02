@@ -1,108 +1,26 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Upload, Loader2, Check, AlertTriangle } from "lucide-react";
-import { useSession } from "@/lib/session/session-context";
+import { ShieldCheck, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { parseStatement, categorize } from "@/lib/statement";
 import {
-  parseStatementMetadata,
-  statementLabel,
-  statementUtilization,
-  type StatementMetadata,
-} from "@/lib/statement/parse-metadata";
-import { extractText } from "@/lib/statement/parse-pdf";
+  StatementDropzone,
+  type IngestResult,
+} from "@/components/statement-dropzone";
+import { statementLabel, statementUtilization } from "@/lib/statement/parse-metadata";
 
 /**
  * Drop-and-go onboarding.
  *
  * A statement already names the card, the issuer, the credit limit and the
  * balance, so asking for them up front was friction we imposed for no reason.
- * Drop a file and everything below is derived: the account, the utilization,
- * the transactions and what they say about spending. Nothing is uploaded —
- * parsing runs in this tab and the results live in session memory only.
+ * Drop a file and everything below is derived. Nothing is uploaded — parsing
+ * runs in this tab and the results live in session memory only.
  */
-
-interface Detected {
-  meta: StatementMetadata;
-  added: number;
-  errors: number;
-  fileName: string;
-}
-
 export default function StartPage() {
   const router = useRouter();
-  const { session, addCard, addTransactions } = useSession();
-  const [busy, setBusy] = useState(false);
-  const [detected, setDetected] = useState<Detected[]>([]);
-  const [failure, setFailure] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const ingest = useCallback(
-    async (files: FileList | File[]) => {
-      setBusy(true);
-      setFailure(null);
-      try {
-        for (const file of Array.from(files)) {
-          // Read the text once so metadata and transactions agree on the
-          // sign convention: a credit-card statement lists charges positive.
-          const isPdf =
-            file.type === "application/pdf" ||
-            file.name.toLowerCase().endsWith(".pdf");
-          const meta = isPdf
-            ? parseStatementMetadata(
-                await extractText(new Uint8Array(await file.arrayBuffer()))
-              )
-            : ({ isCredit: false } as StatementMetadata);
-
-          const { rows, errors } = await parseStatement(file, {
-            isCredit: meta.isCredit,
-          });
-
-          if (rows.length === 0) {
-            setFailure(
-              `Couldn't read any transactions from ${file.name}. If it's a scanned image, the text can't be extracted.`
-            );
-            continue;
-          }
-
-          // The statement told us the account — record it without asking.
-          const label = statementLabel(meta);
-          const known = session.heldCards.some((c) => c.name === label);
-          if (!known && (meta.cardName || meta.issuer || meta.creditLimit)) {
-            addCard({
-              name: label,
-              issuer: meta.issuer,
-              creditLimit: meta.creditLimit,
-              currentBalance: meta.currentBalance,
-            });
-          }
-
-          addTransactions(
-            rows.map((r) => ({
-              occurredOn: r.occurredOn,
-              merchant: r.merchant,
-              amount: r.signedAmount,
-              category: categorize(r.merchant).category,
-            })),
-            { fileName: file.name, kind: isPdf ? "pdf" : "csv", added: rows.length, errors: errors.length }
-          );
-
-          setDetected((d) => [
-            ...d,
-            { meta, added: rows.length, errors: errors.length, fileName: file.name },
-          ]);
-        }
-      } catch {
-        setFailure("That file couldn't be read. CSV and text-based PDF statements work best.");
-      } finally {
-        setBusy(false);
-      }
-    },
-    [addCard, addTransactions, session.heldCards]
-  );
+  const [detected, setDetected] = useState<IngestResult[]>([]);
 
   const total = detected.reduce((s, d) => s + d.added, 0);
 
@@ -116,55 +34,9 @@ export default function StartPage() {
         </p>
       </div>
 
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          if (e.dataTransfer.files?.length) void ingest(e.dataTransfer.files);
-        }}
-        onClick={() => inputRef.current?.click()}
-        className={
-          "dashed-card cursor-pointer py-14 " +
-          (dragging ? "border-primary bg-accent text-card-foreground" : "")
-        }
-      >
-        {busy ? (
-          <>
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-sm">Reading your statement…</span>
-          </>
-        ) : (
-          <>
-            <Upload className="h-6 w-6" />
-            <span className="text-sm font-medium">
-              Drop a PDF or CSV statement, or click to choose
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Parsed in this tab — the file never leaves your device
-            </span>
-          </>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,.csv,application/pdf,text/csv"
-          multiple
-          hidden
-          onChange={(e) => e.target.files?.length && void ingest(e.target.files)}
-        />
-      </div>
-
-      {failure && (
-        <p className="mt-4 flex items-start gap-2 border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          {failure}
-        </p>
-      )}
+      <StatementDropzone
+        onIngested={(results) => setDetected((d) => [...d, ...results])}
+      />
 
       {detected.length > 0 && (
         <section className="mt-8">

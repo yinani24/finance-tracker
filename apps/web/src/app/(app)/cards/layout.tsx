@@ -2,19 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, Compass, Lightbulb, Wallet, PieChart } from "lucide-react";
+import { Compass, Lightbulb, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-// Card-related surfaces are consolidated under a single "Cards" section with
-// internal tabs. "Your cards" is the index route (/cards); the others are nested
-// segments so each keeps its own page component and data fetching.
-//
-// This strip is the section's *only* level of tabs. Portfolio and Spending
-// profile used to be inner, state-driven tabs of /cards/recommendations; they
-// are now sibling routes so the nesting is one level deep everywhere.
+// Three surfaces, one level of tabs. Explore browses the whole card dataset,
+// Recommendations ranks what to get next, and Portfolio is the cards you
+// actually hold and how well they fit your spending. "Your cards" folded into
+// Portfolio — holding a card and judging it are the same question.
 const TABS = [
-  { href: "/cards", label: "Your cards", icon: CreditCard, exact: true },
   { href: "/cards/explore", label: "Explore", icon: Compass, exact: false },
   {
     href: "/cards/recommendations",
@@ -23,12 +19,6 @@ const TABS = [
     exact: false,
   },
   { href: "/cards/portfolio", label: "Portfolio", icon: Wallet, exact: false },
-  {
-    href: "/cards/spending-profile",
-    label: "Spending profile",
-    icon: PieChart,
-    exact: false,
-  },
 ] as const;
 
 // Module-level so the measurement callback below depends on nothing but the

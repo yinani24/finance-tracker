@@ -209,6 +209,53 @@ export const deletePlaidItem = (itemId: number) =>
 // Recommendations
 export const getNextCardRecommendations = () =>
   request<NextCardResponse>("/recommendations/next-card");
+
+/**
+ * Rank cards from a profile the browser derived locally.
+ *
+ * The GET variant ranks against transactions stored server-side, which the
+ * client-only flow never writes — so it would answer from stale data. This
+ * sends aggregates instead: monthly spend and a category breakdown, which is
+ * all the ranking engine reads. No merchant names, dates, amounts or account
+ * numbers are transmitted, and the server stores nothing.
+ */
+export interface StatelessProfileRequest {
+  avg_monthly_spend: number;
+  category_breakdown: Record<string, number>;
+  held_cards: { name: string; issuer?: string; annual_fee?: number }[];
+  credit_score_band?: string | null;
+  recent_card_applications?: number | null;
+  max_results?: number;
+}
+
+export const postStatelessRecommendations = (body: StatelessProfileRequest) =>
+  request<NextCardResponse>("/recommendations/next-card/stateless", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export interface StatelessPortfolioResponse {
+  analyses: {
+    name: string;
+    issuer?: string;
+    estimated_annual_value?: number;
+    annual_fee?: number;
+    net_value?: number;
+    verdict?: string;
+  }[];
+  best_per_category: {
+    category: string;
+    best_card: { name: string; issuer: string } | null;
+    rate: number | null;
+    rationale?: string;
+  }[];
+}
+
+export const postStatelessPortfolio = (body: StatelessProfileRequest) =>
+  request<StatelessPortfolioResponse>("/recommendations/portfolio/stateless", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 export const getPortfolioAnalysis = () =>
   request<PortfolioResponse>("/recommendations/portfolio");
 export const getSpendingProfile = () =>
