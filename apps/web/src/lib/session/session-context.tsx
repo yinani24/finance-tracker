@@ -6,9 +6,9 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 import {
   EMPTY_SESSION,
   type HeldCard,
@@ -67,28 +67,30 @@ function readStored(): SessionState | null {
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<SessionState>(EMPTY_SESSION);
-  // Hydration guard: sessionStorage is unavailable during SSR, so the first
-  // client render must match the server's (empty) output before we restore.
-  const [ready, setReady] = useState(false);
-  const hydrated = useRef(false);
+  // Restore from sessionStorage in the lazy initializer rather than a mount
+  // effect. `readStored` is SSR-safe (it swallows the `sessionStorage`
+  // ReferenceError and returns null on the server), so the server and the first
+  // client render both start from EMPTY_SESSION; `ready` gates consumers until
+  // the client has hydrated, so the restored data never appears before then and
+  // the markup can't mismatch.
+  const [session, setSession] = useState<SessionState>(
+    () => readStored() ?? EMPTY_SESSION
+  );
+  // `false` during SSR + first client render, `true` afterwards — same lifetime
+  // the old `setReady(true)`-in-effect gave, without the cascading setState.
+  const ready = useHydrated();
 
   useEffect(() => {
-    const stored = readStored();
-    if (stored) setSession(stored);
-    hydrated.current = true;
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated.current) return;
+    // Skip the write on the hydrating render: `session` already equals what's in
+    // storage, so there's nothing to persist until it actually changes.
+    if (!ready) return;
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch {
       // Quota or a privacy mode that blocks storage: the session still works
       // in memory for this page, it just won't survive a refresh.
     }
-  }, [session]);
+  }, [session, ready]);
 
   const setStep = useCallback((step: SessionStep) => {
     setSession((s) => ({ ...s, step }));

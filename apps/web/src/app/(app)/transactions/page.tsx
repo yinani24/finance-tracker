@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTransactions, getAccounts, updateTransaction } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -79,16 +79,22 @@ export default function TransactionsPage() {
   // Paginate the (filtered, sorted) list so long statements stay scannable.
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(1);
+  // Jump back to page 1 whenever the filters/search change the result set.
+  // Adjusting state during render off a changing key is React's recommended
+  // pattern for this (https://react.dev/learn/you-might-not-need-an-effect),
+  // and avoids a synchronous setState inside an effect.
+  const filterKey = `${search}|${filterAccount ?? ""}|${filterCategory ?? ""}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paged = sorted.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
-  // Jump back to page 1 whenever the filters/search change the result set.
-  useEffect(() => {
-    setPage(1);
-  }, [search, filterAccount, filterCategory]);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">

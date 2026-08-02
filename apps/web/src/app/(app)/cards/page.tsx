@@ -12,7 +12,6 @@ import {
 import type { Card } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
 import { Plus, CreditCard, Check, ArrowRight, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
 import {
   Dialog,
   DialogTrigger,
