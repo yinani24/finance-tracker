@@ -37,6 +37,8 @@ class TransactionRead(BaseModel):
     merchant: str
     normalized_merchant: Optional[str]
     category: Optional[str]
+    category_confidence: Optional[float]
+    enriched_at: Optional[datetime]
     is_income: bool
     is_savings: bool
     source: Optional[str]

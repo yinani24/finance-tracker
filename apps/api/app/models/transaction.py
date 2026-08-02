@@ -20,6 +20,11 @@ class Transaction(Base):
     merchant: Mapped[str] = mapped_column(String(255))
     normalized_merchant: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # Enrichment provenance: the provider's confidence in `category` (0..1) and
+    # when it last classified this row. Both NULL until a provider assigns a
+    # category, so `enriched_at IS NULL` selects rows still needing a backfill.
+    category_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    enriched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     is_income: Mapped[bool] = mapped_column(Boolean, default=False)
     is_savings: Mapped[bool] = mapped_column(Boolean, default=False)
     source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

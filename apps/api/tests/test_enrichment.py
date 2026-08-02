@@ -194,6 +194,23 @@ class TestSyncEnrichmentHook:
         txn = db_session.query(Transaction).filter_by(user_id=1).one()
         assert txn.category == "dining"
         assert txn.normalized_merchant == "STARBUCKS_CLEAN"
+        # Provenance is stamped when the provider assigns a category.
+        assert txn.category_confidence == 0.99
+        assert txn.enriched_at is not None
+
+    def test_fail_open_leaves_provenance_unstamped(self, client, db_session):
+        # A provider blow-up must not stamp confidence/enriched_at, so the row
+        # stays a backfill candidate (enriched_at IS NULL).
+        self._item_id = self._make_plaid_item(db_session).id
+        with patch(
+            "app.services.enrichment.apply.get_provider", return_value=_BoomProvider()
+        ):
+            resp = self._run_sync(client)
+        assert resp.status_code == 200
+
+        txn = db_session.query(Transaction).filter_by(user_id=1).one()
+        assert txn.category_confidence is None
+        assert txn.enriched_at is None
 
     def test_fail_open_keeps_raw_category(self, client, db_session):
         self._item_id = self._make_plaid_item(db_session).id
