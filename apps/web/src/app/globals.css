@@ -431,3 +431,74 @@
     animation: none !important;
   }
 }
+/* ── Reference dashboard patterns ───────────────────────────────────────────
+   Measured from the Composio project dashboard: flat panels, hairline-divided
+   label/value rows, an affordance arrow revealed on hover, and dashed-outline
+   placeholders for "create" actions. Motion uses the shared 150ms house curve. */
+
+/* A titled panel: header block, hairline rule, then label/value rows. */
+.panel {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;              /* the reference is nearly square-cornered */
+  overflow: hidden;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding: 1rem 1.15rem 0.85rem;
+}
+.panel-body { padding: 0 1.15rem 0.4rem; }
+/* label left, value right, hairline between rows */
+.panel-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+}
+.panel-row:first-child { border-top: 0; }
+.panel-label { color: var(--color-muted-foreground); }
+.panel-value { color: var(--color-card-foreground); font-variant-numeric: tabular-nums; }
+/* monospace chip for IDs / codes */
+.mono-chip {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  background: var(--color-accent);
+  color: var(--color-card-foreground);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+/* Interactive panel: lifts its background and reveals a trailing arrow. */
+.panel-link { display: block; text-decoration: none; }
+.panel-link:hover .panel,
+.panel-link:focus-visible .panel { background: var(--color-accent); }
+.hover-arrow {
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity var(--dur-fast) var(--ease-composio),
+              transform var(--dur-fast) var(--ease-composio);
+}
+.panel-link:hover .hover-arrow,
+.panel-link:focus-visible .hover-arrow { opacity: 1; transform: translateX(0); }
+
+/* Dashed placeholder — the "create a new thing" tile. */
+.dashed-card {
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.4rem;
+  min-height: 148px;
+  color: var(--color-muted);
+  transition: border-color var(--dur-fast) var(--ease-composio),
+              color var(--dur-fast) var(--ease-composio),
+              background-color var(--dur-fast) var(--ease-composio);
+}
+.dashed-card:hover {
+  border-color: var(--color-primary);
+  color: var(--color-card-foreground);
+  background: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-arrow { transition: none; }
+}
