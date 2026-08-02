@@ -146,32 +146,50 @@ export function StatementImport() {
           <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
             Recent imports
           </div>
-          <ul className="text-sm text-card-foreground divide-y divide-border">
-            {pagedImports.map((imp) => (
-              <li key={imp.id} className="flex items-center justify-between py-2">
-                <span className="text-muted">
-                  {new Date(imp.created_at).toLocaleDateString()} ·{" "}
-                  {imp.import_type.toUpperCase()}
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className="font-mono tabular-nums">
-                    {imp.transaction_count} txns
-                  </span>
-                  <span
-                    className={
-                      imp.status === "completed"
-                        ? "text-success"
-                        : imp.status === "failed"
-                          ? "text-destructive"
-                          : "text-muted"
-                    }
+          <div className="overflow-x-auto border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Date</th>
+                  <th className="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Account</th>
+                  <th className="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Type</th>
+                  <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Txns</th>
+                  <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedImports.map((imp) => (
+                  <tr
+                    key={imp.id}
+                    className="border-b border-border last:border-0 motion-base hover:bg-accent/40"
                   >
-                    {imp.status}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+                    <td className="px-3 py-2 font-mono tabular-nums text-muted whitespace-nowrap">
+                      {new Date(imp.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-3 py-2 text-card-foreground truncate max-w-[180px]">
+                      {accounts.find((a) => a.id === imp.account_id)?.name ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="mono-chip uppercase">{imp.import_type}</span>
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-card-foreground">
+                      {imp.transaction_count}
+                    </td>
+                    <td
+                      className={
+                        "px-3 py-2 text-right whitespace-nowrap " +
+                        (imp.status === "failed"
+                          ? "text-destructive"
+                          : "text-success")
+                      }
+                    >
+                      {imp.status}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {importPages > 1 && (
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="text-muted">
