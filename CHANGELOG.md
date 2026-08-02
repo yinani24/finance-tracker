@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Portfolio tab now renders per-category "best held card" guidance (#183).**
+  The `/recommendations/portfolio` response already carried `category_assignments`
+  (added backend-side in #181 / #177), but `PortfolioTab` dropped it. Added a
+  "Which card to use where" section below the per-card analysis: one row per
+  spent-in category showing the human-readable category, the winning held card
+  (name + issuer), its per-category earn rate (percent), and the rationale.
+  Delivers PRD User Story 2 ("which of my cards to use for dining vs. groceries").
+  Types (`BestHeldCard`, `CategoryAssignment`, `PortfolioResponse.category_assignments`)
+  added to `apps/web/src/lib/types.ts`; empty/legacy snapshots render nothing (no crash).
 - **Data-architecture & product-evolution plan (`docs/prd/data-architecture-and-evolution.md`).**
   Documents today's real data flow (Plaid + statement import → dedup → enrichment →
   spending profile → recommendation engine) and an honest limitations list; surveys
