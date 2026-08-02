@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Wallet,
-  ArrowLeftRight,
+  House,
+  Landmark,
+  Receipt,
   Target,
-  CreditCard,
+  WalletCards,
   Settings,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -29,10 +31,10 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "Overview" },
-  { href: "/accounts", label: "Accounts", icon: Wallet, section: "Overview" },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight, section: "Overview" },
-  { href: "/cards", label: "Cards", icon: CreditCard, section: "Optimize" },
+  { href: "/dashboard", label: "Dashboard", icon: House, section: "Overview" },
+  { href: "/accounts", label: "Accounts", icon: Landmark, section: "Overview" },
+  { href: "/transactions", label: "Transactions", icon: Receipt, section: "Overview" },
+  { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
   { href: "/goals", label: "Goals", icon: Target, section: "Optimize" },
   { href: "/settings", label: "Settings", icon: Settings, section: null },
 ];
@@ -163,7 +165,7 @@ export function Sidebar() {
             collapsed ? "justify-center p-2.5" : "gap-3 px-4 py-2.5"
           )}
         >
-          <Search className="w-5 h-5 flex-shrink-0" />
+          <Search className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
           {!collapsed && (
             <>
               <span className="truncate">Search</span>
@@ -207,13 +209,31 @@ export function Sidebar() {
                     : "text-muted hover:text-card-foreground"
                 )}
               >
-                <Icon className="nav-icon w-5 h-5 flex-shrink-0" />
+                <Icon className="nav-icon w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
                 {!collapsed && <span className="truncate">{label}</span>}
               </Link>
             </div>
           );
         })}
       </nav>
+
+      {/* Contextual callout pinned above the account block, as in the
+          reference's promo slot. */}
+      {!collapsed && (
+        <Link
+          href="/transactions"
+          className="mx-3 mb-2 block rounded-lg border border-primary/25 bg-primary/10 p-3 motion-base hover:bg-primary/15"
+        >
+          <span className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-card-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-link" />
+            Import a statement
+            <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+          </span>
+          <span className="block text-xs leading-relaxed text-muted">
+            Add a CSV or PDF to sharpen your card recommendations.
+          </span>
+        </Link>
+      )}
 
       <div className="p-2 border-t border-border">
         {user && (
