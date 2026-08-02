@@ -13,11 +13,14 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  ChevronsUpDown,
+  Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
-import { getMe } from "@/lib/api";
+import { getMe, getAccounts } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -74,6 +77,14 @@ export function Sidebar() {
       return !prev;
     });
   }
+
+  // The switcher shows the primary linked account; falls back to the app name
+  // when nothing is connected yet.
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: getAccounts,
+  });
+  const primaryAccount = accounts[0]?.institution_name || accounts[0]?.name || "Finance Tracker";
 
   const displayName = appUser?.full_name || (user ? getDisplayName(user) : "");
   const initials = user ? getInitials(displayName) : "";
@@ -151,6 +162,29 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Context switcher pinned below the brand, as in the reference: avatar,
+          a small "Account" caption, the current name, and a swap affordance. */}
+      {!collapsed && (
+        <button
+          type="button"
+          title="Switch account"
+          className="w-full flex items-center gap-3 px-4 py-3 border-b border-border text-left motion-base hover:bg-accent/50"
+        >
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+            {primaryAccount.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Account
+            </span>
+            <span className="block truncate text-sm font-medium text-card-foreground">
+              {primaryAccount}
+            </span>
+          </span>
+          <ChevronsUpDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        </button>
+      )}
+
       {/* Search affordance — mirrors the dashboard-app convention of a
           command-palette row pinned above the nav. */}
       <div className="pt-2">
@@ -214,6 +248,24 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Contextual callout pinned above the account block, as in the
+          reference's promo slot. */}
+      {!collapsed && (
+        <Link
+          href="/transactions"
+          className="mx-3 mb-2 block rounded-lg border border-primary/25 bg-primary/10 p-3 motion-base hover:bg-primary/15"
+        >
+          <span className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-card-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-link" />
+            Import a statement
+            <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+          </span>
+          <span className="block text-xs leading-relaxed text-muted">
+            Add a CSV or PDF to sharpen your card recommendations.
+          </span>
+        </Link>
+      )}
 
       <div className="p-2 border-t border-border">
         {user && (
