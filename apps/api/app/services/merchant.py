@@ -23,10 +23,24 @@ _PREFIX = re.compile(
     re.IGNORECASE,
 )
 # Trailing noise: a phone number, then a 2-letter state code, then a store #.
+# The leading "<TOKEN>*" marker a processor stamps before the real merchant.
+_PROCESSOR_TOKEN = re.compile(r"^\s*([A-Za-z]{2,8})\s*\*")
 _TRAIL_PHONE = re.compile(r"\s+\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b")
 _TRAIL_STATE = re.compile(r"\s+[A-Za-z]{2}$")
 _TRAIL_STORE = re.compile(r"\s+#?\d{3,}\b")
 _WS = re.compile(r"\s+")
+
+
+def extract_processor(raw: str) -> str | None:
+    """Return the leading payment-processor token (``SQ``, ``TST``, ``DD`` …).
+
+    Card networks record ``<PROCESSOR>*<REAL MERCHANT>``, so the processor is
+    often a stronger category signal than the merchant name: a charge through
+    Toast is a restaurant even when we've never heard of the restaurant.
+    Returns the upper-cased token, or ``None`` when there is no ``*`` marker.
+    """
+    m = _PROCESSOR_TOKEN.match(raw or "")
+    return m.group(1).upper() if m else None
 
 
 def normalize_merchant(raw: str) -> str:
