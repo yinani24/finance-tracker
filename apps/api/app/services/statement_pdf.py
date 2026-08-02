@@ -151,17 +151,12 @@ def parse_pdf(
     if rows:
         return rows, errors
 
-    llm_rows, llm_errors = _items_to_rows(_llm_extract_rows(text))
-    if is_credit:
-        llm_rows = [
-            ParsedRow(
-                occurred_on=r.occurred_on,
-                merchant=r.merchant,
-                signed_amount=-r.signed_amount,
-            )
-            for r in llm_rows
-        ]
-    return llm_rows, llm_errors
+    # NOTE: no sign flip here. The system prompt already instructs the model to
+    # return our convention (negative = money out), so its output is normalized
+    # before it reaches us. Flipping again for a credit account inverted every
+    # spend into income on the LLM path (#203). Only the heuristic path needs
+    # the flip, because it reads the statement's own raw numbers.
+    return _items_to_rows(_llm_extract_rows(text))
 
 
 def _infer_year(text: str) -> int | None:

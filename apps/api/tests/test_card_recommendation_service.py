@@ -820,3 +820,45 @@ class TestBestCardPerCategory:
         assert len(assignments) == 1
         assert assignments[0]["best_card"]["name"] == "Store Card"
         assert assignments[0]["rate"] == 0
+
+
+class TestOfferCreditValue:
+    """Credits attached to a sign-up offer are first-year value too (#202)."""
+
+    def test_usd_offer_credit_counts(self):
+        offer = {"credits": [{"value": 400, "weight": 1}]}
+        assert CardRecommendationService._offer_credit_value(offer) == 400.0
+
+    def test_points_offer_credit_valued_at_cents(self):
+        # A 50,000-point free-night certificate is ~$500 at 1¢, not $50,000.
+        offer = {"credits": [{"value": 50000, "weight": 1, "currency": "MARRIOTT"}]}
+        assert CardRecommendationService._offer_credit_value(offer) == 500.0
+
+    def test_fieldless_offer_credit_is_dollars_not_card_points(self):
+        # Statement credits / waived fees carry no currency but ARE dollars —
+        # they must not inherit a card's points currency.
+        offer = {"credits": [{"description": "Statement Credit", "value": 400}]}
+        assert CardRecommendationService._offer_credit_value(offer) == 400.0
+
+    def test_weight_is_applied(self):
+        offer = {"credits": [{"value": 100, "weight": 0.6}]}
+        assert CardRecommendationService._offer_credit_value(offer) == 60.0
+
+    def test_no_credits_is_zero(self):
+        assert CardRecommendationService._offer_credit_value({}) == 0.0
+
+    def test_offer_credits_reach_the_score(self):
+        card = {
+            "cardId": "c1", "name": "Credited", "issuer": "TEST", "network": "VISA",
+            "currency": "TEST_POINTS", "isBusiness": False, "annualFee": 0,
+            "isAnnualFeeWaived": False, "universalCashbackPercent": 1,
+            "credits": [], "discontinued": False,
+            "offers": [{
+                "spend": 500, "days": 90, "amount": [{"amount": 10000}],
+                "credits": [{"description": "Statement Credit", "value": 400}],
+            }],
+        }
+        profile = {"avg_monthly_spend": 1000.0, "category_breakdown": {}, "top_merchants": []}
+        (res,) = CardRecommendationService().recommend_next_card(profile, [], [card])
+        # $100 bonus (10k pts @1c) + ongoing - $0 fee + $400 offer credit
+        assert res["score"] > 400.0
