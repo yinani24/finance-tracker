@@ -154,6 +154,51 @@ class TestBonusValueUsd:
         offer = {"amount": [{"amount": 50000}, {"amount": 100, "currency": "USD"}]}
         assert CardRecommendationService._bonus_points(offer) == 50000.0
 
+    # --- issue #201: field-less amount inherits the card's currency ---------
+
+    def test_fieldless_amount_on_usd_card_is_dollars_not_points(self):
+        # A $250 cash bonus with no per-amount currency, on a currency:"USD"
+        # cashback card, must score $250 — not $2.50 (the ~100× bug).
+        offer = {"amount": [{"amount": 250}]}
+        assert (
+            CardRecommendationService._bonus_value_usd(offer, 1.0, "USD") == 250.0
+        )
+
+    def test_fieldless_amount_on_points_card_still_converts_as_points(self):
+        # Same field-less shape on a points card keeps points valuation.
+        offer = {"amount": [{"amount": 60000}]}
+        assert (
+            CardRecommendationService._bonus_value_usd(offer, 1.0, "CHASE") == 600.0
+        )
+
+    def test_explicit_usd_amount_unaffected_by_points_card_currency(self):
+        # An explicitly USD-tagged amount stays dollars even on a points card.
+        offer = {"amount": [{"amount": 200, "currency": "USD"}]}
+        assert (
+            CardRecommendationService._bonus_value_usd(offer, 1.0, "CHASE") == 200.0
+        )
+
+    def test_mixed_offer_on_usd_card_sums_dollars(self):
+        # Field-less + explicit-USD amounts on a USD card: both dollars.
+        offer = {"amount": [{"amount": 250}, {"amount": 100, "currency": "USD"}]}
+        assert (
+            CardRecommendationService._bonus_value_usd(offer, 1.0, "USD") == 350.0
+        )
+
+    def test_fieldless_without_card_currency_defaults_to_points(self):
+        # No card context (legacy bare call) → field-less treated as points.
+        offer = {"amount": [{"amount": 75000}]}
+        assert CardRecommendationService._bonus_value_usd(offer) == 750.0
+
+    def test_bonus_points_excludes_fieldless_amount_on_usd_card(self):
+        # The explanation copy must not render "(250 pts @ 1.0¢)" for cash.
+        offer = {"amount": [{"amount": 250}]}
+        assert CardRecommendationService._bonus_points(offer, "USD") == 0.0
+
+    def test_bonus_points_counts_fieldless_amount_on_points_card(self):
+        offer = {"amount": [{"amount": 60000}]}
+        assert CardRecommendationService._bonus_points(offer, "CHASE") == 60000.0
+
 
 class TestCreditValue:
     """Recurring/anniversary credit valuation in dollars."""
@@ -232,6 +277,40 @@ class TestCrossTypeRanking:
         assert "bonus points" not in explanation
         # points bonus shows the conversion clause
         assert "pts @" in explanation
+
+
+class TestFieldlessCashbackBonus:
+    """Field-less USD-card bonuses value at face, not ~1% (issue #201)."""
+
+    # A real-dataset shape: a currency:"USD" cashback card whose $250 bonus
+    # amount carries no per-amount currency field. Before the fix this scored
+    # $2.50 of bonus (~100× low) and lost to any modest points card.
+    USD_FIELDLESS_CARD = {
+        "cardId": "card-usd-fieldless", "name": "Cash Rewards", "issuer": "TESTBANK",
+        "network": "VISA", "currency": "USD", "annualFee": 0,
+        "universalCashbackPercent": 1.5, "credits": [],
+        "offers": [{"spend": 1000, "amount": [{"amount": 250}], "days": 90, "credits": []}],
+        "discontinued": False,
+    }
+
+    def test_fieldless_usd_bonus_scores_full_dollar_value(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(
+            _make_profile(2000.0), [], [self.USD_FIELDLESS_CARD]
+        )
+        rec = results[0]
+        assert rec["bonus_value"] == 250.0  # not 2.50
+        # $250 bonus + 1.5% × $24k ongoing = $250 + $360 = $610
+        assert rec["score"] == 610.0
+
+    def test_fieldless_usd_bonus_explanation_has_no_points_clause(self):
+        service = CardRecommendationService()
+        results = service.recommend_next_card(
+            _make_profile(2000.0), [], [self.USD_FIELDLESS_CARD]
+        )
+        explanation = results[0]["explanation"]
+        assert "pts @" not in explanation
+        assert "Earn ~$250 in bonus value" in explanation
 
 
 class TestOngoingRewards:
