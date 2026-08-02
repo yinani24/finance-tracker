@@ -141,7 +141,7 @@ export default function TransactionsPage() {
 
       {/* Segmented pill filters — the taxonomy is a small fixed set, so a
           visible toggle row beats a dropdown that hides every option. */}
-      <div className="flex flex-wrap items-center gap-1.5 mb-6">
+      <div className="flex flex-wrap items-center gap-5 mb-6 border-b border-border">
         {[null, ...TAXONOMY_CATEGORIES].map((c) => {
           const active = c === null ? !filterCategory : filterCategory === c;
           return (
@@ -151,10 +151,10 @@ export default function TransactionsPage() {
               onClick={() => setFilterCategory(c ?? undefined)}
               data-active={active}
               className={
-                "rounded-full px-3 py-1.5 text-xs font-medium capitalize motion-base " +
+                "relative -mb-px border-b-2 pb-2.5 pt-1 text-[13px] font-medium capitalize motion-base " +
                 (active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted hover:bg-accent/50 hover:text-card-foreground")
+                  ? "border-primary text-card-foreground"
+                  : "border-transparent text-muted hover:text-card-foreground")
               }
             >
               {c ?? "All"}
@@ -169,7 +169,7 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="bg-card rounded-md border border-border overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border text-left">
