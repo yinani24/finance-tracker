@@ -197,7 +197,10 @@ export default function TransactionsPage() {
                       <td className="px-5 py-3 text-sm text-muted font-mono tabular-nums">
                         {t.occurredOn}
                       </td>
-                      <td className="px-5 py-3 text-sm font-medium text-card-foreground">
+                      <td
+                        className="px-5 py-3 text-sm font-medium text-card-foreground"
+                        title={t.rawMerchant ?? undefined}
+                      >
                         {t.merchant}
                       </td>
                       <td className="px-5 py-3">

@@ -11,6 +11,7 @@ import {
   type StatementMetadata,
 } from "@/lib/statement/parse-metadata";
 import { extractText } from "@/lib/statement/parse-pdf";
+import { normalizeMerchant } from "@/lib/statement/normalize-merchant";
 
 /**
  * The one way statements enter the app.
@@ -136,7 +137,12 @@ export function useStatementIngest() {
           addTransactions(
             rows.map((r) => ({
               occurredOn: r.occurredOn,
-              merchant: r.merchant,
+              // Display and grouping use the cleaned name; categorization keeps
+              // reading the raw descriptor, since the processor prefix that
+              // normalization strips ("DD*", "TST*") is often the strongest
+              // category signal there is.
+              merchant: normalizeMerchant(r.merchant),
+              rawMerchant: r.merchant,
               amount: r.signedAmount,
               category: categorize(r.merchant).category,
               sourceId,

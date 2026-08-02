@@ -44,7 +44,10 @@ export interface CreditStanding {
 export interface SessionTransaction {
   id: string;
   occurredOn: string; // ISO date
+  /** Cleaned name, used for grouping and display. */
   merchant: string;
+  /** The descriptor exactly as the statement printed it. */
+  rawMerchant?: string;
   /** Negative = spend, positive = money in — the app-wide convention. */
   amount: number;
   category: string;
