@@ -49,6 +49,16 @@
   --sidebar-accent-foreground: #17171a;
   --sidebar-border: #e7e5e0;
   --sidebar-ring: #2323dc;
+
+  /*
+   * Motion foundation (Composio-derived).
+   * `--ease-composio` is the house curve; everything interactive references it
+   * so the whole app can be retuned from these four declarations.
+   */
+  --ease-composio: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 150ms; /* hover, active, highlight — the default */
+  --dur-page: 220ms; /* route-level enter animations */
+  --dur-slow: 250ms; /* the longest we ever go */
 }
 
 /* Tasteful dark version of the same system: near-black canvas, same blue accent. */
@@ -165,5 +175,240 @@
   td[data-currency],
   [data-currency] {
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Keyboard focus is never animated away and never suppressed — the ring uses
+   * the existing token so it reads correctly in both themes.
+   */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion utilities
+ *
+ * Composio's feel is crisp and quick rather than flashy: one curve, one short
+ * duration, applied consistently. These classes are the only place a duration
+ * or curve is hard-coded — everything else composes them.
+ * ------------------------------------------------------------------------ */
+
+@layer components {
+  /* The house transition. Covers the properties we actually animate. */
+  .motion-base {
+    transition-property: color, background-color, border-color, opacity,
+      transform, box-shadow;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-composio);
+  }
+
+  /* Affordances (chevrons, row actions) that fade up on hover of a parent. */
+  .motion-fade {
+    transition: opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  /*
+   * Sidebar nav item. The active fill and the left indicator are pseudo
+   * elements so they can animate independently of the label's colour shift,
+   * and so no layout is disturbed when the state flips.
+   */
+  .nav-item {
+    position: relative;
+    isolation: isolate;
+    transition: color var(--dur-fast) var(--ease-composio);
+  }
+
+  /* Animated fill: scales+fades in behind the content. */
+  .nav-item::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-color: var(--sidebar-accent);
+    opacity: 0;
+    transform: scale(0.97);
+    transition: opacity var(--dur-fast) var(--ease-composio),
+      transform var(--dur-fast) var(--ease-composio);
+  }
+
+  .nav-item:hover::before {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  .nav-item[data-active="true"]::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Left accent bar: grows out from the vertical centre. */
+  .nav-item::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 2px;
+    height: 60%;
+    border-radius: 999px;
+    background-color: var(--sidebar-primary);
+    transform: translateY(-50%) scaleY(0);
+    transform-origin: center;
+    opacity: 0;
+    transition: transform var(--dur-fast) var(--ease-composio),
+      opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  .nav-item[data-active="true"]::after {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+  }
+
+  /* Icons sit at reduced weight until the item is hovered or active. */
+  .nav-item .nav-icon {
+    opacity: 0.7;
+    transition: opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  .nav-item:hover .nav-icon,
+  .nav-item[data-active="true"] .nav-icon {
+    opacity: 1;
+  }
+
+  /*
+   * Segmented control (Cards tab strip). The active pill is a single absolutely
+   * positioned element whose left/width are driven by the active tab's
+   * measurements, so it slides between tabs instead of snapping.
+   */
+  .segmented {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .segmented-indicator {
+    position: absolute;
+    z-index: -1;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    border-radius: 999px;
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    transition: left var(--dur-fast) var(--ease-composio),
+      width var(--dur-fast) var(--ease-composio),
+      opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  /* Before the first measurement lands there is nothing to slide to. */
+  .segmented-indicator[data-ready="false"] {
+    opacity: 0;
+    transition: none;
+  }
+
+  /*
+   * Equal-width variant. When every tab is `flex-1` the indicator's geometry is
+   * pure arithmetic, so it needs no measurement — just `--tab-count` and
+   * `--tab-index`. `--seg-pad` and `--seg-gap` must match the container's
+   * padding and gap utilities.
+   */
+  .segmented-equal {
+    --seg-pad: 0.25rem;
+    --seg-gap: 0.25rem;
+    --seg-w: calc(
+      (100% - 2 * var(--seg-pad) - (var(--tab-count) - 1) * var(--seg-gap)) /
+        var(--tab-count)
+    );
+  }
+
+  .segmented-equal .segmented-indicator {
+    width: var(--seg-w);
+    left: calc(
+      var(--seg-pad) + var(--tab-index) * (var(--seg-w) + var(--seg-gap))
+    );
+  }
+
+  .segmented-item {
+    position: relative;
+    transition: color var(--dur-fast) var(--ease-composio),
+      opacity var(--dur-fast) var(--ease-composio);
+  }
+
+  /*
+   * Row hover for tables and list items. A background shift only — Composio is
+   * flat, so no shadow and no movement.
+   */
+  .row-interactive {
+    transition: background-color var(--dur-fast) var(--ease-composio);
+  }
+
+  /*
+   * Card hover. Deliberately restrained: the border gains emphasis, nothing
+   * else. No shadow bloom — Composio's surfaces are flat.
+   */
+  .card-interactive {
+    transition: border-color var(--dur-fast) var(--ease-composio),
+      background-color var(--dur-fast) var(--ease-composio),
+      transform var(--dur-fast) var(--ease-composio);
+  }
+
+  .card-interactive:hover {
+    border-color: color-mix(in oklab, var(--ring) 35%, var(--border));
+  }
+
+  /*
+   * The single-pixel lift is reserved for cards that are themselves clickable,
+   * so the movement always corresponds to a real affordance. Panels that merely
+   * *contain* controls get the border emphasis only.
+   */
+  a.card-interactive:hover,
+  button.card-interactive:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Route content enter animation — see app/(app)/layout.tsx. */
+  .page-enter {
+    animation: page-enter var(--dur-page) var(--ease-composio) both;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Accessibility: every animation above is decoration, so honour the OS
+ * preference by collapsing it to an instant state change. Focus rings and
+ * colour tokens are untouched, so the UI stays fully legible and navigable.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .nav-item::before,
+  .nav-item::after {
+    transform: none !important;
+  }
+
+  a.card-interactive:hover,
+  button.card-interactive:hover {
+    transform: none !important;
+  }
+
+  .page-enter {
+    animation: none !important;
   }
 }

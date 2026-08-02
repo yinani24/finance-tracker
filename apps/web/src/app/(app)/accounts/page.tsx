@@ -71,7 +71,7 @@ export default function AccountsPage() {
           </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors active:translate-y-px">
+          <DialogTrigger className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-hover motion-base active:translate-y-px">
             <Plus className="w-4 h-4" />
             Add Account
           </DialogTrigger>
@@ -105,7 +105,7 @@ export default function AccountsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Chase Checking"
                   />
                 </div>
@@ -116,7 +116,7 @@ export default function AccountsPage() {
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                   >
                     {ACCOUNT_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -133,7 +133,7 @@ export default function AccountsPage() {
                     type="text"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="e.g. Chase"
                   />
                 </div>
@@ -146,7 +146,7 @@ export default function AccountsPage() {
                     step="0.01"
                     value={balance}
                     onChange={(e) => setBalance(e.target.value)}
-                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+                    className="w-full border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
                     placeholder="0.00"
                   />
                 </div>
@@ -162,7 +162,7 @@ export default function AccountsPage() {
                 type="submit"
                 form="add-account-form"
                 disabled={mutation.isPending}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 transition-colors active:translate-y-px"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover disabled:opacity-50 motion-base active:translate-y-px"
               >
                 {mutation.isPending ? "Creating..." : "Create Account"}
               </button>
@@ -194,7 +194,7 @@ export default function AccountsPage() {
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="bg-card rounded-xl border border-border p-5 flex items-center justify-between"
+              className="card-interactive bg-card rounded-xl border border-border p-5 flex items-center justify-between"
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">

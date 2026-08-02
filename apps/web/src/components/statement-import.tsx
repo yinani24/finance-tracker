@@ -70,7 +70,7 @@ export function StatementImport() {
           onChange={(e) =>
             setAccountId(e.target.value ? Number(e.target.value) : undefined)
           }
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
         >
           <option value="">Select account…</option>
           {accounts.map((a) => (
@@ -91,7 +91,7 @@ export function StatementImport() {
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+          className="rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 motion-base"
         >
           {mutation.isPending ? "Importing…" : "Import"}
         </button>

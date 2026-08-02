@@ -95,7 +95,7 @@ export default function ExplorePage() {
   const to = Math.min((page + 1) * PAGE_SIZE, total);
 
   const selectClass =
-    "border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors";
+    "border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base";
 
   return (
     <div>
@@ -119,7 +119,7 @@ export default function ExplorePage() {
             placeholder="Search cards..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors"
+            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
           />
         </div>
         <select
@@ -211,7 +211,7 @@ export default function ExplorePage() {
                 <Link
                   key={card.cardId}
                   href={`/cards/explore/${encodeURIComponent(card.cardId)}`}
-                  className="flex flex-col bg-card rounded-xl border border-border p-5 hover:border-ring/50 hover:bg-card/80 transition-colors"
+                  className="card-interactive flex flex-col bg-card rounded-xl border border-border p-5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -270,14 +270,14 @@ export default function ExplorePage() {
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/10 transition-colors"
+                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/10 motion-base"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage((p) => (to < total ? p + 1 : p))}
                   disabled={to >= total}
-                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/10 transition-colors"
+                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/10 motion-base"
                 >
                   Next
                 </button>
