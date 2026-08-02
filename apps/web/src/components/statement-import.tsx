@@ -98,7 +98,7 @@ export function StatementImport() {
       </div>
 
       {mutation.isError && (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-500">
+        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
           {mutation.error instanceof Error
             ? mutation.error.message
             : "Import failed"}
@@ -106,7 +106,7 @@ export function StatementImport() {
       )}
 
       {summary && (
-        <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-card-foreground">
+        <div className="mt-4 rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-card-foreground">
           Imported <span className="font-medium">{summary.added}</span> new
           transaction{summary.added === 1 ? "" : "s"} from {summary.total_rows} row
           {summary.total_rows === 1 ? "" : "s"} · {summary.duplicates} duplicate
@@ -149,9 +149,9 @@ export function StatementImport() {
                   <span
                     className={
                       imp.status === "completed"
-                        ? "text-emerald-500"
+                        ? "text-success"
                         : imp.status === "failed"
-                          ? "text-red-500"
+                          ? "text-destructive"
                           : "text-muted"
                     }
                   >

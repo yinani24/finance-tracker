@@ -132,9 +132,9 @@ function PortfolioTab() {
   }
 
   const statusIcon = {
-    good: <CheckCircle className="w-5 h-5 text-emerald-500" />,
+    good: <CheckCircle className="w-5 h-5 text-success" />,
     underperforming: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-    costing_money: <AlertTriangle className="w-5 h-5 text-red-500" />,
+    costing_money: <AlertTriangle className="w-5 h-5 text-destructive" />,
   };
 
   return (
@@ -172,7 +172,7 @@ function PortfolioTab() {
             <div>
               <span className="text-muted">Net:</span>{" "}
               <span
-                className={`font-mono font-medium ${card.net_value >= 0 ? "text-emerald-500" : "text-red-500"}`}
+                className={`font-mono font-medium ${card.net_value >= 0 ? "text-success" : "text-destructive"}`}
               >
                 {formatCurrency(card.net_value)}
               </span>
@@ -204,7 +204,7 @@ function PortfolioTab() {
                       <span className="text-muted">
                         Fee: {formatCurrency(alt.card.annualFee)}
                       </span>
-                      <span className="text-emerald-500 font-mono">
+                      <span className="text-success font-mono">
                         Net: {formatCurrency(alt.net_value)}
                       </span>
                     </div>
@@ -305,7 +305,7 @@ function SpendingTab() {
               </div>
               <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-emerald-500"
+                  className="h-full rounded-full bg-success"
                   style={{
                     width: `${Math.max(2, (cat.monthly_avg / maxSpend) * 100)}%`,
                   }}
