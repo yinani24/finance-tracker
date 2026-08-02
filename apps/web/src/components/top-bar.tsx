@@ -2,14 +2,14 @@
 
 import { Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function TopBar() {
   const { setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  // The theme toggle depends on the resolved (client-only) theme, so it must not
+  // render until the client has hydrated — otherwise the icon flashes/mismatches.
+  const mounted = useHydrated();
 
   function toggleTheme() {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");

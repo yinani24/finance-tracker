@@ -42,6 +42,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   richer card data). Planning doc only — no application code changed.
 
 ### Fixed
+- **Web trunk no longer fails eslint / `next build` on `react-hooks/set-state-in-effect` (#229).**
+  Four mount effects that synchronously called `setState` (the newly-enforced rule
+  flags these as cascading renders, and `next build` runs eslint so a production
+  build was broken on trunk) were replaced with the React-idiomatic equivalents,
+  each preserving behavior and SSR/hydration safety:
+  - `top-bar.tsx` and `session-context.tsx` — their `mounted` / `ready` hydration
+    flags now come from a shared `useHydrated()` hook (`useSyncExternalStore` with
+    a `false` server snapshot / `true` client snapshot) instead of
+    `useState(false)` + `useEffect(() => setState(true), [])`. The session is now
+    restored from `sessionStorage` in a lazy `useState` initializer rather than a
+    restore effect.
+  - `sidebar.tsx` — the persisted `collapsed` flag is read through
+    `useSyncExternalStore` backed by a tiny `localStorage` store (server snapshot
+    `false`), so it restores without a setState-in-effect and stays in sync across
+    mounted sidebars.
+  - `transactions/page.tsx` — the "reset to page 1 when filters change" effect
+    became an adjust-state-during-render off a filter key, per React's
+    "you might not need an effect" guidance.
+  Also cleared three `no-unused-vars` warnings (`Link` in `cards/page.tsx`,
+  `PanelLeftOpen` in `sidebar.tsx`, an unused `<T>` on `fetchWithAuth` in `api.ts`).
+  `npm run lint` and `npx tsc --noEmit` are now clean; the eslint + TypeScript
+  build gates pass. (`/cards/explore` still fails static prerender for a
+  separate, pre-existing reason — it needs Supabase env vars at build time —
+  which is out of scope here.)
 - **Insights "Snooze" silently failed with HTTP 422 (#200).** The Insights page
   built the snooze target with `new Date().toISOString()` and sent the full
   datetime (e.g. `"2026-08-23T14:23:45.123Z"`), but `SnoozeRequest.until` is a
