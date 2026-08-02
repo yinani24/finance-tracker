@@ -11,6 +11,10 @@ export interface UserPreference {
   user_id: number;
   theme: string;
   timezone: string;
+  /** Coarse credit band used to estimate approval odds; null = not provided. */
+  credit_score_band?: string | null;
+  /** Cards opened in the last 24 months (drives issuer velocity rules). */
+  recent_card_applications?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -166,6 +170,13 @@ export interface NextCardRecommendation {
   months_to_hit: number;
   achievable: boolean;
   explanation: string;
+  /** 0..1 estimated chance of approval; 1 when no credit profile is set. */
+  approval_odds?: number;
+  /** Band label ("excellent" | "good" | "fair" | "poor"), null when unknown. */
+  approval_label?: string | null;
+  approval_reason?: string | null;
+  /** score x approval_odds — what the ranking actually sorts on. */
+  expected_value?: number;
 }
 
 export interface NextCardResponse {

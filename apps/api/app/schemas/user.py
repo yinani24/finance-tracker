@@ -17,6 +17,8 @@ class PreferenceRead(BaseModel):
     theme: str
     timezone: str
     currency: str
+    credit_score_band: Optional[str] = None
+    recent_card_applications: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
@@ -24,4 +26,6 @@ class PreferenceRead(BaseModel):
 class PreferenceUpdate(BaseModel):
     theme: Optional[str] = None
     timezone: Optional[str] = None
+    credit_score_band: Optional[str] = None
+    recent_card_applications: Optional[int] = None
     currency: Optional[str] = None

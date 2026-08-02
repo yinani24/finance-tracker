@@ -70,6 +70,23 @@ class RecommendationSnapshotService:
             "computed_at": str(profile.computed_at),
         }
 
+    def _get_approval_profile(self, user_id: int):
+        """Build an ``ApprovalProfile`` from the user's stored credit standing.
+
+        Returns ``None`` when no band has been set, which makes odds estimation
+        a no-op and leaves the ranking on headline value.
+        """
+        from app.models.user import UserPreference
+        from app.services.approval_odds import ApprovalProfile
+
+        pref = self.db.get(UserPreference, user_id)
+        if not pref or not pref.credit_score_band:
+            return None
+        return ApprovalProfile(
+            score_band=pref.credit_score_band,
+            recent_applications=pref.recent_card_applications,
+        )
+
     def get_recommendations(self, user_id: int, rec_type: str) -> Dict:
         profile = get_or_refresh_profile(self.db, user_id)
         user_cards = self._get_user_cards(user_id)
@@ -82,11 +99,21 @@ class RecommendationSnapshotService:
         # in-memory read on the hot path, not an extra upstream round-trip.
         available_cards = _fetch_cards()
 
+        # The user's credit standing changes the RANKING (expected value =
+        # value x approval odds), so it belongs in the cache key too.
+        approval_profile = self._get_approval_profile(user_id)
+
         profile_json = profile.category_breakdown_json + str(profile.avg_monthly_spend)
         user_cards_json = json.dumps(user_cards, sort_keys=True)
         dataset_json = json.dumps(available_cards, sort_keys=True)
         current_hash = _compute_inputs_hash(
-            profile_json, user_cards_json, dataset_json, settings.points_value_cents
+            profile_json,
+            user_cards_json,
+            dataset_json,
+            settings.points_value_cents,
+            f"{approval_profile.score_band}:{approval_profile.recent_applications}"
+            if approval_profile
+            else "no-credit-profile",
         )
 
         # Check cache
@@ -112,6 +139,7 @@ class RecommendationSnapshotService:
                 user_cards,
                 available_cards,
                 points_value_cents=settings.points_value_cents,
+                approval_profile=approval_profile,
             )
         else:
             # Portfolio: cache the per-card analyses AND the per-category "best

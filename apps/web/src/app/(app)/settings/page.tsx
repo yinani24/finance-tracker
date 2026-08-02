@@ -10,10 +10,11 @@ import {
 } from "@/lib/api";
 import { PlaidLinkButton } from "@/components/plaid-link-button";
 import { formatDate } from "@/lib/format";
-import { RefreshCw, Trash2, Building2, Globe, Sun, Moon, Monitor } from "lucide-react";
+import { RefreshCw, Trash2, Building2, Globe, Gauge, Sun, Moon, Monitor } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import type { UserPreference } from "@/lib/types";
 import type { SyncResult } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 
@@ -57,7 +58,7 @@ export default function SettingsPage() {
   });
 
   const prefsMutation = useMutation({
-    mutationFn: (data: { theme?: string; timezone?: string }) =>
+    mutationFn: (data: Partial<UserPreference>) =>
       updatePreferences(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["preferences"] });
@@ -181,6 +182,72 @@ export default function SettingsPage() {
             accounts synced.
           </div>
         )}
+      </section>
+
+      {/* Credit standing — feeds the approval-odds estimate so recommendations
+          rank by expected value rather than headline value. Entirely optional:
+          leaving it unset ranks on value alone, exactly as before. */}
+      <section className="bg-card rounded-xl border border-border p-6">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+            <Gauge className="w-4 h-4 text-accent-foreground" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-card-foreground">
+              Credit standing
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Optional. Used to estimate approval odds, so we stop recommending
+              cards you are unlikely to get.
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted">
+              Credit score range
+            </label>
+            <select
+              value={prefs?.credit_score_band ?? ""}
+              onChange={(e) =>
+                prefsMutation.mutate({
+                  credit_score_band: e.target.value || null,
+                })
+              }
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground motion-base focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
+            >
+              <option value="">Prefer not to say</option>
+              <option value="excellent">Excellent (740+)</option>
+              <option value="good">Good (670–739)</option>
+              <option value="fair">Fair (580–669)</option>
+              <option value="poor">Poor (below 580)</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted">
+              Cards opened in the last 24 months
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={prefs?.recent_card_applications ?? ""}
+              placeholder="e.g. 2"
+              onChange={(e) =>
+                prefsMutation.mutate({
+                  recent_card_applications: e.target.value
+                    ? Number(e.target.value)
+                    : null,
+                })
+              }
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-foreground motion-base focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Some issuers decline applicants past a threshold (Chase at 5).
+            </p>
+          </div>
+        </div>
       </section>
 
       <section className="bg-card rounded-xl border border-border p-6">
