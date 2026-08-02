@@ -447,7 +447,12 @@
 
 /* A titled panel: header block, hairline rule, then label/value rows. */
 .panel {
-  background: var(--color-card);
+  /* The reference does NOT fill its grouping containers: they are hairline
+     outlines on the flat canvas, with typographic headers doing the structural
+     work. Filling every panel is what made this read as "card soup" rather
+     than like the reference. Entity cards that are themselves clickable opt
+     into a fill via .panel--filled. */
+  background: transparent;
   border: 1px solid var(--color-border);
   border-radius: 6px;              /* the reference is nearly square-cornered */
   overflow: hidden;
@@ -479,6 +484,7 @@
 
 /* Interactive panel: lifts its background and reveals a trailing arrow. */
 .panel-link { display: block; text-decoration: none; }
+.panel--filled { background: var(--color-card); }
 .panel-link:hover .panel,
 .panel-link:focus-visible .panel { background: var(--color-accent); }
 .hover-arrow {
@@ -547,6 +553,9 @@
   }
   h1 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
   h2 { font-size: 18px; line-height: 26px; font-weight: 600; letter-spacing: -0.005em; }
+  /* Section blocks sit directly on the canvas, separated by space rather than
+     by a card boundary (matches the reference's settings/detail pages). */
+  section + section { margin-top: 2.5rem; }
   h3 { font-size: 15px; line-height: 22px; font-weight: 600; }
   .font-mono, code, kbd, pre { letter-spacing: -0.01em; }
 }
