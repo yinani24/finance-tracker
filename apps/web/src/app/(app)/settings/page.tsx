@@ -16,12 +16,10 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import type { UserPreference } from "@/lib/types";
 import type { SyncResult } from "@/lib/types";
-import { useAuth } from "@/lib/auth-context";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
-  const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [browserTimezone, setBrowserTimezone] = useState("America/New_York");
@@ -65,10 +63,6 @@ export default function SettingsPage() {
     },
   });
 
-  const displayName =
-    (user?.user_metadata?.full_name as string) ??
-    user?.email?.split("@")[0] ??
-    "User";
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -80,22 +74,6 @@ export default function SettingsPage() {
           Manage connections and preferences
         </p>
       </div>
-
-      <section className="bg-card rounded-xl border border-border p-5 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-foreground/10 flex items-center justify-center text-foreground font-semibold text-base">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-card-foreground truncate">
-              {displayName}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {user?.email || "No email"}
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="bg-card rounded-xl border border-border p-6 mb-6">
         <div className="flex items-center justify-between mb-4">

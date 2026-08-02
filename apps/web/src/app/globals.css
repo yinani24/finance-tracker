@@ -12,36 +12,36 @@
  */
 :root {
   color-scheme: light;
-  --background: #f7f6f3; /* warm off-white app canvas */
-  --foreground: #17171a; /* near-black text */
-  --card: #ffffff; /* surfaces / cards */
-  --card-foreground: #17171a;
-  --border: #e7e5e0; /* thin warm-grey border */
-  --muted: #6b7280; /* muted body text */
-  --muted-foreground: #9ca3af; /* subtle icons / secondary text */
-  --accent: #efede7; /* light warm-grey highlight (active nav, hovers) */
-  --accent-foreground: #17171a;
+  --background: #fbfbfb; /* oklch(0.985 0 0) — near-white canvas, neutral */
+  --foreground: #262626; /* oklch(0.218 0 0) */
+  --card: #f5f5f5; /* panel surface sits BELOW the canvas in light mode */
+  --card-foreground: #262626;
+  --border: rgba(0, 0, 0, 0.1); /* hairline, pure neutral */
+  --muted: #737373;
+  --muted-foreground: #8f8f8f;
+  --accent: #f7f7f7; /* oklch(0.97) — active nav fill */
+  --accent-foreground: #262626;
   --popover: #ffffff;
-  --popover-foreground: #17171a;
-  --primary: #2323dc; /* royal-blue accent */
-  --primary-hover: #1c1cb0;
+  --popover-foreground: #262626;
+  --primary: #1d1dd6; /* oklch(0.387 0.264 264.1) — deep royal blue */
+  --primary-hover: #1717b3;
   --primary-foreground: #ffffff;
-  --link: #2323dc; /* blue text; diverges from --primary on dark only */
-  --secondary: #efede7;
-  --secondary-foreground: #17171a;
+  --link: #1d1dd6;
+  --secondary: #f7f7f7;
+  --secondary-foreground: #262626;
   --success: #1f9d57; /* positive / active green */
   --success-foreground: #ffffff;
   --warning: #b45309; /* caution / underperforming */
   --destructive: #dc2626; /* semantic red for negative / spend */
   --overlay: rgba(23, 23, 26, 0.15); /* modal scrim */
-  --input: #e7e5e0;
-  --ring: #2323dc; /* blue focus ring */
+  --input: #eaeaea; /* oklch(0.931) — control borders */
+  --ring: #1d1dd6;
   --chart-1: #2323dc;
   --chart-2: #8b5cf6;
   --chart-3: #06b6d4;
   --chart-4: #f59e0b;
   --chart-5: #1f9d57;
-  --radius: 0.625rem; /* ~10px cards */
+  --radius: 0rem; /* the reference is square-cornered throughout */
   --sidebar-width: 256px;
   --sidebar-collapsed-width: 64px;
   --sidebar: #ffffff;
@@ -77,21 +77,21 @@
  */
 .dark {
   color-scheme: dark;
-  --background: #171717; /* app canvas — neutral near-black */
-  --foreground: #fbfbfb; /* oklch(0.985 0 0) — primary text */
-  --card: #1f1f1f; /* one step up from the canvas */
+  --background: #171717; /* oklch(0.159 0 0) */
+  --foreground: #fbfbfb; /* oklch(0.985 0 0) */
+  --card: #262626; /* oklch(0.218 0 0) — panels sit ABOVE the canvas */
   --card-foreground: #fbfbfb;
-  --border: rgba(255, 255, 255, 0.1); /* hairline white overlay */
-  --muted: #a1a1a1; /* secondary body text — 7.1:1 on the canvas */
-  --muted-foreground: #8a8a8a; /* labels / subtle icons — 5.3:1 */
-  --accent: #2e2e2e; /* raised fill: active nav, hovers */
+  --border: rgba(255, 255, 255, 0.1);
+  --muted: #b3b3b3; /* oklch(0.706 0 0) */
+  --muted-foreground: #8f8f8f;
+  --accent: #2e2e2e; /* oklch(0.269) — active nav fill */
   --accent-foreground: #fbfbfb;
-  --popover: #1f1f1f;
+  --popover: #262626;
   --popover-foreground: #fbfbfb;
-  --primary: #4b4bf0; /* royal blue, brightened for dark */
-  --primary-hover: #5f5ff5; /* hover brightens rather than darkens */
-  --primary-foreground: #ffffff;
-  --link: #8f8ffa; /* blue *text* — the fill blue is too dark to read small */
+  --primary: #fbfbfb; /* dark-mode CTA is light-on-dark, not blue */
+  --primary-hover: #e8e8e8;
+  --primary-foreground: #262626;
+  --link: #8f8ffa;
   --secondary: #2e2e2e;
   --secondary-foreground: #fbfbfb;
   --success: #3ecf8e;
@@ -100,7 +100,7 @@
   --destructive: #f0616d;
   --overlay: rgba(0, 0, 0, 0.65);
   --input: rgba(255, 255, 255, 0.1);
-  --ring: #5c5cf5;
+  --ring: #8f8ffa;
   --chart-1: #6b6bf5;
   --chart-2: #a78bfa;
   --chart-3: #22d3ee;
