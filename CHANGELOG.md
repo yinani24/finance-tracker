@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Browser-side statement parser (`apps/web/src/lib/statement/`).** A TypeScript
+  port of the server ingest services so a bank/credit-card statement can be parsed
+  entirely on the user's device — the file never leaves the browser. `parseStatement(file,
+  { isCredit })` dispatches on file type: CSV goes through a faithful port of
+  `statement_import.py` (hint-priority column matching, currency/parenthesis/
+  trailing-minus amount parsing, the eight supported date formats, the two-column
+  debit/credit layout), PDF through `pdfjs-dist` text extraction plus the
+  `statement_pdf.py` date-led-line heuristic (bare `MM/DD` year inference,
+  last-money-token-is-the-amount, credit-account sign flip). `merchant.ts` and
+  `categorize.ts` port `merchant.py` and `enrichment/rules.py` including the
+  word-boundary keyword compilation and `*` prefix keywords. The LLM fallback is
+  deliberately not ported — when the heuristic finds nothing the parser returns an
+  empty result with an explicit error for the UI. 58 vitest tests mirror the
+  Python suites.
 - **Data-architecture & product-evolution plan (`docs/prd/data-architecture-and-evolution.md`).**
   Documents today's real data flow (Plaid + statement import → dedup → enrichment →
   spending profile → recommendation engine) and an honest limitations list; surveys
