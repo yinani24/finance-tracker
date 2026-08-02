@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, Compass, Lightbulb } from "lucide-react";
+import { CreditCard, Compass, Lightbulb, Wallet, PieChart } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 // Card-related surfaces are consolidated under a single "Cards" section with
 // internal tabs. "Your cards" is the index route (/cards); the others are nested
 // segments so each keeps its own page component and data fetching.
+//
+// This strip is the section's *only* level of tabs. Portfolio and Spending
+// profile used to be inner, state-driven tabs of /cards/recommendations; they
+// are now sibling routes so the nesting is one level deep everywhere.
 const TABS = [
   { href: "/cards", label: "Your cards", icon: CreditCard, exact: true },
   { href: "/cards/explore", label: "Explore", icon: Compass, exact: false },
@@ -16,6 +20,13 @@ const TABS = [
     href: "/cards/recommendations",
     label: "Recommendations",
     icon: Lightbulb,
+    exact: false,
+  },
+  { href: "/cards/portfolio", label: "Portfolio", icon: Wallet, exact: false },
+  {
+    href: "/cards/spending-profile",
+    label: "Spending profile",
+    icon: PieChart,
     exact: false,
   },
 ] as const;
@@ -92,7 +103,7 @@ export default function CardsLayout({
 
       <div
         ref={stripRef}
-        className="segmented flex gap-1 mb-8 bg-accent/60 rounded-full p-1 w-fit"
+        className="segmented flex gap-1 mb-8 bg-accent/60 rounded-full p-1 w-fit max-w-full overflow-x-auto"
       >
         <span
           ref={indicatorRef}
@@ -113,7 +124,7 @@ export default function CardsLayout({
               data-active={active}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "segmented-item flex items-center gap-2 px-4 py-2 text-sm rounded-full",
+                "segmented-item flex shrink-0 items-center gap-2 px-4 py-2 text-sm rounded-full whitespace-nowrap",
                 active
                   ? "text-card-foreground"
                   : "text-muted hover:text-card-foreground"
