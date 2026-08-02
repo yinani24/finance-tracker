@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, Check } from "lucide-react";
 
 import {
   Dialog,
@@ -190,30 +190,40 @@ export default function AccountsPage() {
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
+        /* Connect-grid: a two-column set of dense rows \u2014 icon tile, name +
+           status, trailing value \u2014 instead of one full-width stack. */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="card-interactive bg-card rounded-xl border border-border p-5 flex items-center justify-between"
+              className="card-interactive bg-card rounded-lg border border-border px-4 py-3.5 flex items-center justify-between gap-3"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-accent-foreground" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-[18px] h-[18px] text-accent-foreground" />
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-card-foreground">
-                    {account.name}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-card-foreground truncate">
+                      {account.name}
+                    </span>
+                    {account.last_synced_at && (
+                      <span className="flex-shrink-0 inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                        <Check className="w-3 h-3" />
+                        Synced
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground truncate">
                     {account.institution_name || account.type} &middot;{" "}
                     {account.type}
                     {account.last_synced_at &&
-                      ` \u00B7 Synced ${formatDate(account.last_synced_at)}`}
+                      ` \u00B7 ${formatDate(account.last_synced_at)}`}
                   </div>
                 </div>
               </div>
               <span
-                className={`text-base font-mono font-medium tabular-nums ${account.balance >= 0 ? "text-card-foreground" : "text-destructive"}`}
+                className={`flex-shrink-0 text-sm font-mono font-medium tabular-nums ${account.balance >= 0 ? "text-card-foreground" : "text-destructive"}`}
               >
                 {formatCurrency(account.balance)}
               </span>
