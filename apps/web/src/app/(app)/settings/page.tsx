@@ -211,10 +211,13 @@ export default function SettingsPage() {
                       prefsMutation.mutate({ theme: opt });
                     }}
                     className={cn(
-                      "p-1.5 rounded-md motion-base",
+                      // Flat like the rest of the system: the active pill is
+                      // marked by a border, not a shadow, so it still reads on
+                      // the dark canvas where shadows are invisible.
+                      "p-1.5 rounded-md border motion-base",
                       theme === opt
-                        ? "bg-card text-card-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-card-foreground"
+                        ? "bg-card text-card-foreground border-border"
+                        : "border-transparent text-muted-foreground hover:text-card-foreground"
                     )}
                     title={opt.charAt(0).toUpperCase() + opt.slice(1)}
                   >

@@ -92,7 +92,7 @@ export default function CardsLayout({
 
       <div
         ref={stripRef}
-        className="segmented flex gap-1 mb-8 bg-muted/15 rounded-full p-1 w-fit"
+        className="segmented flex gap-1 mb-8 bg-accent/60 rounded-full p-1 w-fit"
       >
         <span
           ref={indicatorRef}

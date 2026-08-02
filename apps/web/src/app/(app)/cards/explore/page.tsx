@@ -101,7 +101,7 @@ export default function ExplorePage() {
     <div>
       <p className="text-sm text-muted mb-6">
         {isLoading ? (
-          <span className="inline-block h-4 w-40 bg-muted rounded animate-pulse align-middle" />
+          <span className="inline-block h-4 w-40 bg-accent rounded animate-pulse align-middle" />
         ) : (
           <>
             Browse{" "}
@@ -270,14 +270,14 @@ export default function ExplorePage() {
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/10 motion-base"
+                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent motion-base"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage((p) => (to < total ? p + 1 : p))}
                   disabled={to >= total}
-                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/10 motion-base"
+                  className="border border-input bg-background text-foreground rounded-lg px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent motion-base"
                 >
                   Next
                 </button>

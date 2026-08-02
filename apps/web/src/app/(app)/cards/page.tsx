@@ -206,7 +206,7 @@ export default function CardsPage() {
                     className="bg-card rounded-lg border border-border p-5 flex items-start gap-4"
                   >
                     <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-primary" />
+                      <Building2 className="w-5 h-5 text-link" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
@@ -298,7 +298,7 @@ function ManualCardItem({ card }: { card: Card }) {
     <div className="card-interactive bg-card rounded-lg border border-border p-5">
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <CreditCard className="w-5 h-5 text-primary" />
+          <CreditCard className="w-5 h-5 text-link" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-medium text-sm text-card-foreground truncate">

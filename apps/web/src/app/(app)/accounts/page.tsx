@@ -59,7 +59,7 @@ export default function AccountsPage() {
           </h1>
           <p className="text-sm text-muted mt-1">
             {isLoading ? (
-              <span className="inline-block h-4 w-28 bg-muted rounded animate-pulse align-middle" />
+              <span className="inline-block h-4 w-28 bg-accent rounded animate-pulse align-middle" />
             ) : (
               <>
                 Total balance:{" "}
@@ -179,13 +179,13 @@ export default function AccountsPage() {
               className="bg-card rounded-xl border border-border p-5 flex items-center justify-between animate-pulse"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-muted" />
+                <div className="w-10 h-10 rounded-lg bg-accent" />
                 <div className="space-y-2">
-                  <div className="h-4 w-32 bg-muted rounded" />
-                  <div className="h-3 w-48 bg-muted rounded" />
+                  <div className="h-4 w-32 bg-accent rounded" />
+                  <div className="h-3 w-48 bg-accent rounded" />
                 </div>
               </div>
-              <div className="h-5 w-24 bg-muted rounded" />
+              <div className="h-5 w-24 bg-accent rounded" />
             </div>
           ))}
         </div>
