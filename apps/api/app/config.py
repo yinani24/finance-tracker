@@ -3,6 +3,12 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str = "postgresql://localhost:5432/finance_tracker"
+    # Comma-separated browser origins allowed to call this API.
+    cors_origins_raw: str = "http://localhost:3000"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]
     test_database_url: str = "postgresql://localhost:5432/finance_tracker_test"
     debug: bool = False
     supabase_jwt_secret: str = ""

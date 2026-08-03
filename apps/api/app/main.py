@@ -33,10 +33,19 @@ def create_app() -> FastAPI:
     def health_check() -> dict[str, str]:
         return {"status": "ok"}
 
+    # Local development plus anything served from the project's own Vercel
+    # domains. The regex covers preview deployments, whose hostname changes on
+    # every build and so cannot be enumerated ahead of time.
+    #
+    # `allow_credentials` is False: the stateless recommendation endpoints take
+    # everything they need in the request body and read no cookie or auth
+    # header, so permitting credentials across origins would grant access this
+    # API never needs.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000"],
-        allow_credentials=True,
+        allow_origins=settings.cors_origins,
+        allow_origin_regex=r"https://[a-z0-9-]+\.vercel\.app$",
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
