@@ -794,7 +794,16 @@ class TestBestCardPerCategory:
         assignments = service.best_card_per_category(profile, [self._held(gold)], [gold])
         assert [a["category"] for a in assignments] == ["dining", "groceries", "travel"]
         for a in assignments:
-            assert set(a) == {"category", "best_card", "rate", "rationale"}
+            # `card_rates` carries every held card's rate in the category, so a
+            # caller can price the gap between the card used and the winner
+            # rather than only being told which card wins.
+            assert set(a) == {
+                "category",
+                "best_card",
+                "rate",
+                "rationale",
+                "card_rates",
+            }
             assert set(a["best_card"]) == {"name", "issuer"}
 
     def test_empty_wallet_returns_no_assignments(self):
