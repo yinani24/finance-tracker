@@ -17,6 +17,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backfill. `TransactionRead` surfaces both fields, lighting up low-confidence
   surfacing in the recategorize UI. Provider-independent: works with the current
   `rules` provider and needs no product decision.
+- **Multi-card combination recommender (`optimal_card_combination`, #185 —
+  rec-engine slice 5).** Answers the product's headline question (PRD Decision #1):
+  *"what set of cards — keep these, add that one — maximizes my total first-year
+  value?"* A new pure `CardRecommendationService.optimal_card_combination(profile,
+  user_cards, available_cards, *, max_new_cards=1)` routes each spent-in category
+  to the best card across the **union of held + candidate-new** cards, then greedily
+  adds the new card whose *marginal* first-year value — `Δ_earn` (extra earn it wins
+  by becoming best-in-category) `+ sign-up bonus + first-year credits − first-year
+  fee` — is highest and positive, up to `max_new_cards`. Reuses slice-4's
+  `_category_rate` via a shared `_route_wallet` primitive so routing can't drift
+  from `best_card_per_category`; deterministic, greedy and bounded (never an
+  exhaustive powerset), same tie-break as slice 4 (`-Δ` → lowest first-year fee →
+  case-insensitive name). An already-optimal wallet recommends nothing
+  (`projected == baseline`). First-year fee frame (honors `isAnnualFeeWaived`),
+  matching `recommend_next_card` — held cards' fees are already sunk in the baseline.
+  Exposed via `GET /recommendations/combination` (snapshot-cached through the same
+  `_shape_payload` discipline as portfolio). Additive Pydantic models
+  `RoutedCategory` / `RecommendedNewCard` / `CombinationResponse`; no existing
+  `/recommendations/*` response keys change. Hermetic `TestOptimalCardCombination`
+  suite covers baseline routing, the recommend-nothing case, add-one-wins, the
+  fee-not-worth-it drop, multi-tier bonus crediting, waived-fee handling, tie-break,
+  empty profile/wallet, and owned/discontinued exclusion. Frontend rendering is a
+  separate fast-follow slice.
 - **Browser-side statement parser (`apps/web/src/lib/statement/`).** A TypeScript
   port of the server ingest services so a bank/credit-card statement can be parsed
   entirely on the user's device — the file never leaves the browser. `parseStatement(file,

@@ -670,3 +670,266 @@ class CardRecommendationService:
             )
 
         return assignments
+
+    # ------------------------------------------------------------------ #
+    # Multi-card combination (slice 5, #185)                               #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _route_wallet(
+        category_breakdown: Dict[str, float],
+        wallet: List[dict],
+    ) -> tuple[List[dict], float]:
+        """Route each spent-in category to the highest-earning card in ``wallet``.
+
+        The single shared routing primitive behind slice 5's baseline and every
+        marginal recompute, so combination math can never drift from slice-4's
+        ``best_card_per_category`` — it reuses the same ``_category_rate`` lookup
+        and the same tie-break ``(-rate, annual_fee, name.lower())``.
+
+        ``wallet`` is a list of resolved entries
+        ``{"card": <rate-lookup dict>, "name", "issuer", "annual_fee", "is_new"}``.
+        Returns ``(routing, total_first_year_earn)`` where ``routing`` is
+        ``[{category, card:{name,issuer}, is_new, rate}]`` in sorted-category
+        order and the scalar is the summed first-year ongoing earn in dollars
+        (``Σ monthly × 12 × winner_rate / 100``). An empty wallet (or empty
+        breakdown) yields ``([], 0.0)`` — no card to assign, nothing earned.
+        """
+        routing: List[dict] = []
+        total = 0.0
+        if not wallet:
+            return routing, total
+        for category in sorted(category_breakdown):
+            monthly = category_breakdown.get(category, 0.0)
+            if monthly <= 0:
+                continue
+            winner = min(
+                wallet,
+                key=lambda w: (
+                    -CardRecommendationService._category_rate(w["card"], category),
+                    w["annual_fee"],
+                    w["name"].lower(),
+                ),
+            )
+            rate = CardRecommendationService._category_rate(winner["card"], category)
+            total += monthly * 12 * rate / 100.0
+            routing.append(
+                {
+                    "category": category,
+                    "card": {"name": winner["name"], "issuer": winner["issuer"]},
+                    "is_new": winner["is_new"],
+                    "rate": rate,
+                }
+            )
+        return routing, total
+
+    def optimal_card_combination(
+        self,
+        profile: dict,
+        user_cards: List[dict],
+        available_cards: List[dict],
+        *,
+        max_new_cards: int = 1,
+        points_value_cents: float = 1.0,
+    ) -> dict:
+        """Recommend the optimal SET of cards (held + new) that maximizes total
+        first-year value — the product's headline question (PRD Decision #1,
+        recommendation-engine slice 5).
+
+        Routes each spent-in category to the best card across the union of held
+        and candidate-new cards, then greedily adds the new card whose *marginal*
+        first-year value is highest-and-positive, up to ``max_new_cards``.
+
+        Marginal value of adding candidate ``C`` (same first-year frame as
+        ``recommend_next_card`` — an apply-for-new decision):
+
+            Δ = Δ_earn + bonus + credits − first_year_fee
+
+        where ``Δ_earn`` is the extra ongoing earn ``C`` wins by becoming
+        best-in-category for one or more categories (``_route_wallet`` recompute,
+        ≥ 0 by construction), ``bonus`` is the dollar value of the best offer the
+        user can actually hit (``_best_achievable_offer`` → ``_bonus_value_usd``;
+        0 without spend history or an achievable tier), ``credits`` are the
+        card's recurring plus offer-attached first-year credits, and
+        ``first_year_fee`` honors ``isAnnualFeeWaived`` (year-one fee, **not** the
+        portfolio full-fee — held cards' fees are already sunk in the baseline).
+
+        Greedy, deterministic, and bounded — never an exhaustive powerset. A
+        candidate is added only if its Δ > 0; the loop stops early once no
+        remaining candidate has positive Δ (the "already-optimal ⇒ recommend
+        nothing" case). Tie-break among positive candidates:
+        ``(-Δ, first_year_fee, name.lower())``.
+
+        Returns::
+
+            {
+              "recommended_new_cards": [
+                {name, issuer, marginal_value, categories_won, rationale}
+              ],
+              "per_category_routing": [
+                {category, card:{name,issuer}, is_new, rate}
+              ],
+              "baseline_first_year_value": float,   # held-wallet ongoing earn
+              "projected_first_year_value": float,  # baseline + Σ marginal_value
+            }
+        """
+        category_breakdown: Dict[str, float] = profile.get("category_breakdown", {}) or {}
+        avg_monthly_spend: float = float(profile.get("avg_monthly_spend", 0.0) or 0.0)
+
+        available_by_key: Dict[str, dict] = {}
+        for ac in available_cards:
+            available_by_key[self._card_key(ac.get("name", ""), ac.get("issuer", ""))] = ac
+
+        # Resolve each held card to its rate-lookup dict — identical resolution
+        # to best_card_per_category (matched dataset entry carries cardId +
+        # curated rates; else the bare owned dict → flat rate).
+        held_wallet: List[dict] = []
+        owned_keys = set()
+        for uc in user_cards:
+            key = self._card_key(uc.get("name", ""), uc.get("issuer", ""))
+            owned_keys.add(key)
+            matched = available_by_key.get(key)
+            rate_card = matched if matched is not None else uc
+            name = uc.get("name") or (matched or {}).get("name", "Card")
+            issuer = uc.get("issuer") or (matched or {}).get("issuer", "")
+            annual_fee = float(
+                (matched or {}).get("annualFee", uc.get("annual_fee", 0)) or 0
+            )
+            held_wallet.append(
+                {
+                    "card": rate_card,
+                    "name": name,
+                    "issuer": issuer,
+                    "annual_fee": annual_fee,
+                    "is_new": False,
+                }
+            )
+
+        # Candidate pool: non-owned, non-discontinued — identical filter to
+        # recommend_next_card / analyze_portfolio.
+        candidates: List[dict] = []
+        for card in available_cards:
+            if card.get("discontinued", False):
+                continue
+            if self._card_key(card.get("name", ""), card.get("issuer", "")) in owned_keys:
+                continue
+            candidates.append(card)
+
+        baseline_routing, baseline_value = self._route_wallet(
+            category_breakdown, held_wallet
+        )
+
+        recommended: List[dict] = []
+        current_wallet = list(held_wallet)
+        current_routing, current_value = baseline_routing, baseline_value
+
+        # Without spend history no bonus is achievable and no category earns —
+        # nothing to base an add on. Mirrors recommend_next_card's early return.
+        if avg_monthly_spend > 0:
+            remaining = list(candidates)
+            for _ in range(max_new_cards):
+                best: Optional[dict] = None
+                for cand in remaining:
+                    cand_item = {
+                        "card": cand,
+                        "name": cand.get("name", "Card"),
+                        "issuer": cand.get("issuer", ""),
+                        "annual_fee": float(cand.get("annualFee", 0) or 0),
+                        "is_new": True,
+                    }
+                    routing_after, value_after = self._route_wallet(
+                        category_breakdown, current_wallet + [cand_item]
+                    )
+                    earn_delta = value_after - current_value
+
+                    bonus_val = 0.0
+                    offer_credit_val = 0.0
+                    selected = self._best_achievable_offer(
+                        cand, avg_monthly_spend, points_value_cents
+                    )
+                    if selected is not None:
+                        offer, _ = selected
+                        bonus_val = self._bonus_value_usd(
+                            offer, points_value_cents, cand.get("currency")
+                        )
+                        offer_credit_val = self._offer_credit_value(
+                            offer, points_value_cents
+                        )
+                    credit_val = (
+                        self._credit_value(cand, points_value_cents) + offer_credit_val
+                    )
+                    first_year_fee = self._first_year_fee(cand)
+                    delta = earn_delta + bonus_val + credit_val - first_year_fee
+
+                    if delta <= 0:
+                        continue
+
+                    # Categories this candidate would win (its winner changed to
+                    # the new card on the recompute that added it).
+                    categories_won = [
+                        r["category"]
+                        for r in routing_after
+                        if r["is_new"]
+                        and r["card"]["name"] == cand_item["name"]
+                        and r["card"]["issuer"] == cand_item["issuer"]
+                    ]
+
+                    key = (-delta, first_year_fee, cand_item["name"].lower())
+                    if best is None or key < best["_key"]:
+                        best = {
+                            "_key": key,
+                            "cand": cand,
+                            "item": cand_item,
+                            "delta": delta,
+                            "earn_delta": earn_delta,
+                            "bonus": bonus_val,
+                            "credits": credit_val,
+                            "fee": first_year_fee,
+                            "routing_after": routing_after,
+                            "value_after": value_after,
+                            "categories_won": categories_won,
+                        }
+
+                if best is None:
+                    break  # no positive-Δ candidate remains → already optimal
+
+                recommended.append(
+                    {
+                        "name": best["item"]["name"],
+                        "issuer": best["item"]["issuer"],
+                        "marginal_value": round(best["delta"], 2),
+                        "categories_won": best["categories_won"],
+                        "rationale": self._combination_rationale(best),
+                    }
+                )
+                current_wallet.append(best["item"])
+                current_routing = best["routing_after"]
+                current_value = best["value_after"]
+                remaining.remove(best["cand"])
+
+        projected_value = baseline_value + sum(
+            r["marginal_value"] for r in recommended
+        )
+
+        return {
+            "recommended_new_cards": recommended,
+            "per_category_routing": current_routing,
+            "baseline_first_year_value": round(baseline_value, 2),
+            "projected_first_year_value": round(projected_value, 2),
+        }
+
+    @staticmethod
+    def _combination_rationale(best: dict) -> str:
+        """Human rationale for adding a card, naming the categories it wins and
+        the dollar breakdown of its marginal first-year value."""
+        name = best["item"]["name"]
+        won = best["categories_won"]
+        if won:
+            lead = f"best card for {', '.join(won)} (+${best['earn_delta']:,.0f}/yr earn)"
+        else:
+            lead = f"+${best['earn_delta']:,.0f}/yr earn"
+        return (
+            f"Add {name} — +${best['delta']:,.0f} first-year value: {lead}, "
+            f"${best['bonus']:,.0f} sign-up bonus, ${best['credits']:,.0f} credits, "
+            f"−${best['fee']:,.0f} first-year fee."
+        )

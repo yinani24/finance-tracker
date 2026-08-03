@@ -141,6 +141,17 @@ class RecommendationSnapshotService:
                 points_value_cents=settings.points_value_cents,
                 approval_profile=approval_profile,
             )
+        elif rec_type == "combination":
+            # Multi-card combination (slice 5, #185): cache the whole result dict
+            # (recommended new cards + routing + baseline/projected) and return it
+            # spread, mirroring the portfolio dict discipline so cold and
+            # cache-hit paths can't drift.
+            to_cache = self.rec_service.optimal_card_combination(
+                profile_dict,
+                user_cards,
+                available_cards,
+                points_value_cents=settings.points_value_cents,
+            )
         else:
             # Portfolio: cache the per-card analyses AND the per-category "best
             # held card" assignments as one blob, so both survive a cache hit
@@ -182,12 +193,15 @@ class RecommendationSnapshotService:
         """
         if rec_type == "next_card":
             return {"recommendations": cached}
+        if rec_type == "combination":
+            # Stored as the full combination dict; returned spread.
+            return dict(cached)  # type: ignore[arg-type]
         if isinstance(cached, list):
             return {"cards": cached, "category_assignments": []}
         return dict(cached)  # type: ignore[arg-type]
 
     def invalidate(self, user_id: int) -> None:
-        for rec_type in ("next_card", "portfolio_gap"):
+        for rec_type in ("next_card", "portfolio_gap", "combination"):
             existing = self.snapshot_repo.get(user_id, rec_type)
             if existing:
                 existing.inputs_hash = "invalidated"
