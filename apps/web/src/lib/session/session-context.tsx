@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { migrate } from "./migrate";
 import {
   EMPTY_SESSION,
   type HeldCard,
@@ -62,7 +63,7 @@ function readStored(): SessionState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SessionState;
     // Defensive: a shape change between versions must not crash the app.
-    return { ...EMPTY_SESSION, ...parsed };
+    return migrate({ ...EMPTY_SESSION, ...parsed });
   } catch {
     return null;
   }

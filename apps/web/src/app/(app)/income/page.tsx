@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { Wallet, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
-import { summarize, monthlyTrend, incomeOf } from "@/lib/session/derive";
+import { summarize, monthlyTrend } from "@/lib/session/derive";
+import { analyzeIncome, cadenceLabel } from "@/lib/session/income";
 import { StatementDropzone } from "@/components/statement-dropzone";
 
 /**
@@ -23,24 +24,13 @@ export default function IncomePage() {
 
   const summary = useMemo(() => summarize(session), [session]);
   const trend = useMemo(() => monthlyTrend(txns), [txns]);
-  const sources = useMemo(() => {
-    const map = new Map<string, { total: number; count: number }>();
-    for (const t of txns) {
-      const amount = incomeOf(t);
-      if (amount === 0) continue;
-      const e = map.get(t.merchant) ?? { total: 0, count: 0 };
-      e.total += amount;
-      e.count += 1;
-      map.set(t.merchant, e);
-    }
-    return [...map.entries()]
-      .map(([merchant, e]) => ({ merchant, ...e }))
-      .sort((a, b) => b.total - a.total);
-  }, [txns]);
+  const income = useMemo(() => analyzeIncome(txns), [txns]);
+  const sources = income.sources;
 
-  // Averaged over the months income actually appears in, which is rarely the
-  // same window the card statements cover.
-  const monthlyIncome = summary.monthlyIncome;
+  // Recurring income is projected from its own cadence rather than averaged
+  // over the file's window: a bank export reaching back before the job starts
+  // would otherwise report a fraction of the real salary.
+  const monthlyIncome = income.monthlyTotal;
   const net = monthlyIncome - summary.monthlySpend;
   const savingsRate = monthlyIncome > 0 ? net / monthlyIncome : null;
 
@@ -75,6 +65,11 @@ export default function IncomePage() {
               <span className="text-2xl font-semibold font-mono tabular-nums text-card-foreground">
                 {formatCurrency(monthlyIncome)}
               </span>
+              {income.primary && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatCurrency(income.annualTotal)} a year
+                </p>
+              )}
             </div>
             <div className="border border-border p-6">
               <span className="text-sm text-muted">Monthly spend</span>
@@ -108,17 +103,38 @@ export default function IncomePage() {
               <tbody>
                 {sources.map((s) => (
                   <tr key={s.merchant} className="border-b border-border last:border-0">
-                    <td className="py-2.5 text-card-foreground">{s.merchant}</td>
-                    <td className="py-2.5 text-right text-xs text-muted-foreground font-mono tabular-nums">
-                      {s.count}×
+                    <td className="py-2.5">
+                      <span className="text-card-foreground">{s.merchant}</span>
+                      {s.isRecurring ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {formatCurrency(s.amount)} {cadenceLabel(s.cadence)} ·{" "}
+                          {s.deposits}×
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          one-off · {s.deposits}×
+                        </span>
+                      )}
                     </td>
                     <td className="py-2.5 pl-3 text-right font-mono tabular-nums text-success">
-                      {formatCurrency(s.total)}
+                      {formatCurrency(s.annualized)}
+                      <span className="ml-1 text-[11px] text-muted-foreground">
+                        {s.isRecurring ? "/yr" : "seen"}
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {income.primary && (
+              <p className="mt-4 text-sm text-muted">
+                {income.primary.merchant} pays{" "}
+                {formatCurrency(income.primary.amount)}{" "}
+                {cadenceLabel(income.primary.cadence)} —{" "}
+                {formatCurrency(income.primary.annualized)} a year. Projected
+                from its own schedule, not averaged over the file.
+              </p>
+            )}
           </section>
 
           {trend.length > 1 && (

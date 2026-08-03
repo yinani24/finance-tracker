@@ -71,6 +71,26 @@ export default function PortfolioPage() {
   }
 
   const best = data?.best_per_category ?? [];
+  const bestAvailable = data?.best_available_per_category ?? [];
+
+  // What each category is worth per year, so a rate gap can be shown in
+  // dollars rather than percentage points.
+  const annualByCategory = new Map(
+    cats.map((c) => [c.category, (c.total / summary.months) * 12])
+  );
+
+  const gaps = bestAvailable
+    .map((b) => {
+      const held = best.find((x) => x.category === b.category);
+      const heldRate = held?.rate ?? 0;
+      const annual = annualByCategory.get(b.category) ?? 0;
+      const gain = (annual * (b.rate - heldRate)) / 100;
+      return { ...b, heldRate, heldCard: held?.best_card?.name ?? null, annual, gain };
+    })
+    .filter((g) => g.gain > 0)
+    .sort((a, b) => b.gain - a.gain);
+
+  const totalGain = gaps.reduce((s, g) => s + g.gain, 0);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -264,13 +284,94 @@ export default function PortfolioPage() {
             </table>
           </div>
 
-          {best.length > 0 && (
+          {gaps.length > 0 && (
+            <section className="border border-border p-6 mb-6">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold text-card-foreground mb-1">
+                    What each category could earn
+                  </h2>
+                  <p className="text-sm text-muted">
+                    Your rate against the best card on the market, in
+                    cash-equivalent terms — points are valued at what they
+                    actually redeem for, not one cent each.
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <div className="font-mono text-lg tabular-nums text-success">
+                    +{formatCurrency(totalGain)}
+                  </div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    per year on the table
+                  </div>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Category
+                    </th>
+                    <th className="pb-2 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      A year
+                    </th>
+                    <th className="pb-2 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      You earn
+                    </th>
+                    <th className="pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Best card
+                    </th>
+                    <th className="pb-2 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Gain
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gaps.map((g) => (
+                    <tr key={g.category} className="border-b border-border last:border-0">
+                      <td className="py-2.5 capitalize text-card-foreground">
+                        {g.category}
+                      </td>
+                      <td className="py-2.5 text-right font-mono tabular-nums text-muted">
+                        {formatCurrency(g.annual)}
+                      </td>
+                      <td className="py-2.5 text-right font-mono tabular-nums text-muted">
+                        {g.heldRate}%
+                      </td>
+                      <td className="py-2.5">
+                        <span className="text-card-foreground">{g.card.name}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {g.raw_rate}
+                          {g.currency && g.currency !== "USD" ? "x" : "%"} ={" "}
+                          {g.rate}%
+                          {g.card.annualFee > 0
+                            ? ` · $${g.card.annualFee}/yr`
+                            : " · no fee"}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right font-mono tabular-nums text-success">
+                        +{formatCurrency(g.gain)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Annual fees are shown but not subtracted: one card usually earns
+                across several categories, so it has to be judged as a whole
+                rather than per row. Recommendations does that, and ranks by
+                first-year value net of fee.
+              </p>
+            </section>
+          )}
+
+          {best.length > 1 && session.heldCards.length > 1 && (
             <section className="border border-border p-6">
               <h2 className="font-semibold text-card-foreground mb-1">
-                Which card to use where
+                Which of your cards to use where
               </h2>
               <p className="text-sm text-muted mb-4">
-                Based on the categories you actually spend in.
+                Among the cards you already hold.
               </p>
               <table className="w-full text-sm">
                 <tbody>

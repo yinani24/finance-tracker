@@ -186,4 +186,135 @@ def post_portfolio_stateless(payload: StatelessProfileRequest) -> dict:
         "best_per_category": service.best_card_per_category(
             profile, user_cards, available
         ),
+        "best_available_per_category": _best_available_per_category(
+            service, payload.category_breakdown, available
+        ),
     }
+
+
+# What a point is worth, in cents, by the currency the card earns.
+#
+# The engine values every point at ``points_value_cents`` (1.0 by default),
+# which makes a hotel card earning 5x look strictly better than a 3% cash-back
+# card. It isn't: Hilton points are worth roughly half a cent, so 5x Hilton is
+# about 2.5% — less than the 3% card. Comparing categories across cards is
+# meaningless without this, so the comparison below converts every rate to
+# cash-equivalent first.
+#
+# These are conservative, widely-published baseline redemption values, not
+# aspirational sweet-spot valuations.
+_POINT_VALUE_CENTS = {
+    "HILTON": 0.5,
+    "MARRIOTT": 0.7,
+    "IHG": 0.5,
+    "WYNDHAM": 0.9,
+    "CHOICE": 0.6,
+    "AMERICAN_EXPRESS": 1.0,
+    "CHASE": 1.25,
+    "CAPITAL_ONE": 1.0,
+    "CITI": 1.0,
+    "BILT": 1.25,
+    "DELTA": 1.1,
+    "UNITED": 1.2,
+    "AMERICAN": 1.4,
+    "SOUTHWEST": 1.3,
+    "ALASKA": 1.4,
+    "JETBLUE": 1.3,
+    "USD": 1.0,
+    "CASH": 1.0,
+}
+
+
+def _cash_equivalent_rate(service: CardRecommendationService, card: dict, category: str) -> float:
+    """A card's earn rate in this category, expressed as cents back per dollar.
+
+    Without this, 5x in a currency worth half a cent outranks 3% cash.
+    """
+    rate = service._category_rate(card, category)
+    currency = (card.get("currency") or "USD").upper()
+    return rate * _POINT_VALUE_CENTS.get(currency, 1.0)
+
+
+# Retail-finance issuers whose cards are usually closed-loop.
+_STORE_ISSUERS = {"SYNCHRONY", "COMENITY", "BREAD", "ALLIANCE DATA"}
+
+
+def _is_store_card(card: dict) -> bool:
+    """Is this a store card, usable only at one retailer?
+
+    The dataset records the Amazon Prime Store Card as
+    ``universalCashbackPercent: 5``, but that 5% applies at Amazon and nowhere
+    else. Since ``_category_rate`` falls back to the flat rate for any category
+    a card doesn't curate, such a card looks like the best card on the market
+    for dining, travel and everything else — advice that would cost the user
+    money if followed.
+
+    Fixing the flat rate itself belongs upstream in the card dataset. Excluding
+    closed-loop cards from general-purpose comparison is the correct scope
+    here: they are never the answer to "which card should I use for dining".
+    """
+    name = (card.get("name") or "").lower()
+    issuer = (card.get("issuer") or "").upper()
+    return "store card" in name or issuer in _STORE_ISSUERS
+
+
+def _best_available_per_category(
+    service: CardRecommendationService,
+    category_breakdown: dict[str, float],
+    available: list[dict],
+) -> list[dict]:
+    """The highest-earning card on the market for each category the user spends in.
+
+    ``best_card_per_category`` only ranks cards the user already holds, which
+    answers nothing when they hold one card: it names that card for every
+    category. This says what the ceiling is, so the gap between the two can be
+    priced and the user can see which categories are worth a new card at all.
+
+    Discontinued cards are skipped — recommending something no longer offered
+    is worse than recommending nothing.
+    """
+    live = [
+        c
+        for c in available
+        if not c.get("discontinued") and not _is_store_card(c)
+    ]
+    results: list[dict] = []
+
+    for category, monthly in sorted(category_breakdown.items()):
+        if monthly <= 0:
+            continue
+
+        ranked = sorted(
+            live,
+            key=lambda c: (
+                -_cash_equivalent_rate(service, c, category),
+                float(c.get("annualFee") or 0),
+                (c.get("name") or "").lower(),
+            ),
+        )
+        if not ranked:
+            continue
+        winner = ranked[0]
+        rate = _cash_equivalent_rate(service, winner, category)
+        if rate <= 0:
+            continue
+
+        results.append(
+            {
+                "category": category,
+                "card": {
+                    "cardId": winner.get("cardId"),
+                    "name": winner.get("name"),
+                    "issuer": winner.get("issuer"),
+                    "annualFee": float(winner.get("annualFee") or 0),
+                    "url": winner.get("url"),
+                },
+                # Cash-equivalent percent, so it can be compared with a
+                # cash-back card and turned into dollars directly.
+                "rate": round(rate, 2),
+                "raw_rate": service._category_rate(winner, category),
+                "currency": winner.get("currency"),
+            }
+        )
+
+    return results

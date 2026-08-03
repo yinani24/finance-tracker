@@ -556,6 +556,12 @@
   /* Section blocks sit directly on the canvas, separated by space rather than
      by a card boundary (matches the reference's settings/detail pages). */
   section + section { margin-top: 2.5rem; }
+  /* …but only when they are stacked. Side by side in a grid or flex row, the
+     rule offsets every column after the first by 2.5rem, so the second box
+     starts lower than the first and — under the default `stretch` — ends up
+     shorter by the same amount. The container's own `gap` is the correct
+     spacing there. */
+  :is(.grid, .flex) > section + section { margin-top: 0; }
   h3 { font-size: 15px; line-height: 22px; font-weight: 600; }
   .font-mono, code, kbd, pre { letter-spacing: -0.01em; }
 }

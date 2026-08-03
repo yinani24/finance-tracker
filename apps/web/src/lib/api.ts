@@ -248,6 +248,21 @@ export interface StatelessPortfolioResponse {
     best_card: { name: string; issuer: string } | null;
     rate: number | null;
     rationale?: string;
+    card_rates?: Record<string, number>;
+  }[];
+  /** The best card on the market per category, as cash-equivalent percent. */
+  best_available_per_category: {
+    category: string;
+    card: {
+      cardId: string;
+      name: string;
+      issuer: string;
+      annualFee: number;
+      url?: string | null;
+    };
+    rate: number;
+    raw_rate: number;
+    currency?: string | null;
   }[];
 }
 
