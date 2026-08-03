@@ -10,13 +10,12 @@ import {
   Sparkle,
   WalletCards,
   PanelLeftClose,
-  PanelLeftOpen,
   Search,
   Sparkles,
   ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 
 // Spending profile is a destination in its own right, not a tab buried under
@@ -38,23 +37,47 @@ const navItems = [
   { href: "/cards", label: "Cards", icon: WalletCards, section: "Optimize" },
 ];
 
+// A tiny external store for the persisted collapse flag. Reading it through
+// `useSyncExternalStore` — rather than restoring it via a `setState` inside a
+// mount effect — keeps SSR safe (the server snapshot is always `false`, so
+// hydration can't mismatch) and keeps every mounted sidebar in sync when the
+// flag toggles.
+const COLLAPSE_KEY = "sidebar-collapsed";
+const collapseListeners = new Set<() => void>();
 
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeCollapsed(value: boolean) {
+  try {
+    localStorage.setItem(COLLAPSE_KEY, String(value));
+  } catch {
+    // Storage unavailable (private mode / quota): the flag still updates
+    // in-memory for this view, it just won't survive a reload.
+  }
+  collapseListeners.forEach((listener) => listener());
+}
+
+function subscribeCollapsed(listener: () => void) {
+  collapseListeners.add(listener);
+  return () => collapseListeners.delete(listener);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-
-
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed");
-    if (saved === "true") setCollapsed(true);
-  }, []);
+  const collapsed = useSyncExternalStore(
+    subscribeCollapsed,
+    readCollapsed,
+    () => false
+  );
 
   function toggle() {
-    setCollapsed((prev) => {
-      localStorage.setItem("sidebar-collapsed", String(!prev));
-      return !prev;
-    });
+    writeCollapsed(!collapsed);
   }
 
 

@@ -44,9 +44,11 @@ function isSessionExpired(session: Session): boolean {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingSession, setLoading] = useState(true);
   const hadSession = useRef(false);
   const supabase = createClient();
+  // Nothing to wait for when auth isn't configured.
+  const loading = supabase ? loadingSession : false;
 
   const handleSignOut = useCallback(async () => {
     await supabase?.auth.signOut();
@@ -67,11 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // No Supabase configured: there is no session to restore and nothing to
-    // subscribe to. The app is fully usable in this state.
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
+    // subscribe to. `loading` is derived as false in that case rather than set
+    // here, since a synchronous setState in an effect costs a second render.
+    if (!supabase) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
       validateAndSetSession(session);
       setLoading(false);

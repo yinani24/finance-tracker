@@ -60,7 +60,7 @@ async function getAccessToken(
   return session?.access_token ?? null;
 }
 
-async function fetchWithAuth<T>(
+async function fetchWithAuth(
   path: string,
   token: string | null,
   options?: RequestInit
@@ -80,13 +80,13 @@ async function fetchWithAuth<T>(
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = await getAccessToken();
-  let res = await fetchWithAuth<T>(path, token, options);
+  let res = await fetchWithAuth(path, token, options);
 
   if (res.status === 401) {
     // Token might be stale — try refreshing once
     const freshToken = await getAccessToken(true);
     if (freshToken) {
-      res = await fetchWithAuth<T>(path, freshToken, options);
+      res = await fetchWithAuth(path, freshToken, options);
     }
     if (res.status === 401) {
       onSessionExpired?.();

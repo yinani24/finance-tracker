@@ -78,6 +78,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = readStored();
+    // The rule targets effects that derive state from props, which cause an
+    // extra render for no reason. This is the other case: sessionStorage does
+    // not exist during SSR, so the first client render must match the server's
+    // empty output before the stored session can replace it. Reading it any
+    // earlier is a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setSession(stored);
     hydrated.current = true;
     setReady(true);

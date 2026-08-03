@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { Search, Plus, X } from "lucide-react";
 import { useSession } from "@/lib/session/session-context";
@@ -50,18 +50,19 @@ export default function TransactionsPage() {
 
   // Paginate the (filtered, sorted) list so long statements stay scannable.
   const PAGE_SIZE = 25;
-  const [page, setPage] = useState(1);
+  // The page number is stored with the filters it belongs to. Resetting it in
+  // an effect meant rendering the wrong page once before correcting, and is
+  // what `react-hooks/set-state-in-effect` warns about; deriving it needs no
+  // second render at all.
+  const filterKey = `${search}|${filterCard ?? ""}|${filterCategory ?? ""}`;
+  const [pageState, setPage] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paged = sorted.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
-  // Jump back to page 1 whenever the filters/search change the result set.
-  useEffect(() => {
-    setPage(1);
-  }, [search, filterCard, filterCategory]);
-
   const empty = ready && transactions.length === 0;
 
   return (
@@ -247,7 +248,9 @@ export default function TransactionsPage() {
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() =>
+                    setPage({ key: filterKey, page: Math.max(1, page - 1) })
+                  }
                   disabled={currentPage <= 1}
                   className="motion-base px-3 py-1.5 border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -257,7 +260,9 @@ export default function TransactionsPage() {
                   {currentPage} / {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setPage({ key: filterKey, page: Math.min(totalPages, page + 1) })
+                  }
                   disabled={currentPage >= totalPages}
                   className="motion-base px-3 py-1.5 border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
