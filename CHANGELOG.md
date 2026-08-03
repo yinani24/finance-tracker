@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Transaction enrichment provenance (#208, slice 2a).** Added two nullable
+  columns to `transactions` — `category_confidence` (the provider's 0..1
+  confidence in `category`) and `enriched_at` (when a provider last classified
+  the row) — with an Alembic migration. `apply_enrichment` now stamps both
+  whenever a provider assigns a category, and leaves them NULL on the fail-open /
+  noop paths, so `enriched_at IS NULL` cleanly selects rows still needing a
+  backfill. `TransactionRead` surfaces both fields, lighting up low-confidence
+  surfacing in the recategorize UI. Provider-independent: works with the current
+  `rules` provider and needs no product decision.
 - **Browser-side statement parser (`apps/web/src/lib/statement/`).** A TypeScript
   port of the server ingest services so a bank/credit-card statement can be parsed
   entirely on the user's device — the file never leaves the browser. `parseStatement(file,
