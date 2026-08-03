@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase?.auth.signOut();
     window.location.href = "/dashboard";
   }, [supabase]);
 
@@ -66,6 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    // No Supabase configured: there is no session to restore and nothing to
+    // subscribe to. The app is fully usable in this state.
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       validateAndSetSession(session);
       setLoading(false);

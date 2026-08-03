@@ -1,258 +1,168 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  dismissInsight,
-  getInsights,
-  getInsightsSummary,
-  markInsightActedOn,
-  markInsightsSeen,
-  snoozeInsight,
-} from "@/lib/api";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, TrendingUp, CircleAlert, Check } from "lucide-react";
+import { postStatelessPortfolio, hasApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
-import type { Insight } from "@/lib/types";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Sparkles,
-  XCircle,
-} from "lucide-react";
+import { useSession } from "@/lib/session/session-context";
+import { summarize, categoryTotals } from "@/lib/session/derive";
+import { buildInsights, type Insight } from "@/lib/session/insights";
+import { StatementDropzone } from "@/components/statement-dropzone";
 
-const ENGINE_TABS = [
-  { id: "all", label: "All", engine: undefined },
-  { id: "save", label: "Save", engine: "save" },
-  { id: "earn", label: "Earn", engine: "earn" },
-  { id: "goal_forecast", label: "Goals", engine: "goal_forecast" },
-  { id: "card", label: "Cards", engine: "card" },
-] as const;
+/**
+ * What the other pages can't see on their own.
+ *
+ * This used to wrap the recommendation engine, so every item it produced was
+ * already a page in the nav. It now reports the cross-cutting findings:
+ * recurring charges, utilization, cashflow, and category spend sitting on the
+ * wrong card — each with the numbers it came from.
+ */
 
-const EFFORT_LABELS: Record<string, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
+const SEVERITY: Record<
+  Insight["severity"],
+  { icon: React.ElementType; className: string; label: string }
+> = {
+  critical: {
+    icon: AlertTriangle,
+    className: "text-destructive",
+    label: "Needs attention",
+  },
+  warning: { icon: CircleAlert, className: "text-destructive", label: "Worth fixing" },
+  opportunity: { icon: TrendingUp, className: "text-success", label: "Opportunity" },
 };
 
-function formatImpact(oneTime: number, annual: number): string {
-  if (annual !== 0) return `${formatCurrency(annual / 100)}/yr`;
-  if (oneTime !== 0) return formatCurrency(oneTime / 100);
-  return "—";
-}
+export default function InsightsPage() {
+  const { session, ready } = useSession();
 
-function EffortBadge({ effort }: { effort: string }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs text-muted">
-      {EFFORT_LABELS[effort] ?? effort}
-    </span>
+  const summary = useMemo(() => summarize(session), [session]);
+  const cats = useMemo(
+    () => categoryTotals(session.transactions),
+    [session.transactions]
   );
-}
 
-function InsightRow({ insight }: { insight: Insight }) {
-  const qc = useQueryClient();
-  const [expanded, setExpanded] = useState(false);
+  const hasData = ready && session.transactions.length > 0;
 
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["insights"] });
-    qc.invalidateQueries({ queryKey: ["insights-summary"] });
-  };
-
-  const dismissMut = useMutation({
-    mutationFn: () => dismissInsight(insight.id),
-    onSuccess: invalidate,
-  });
-  const snoozeMut = useMutation({
-    mutationFn: (days: number) => {
-      const until = new Date();
-      until.setDate(until.getDate() + days);
-      // Backend SnoozeRequest.until is a bare `date`; Pydantic v2 rejects a
-      // datetime with a non-zero time component (422). Send date-only.
-      return snoozeInsight(insight.id, until.toISOString().slice(0, 10));
-    },
-    onSuccess: invalidate,
-  });
-  const actedMut = useMutation({
-    mutationFn: () => markInsightActedOn(insight.id),
-    onSuccess: invalidate,
+  // Per-category rates for the held cards, so a "wrong card" finding can be
+  // priced rather than merely asserted.
+  const { data } = useQuery({
+    queryKey: [
+      "portfolio",
+      "stateless",
+      session.heldCards.map((c) => c.name).join(","),
+      Math.round(summary.monthlySpend),
+    ],
+    enabled: hasData && hasApi && session.heldCards.length > 0,
+    queryFn: () =>
+      postStatelessPortfolio({
+        avg_monthly_spend: summary.monthlySpend,
+        category_breakdown: Object.fromEntries(
+          cats.map((c) => [c.category, c.total / summary.months])
+        ),
+        held_cards: session.heldCards.map((c) => ({
+          // The dataset is keyed on the product name, not the display label.
+          name: c.productName ?? c.name,
+          issuer: c.issuer,
+        })),
+      }),
   });
 
-  let dataPoints: Array<{ label: string; value: string }> = [];
-  try {
-    const parsed = JSON.parse(insight.evidence_json || "{}");
-    if (Array.isArray(parsed.data_points)) dataPoints = parsed.data_points;
-  } catch {
-    dataPoints = [];
+  const insights = useMemo(
+    () => buildInsights(session, data?.best_per_category ?? []),
+    [session, data]
+  );
+
+  const totalUpside = insights
+    .filter((i) => i.impactAnnual != null && i.impactAnnual > 0)
+    .reduce((s, i) => s + (i.impactAnnual ?? 0), 0);
+
+  if (ready && !hasData) {
+    return (
+      <div className="p-8 max-w-3xl mx-auto">
+        <h1 className="text-2xl font-semibold text-card-foreground">Insights</h1>
+        <p className="text-sm text-muted mt-1 mb-8">
+          Drop a statement and this finds what the other pages can&apos;t see on
+          their own.
+        </p>
+        <StatementDropzone />
+      </div>
+    );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs uppercase tracking-wide text-muted">
-              {insight.engine}
-            </span>
-            <EffortBadge effort={insight.effort} />
-            {!insight.seen_at && (
-              <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs text-link">
-                New
-              </span>
-            )}
-          </div>
-          <h3 className="text-base font-medium text-card-foreground">
-            {insight.title}
-          </h3>
-          <p className="mt-1 text-sm text-muted">{insight.body}</p>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-xs text-muted">Impact</p>
-          <p className="font-mono text-base font-semibold text-card-foreground">
-            {formatImpact(insight.impact_one_time_cents, insight.impact_annual_cents)}
+    <div className="p-8 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold text-card-foreground">Insights</h1>
+        <p className="text-sm text-muted mt-1">
+          {insights.length === 0
+            ? "Nothing worth flagging in what's loaded."
+            : totalUpside > 0
+              ? `${insights.length} finding${insights.length === 1 ? "" : "s"} · up to ${formatCurrency(totalUpside)} a year in play`
+              : `${insights.length} finding${insights.length === 1 ? "" : "s"}`}
+        </p>
+      </div>
+
+      {insights.length === 0 ? (
+        <div className="border border-border p-8 text-center">
+          <Check className="mx-auto mb-3 h-8 w-8 text-success opacity-70" />
+          <p className="text-sm text-muted">
+            No recurring charges, utilization or cashflow problems found in the
+            statements loaded. Adding more months gives this more to work with.
           </p>
         </div>
-      </div>
-
-      <div className="mt-4 flex items-center gap-2">
-        <button
-          onClick={() => actedMut.mutate()}
-          disabled={actedMut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
-        >
-          <CheckCircle className="w-3.5 h-3.5" /> Mark done
-        </button>
-        <button
-          onClick={() => snoozeMut.mutate(7)}
-          disabled={snoozeMut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
-        >
-          <Clock className="w-3.5 h-3.5" /> Snooze 7d
-        </button>
-        <button
-          onClick={() => dismissMut.mutate()}
-          disabled={dismissMut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
-        >
-          <XCircle className="w-3.5 h-3.5" /> Dismiss
-        </button>
-        {dataPoints.length > 0 && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="ml-auto inline-flex items-center gap-1 text-xs text-muted hover:text-card-foreground"
-          >
-            {expanded ? "Hide" : "Details"}
-            {expanded ? (
-              <ChevronUp className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
-            )}
-          </button>
-        )}
-      </div>
-
-      {expanded && dataPoints.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-accent p-4 md:grid-cols-3">
-          {dataPoints.map((dp, i) => (
-            <div key={i}>
-              <p className="text-xs text-muted">{dp.label}</p>
-              <p className="font-mono text-sm text-card-foreground">{dp.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function InsightsPage() {
-  const [tab, setTab] = useState<(typeof ENGINE_TABS)[number]["id"]>("all");
-  const qc = useQueryClient();
-  const activeTab = ENGINE_TABS.find((t) => t.id === tab)!;
-
-  const { data: insights, isLoading } = useQuery({
-    queryKey: ["insights", activeTab.engine ?? "all"],
-    queryFn: () => getInsights({ engine: activeTab.engine }),
-  });
-  const { data: summary } = useQuery({
-    queryKey: ["insights-summary"],
-    queryFn: getInsightsSummary,
-  });
-
-  useEffect(() => {
-    markInsightsSeen()
-      .then(() => qc.invalidateQueries({ queryKey: ["insights-summary"] }))
-      .catch(() => {});
-  }, [qc]);
-
-  return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <Sparkles className="w-5 h-5 text-link" />
-        <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-      </div>
-
-      {summary && (
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-xs text-muted">Active</p>
-            <p className="mt-1 font-mono text-2xl font-semibold text-card-foreground">
-              {summary.total_active}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-xs text-muted">Annual impact</p>
-            <p className="mt-1 font-mono text-2xl font-semibold text-card-foreground">
-              {formatCurrency(summary.total_annual_impact_cents / 100)}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-xs text-muted">Unread</p>
-            <p className="mt-1 font-mono text-2xl font-semibold text-card-foreground">
-              {summary.unread_count}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-6 flex gap-2 overflow-x-auto">
-        {ENGINE_TABS.map((t) => {
-          const count = t.engine ? summary?.by_engine[t.engine] ?? 0 : summary?.total_active ?? 0;
-          const active = t.id === tab;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`rounded-full px-4 py-1.5 text-sm motion-base ${
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "border border-border bg-background text-muted hover:text-card-foreground"
-              }`}
-            >
-              {t.label}
-              {summary && (
-                <span className="ml-2 text-xs opacity-70">{count}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-4">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-          ))}
-        </div>
-      ) : !insights || insights.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-          <p className="text-sm text-muted">No insights here yet. Check back after your next sync.</p>
-        </div>
       ) : (
-        <div className="space-y-4">
-          {insights.map((ins) => (
-            <InsightRow key={ins.id} insight={ins} />
-          ))}
+        <div className="space-y-3">
+          {insights.map((insight) => {
+            const s = SEVERITY[insight.severity];
+            const Icon = s.icon;
+            return (
+              <article key={insight.id} className="border border-border p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 gap-3">
+                    <Icon className={`mt-0.5 h-5 w-5 flex-shrink-0 ${s.className}`} />
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-card-foreground">
+                        {insight.title}
+                      </h2>
+                      <p className="mt-1 text-sm text-muted">{insight.body}</p>
+                    </div>
+                  </div>
+                  {insight.impactAnnual != null && (
+                    <div className="flex-shrink-0 text-right">
+                      <div
+                        className={
+                          "font-mono text-lg tabular-nums " +
+                          (insight.impactAnnual < 0
+                            ? "text-destructive"
+                            : "text-success")
+                        }
+                      >
+                        {insight.impactAnnual < 0 ? "−" : ""}
+                        {formatCurrency(Math.abs(insight.impactAnnual))}
+                      </div>
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        per year
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-3 text-xs">
+                  {insight.evidence.map((e, i) => (
+                    <span key={i} className="text-muted-foreground">
+                      {e.label}{" "}
+                      <span className="font-mono tabular-nums text-card-foreground">
+                        {e.value}
+                      </span>
+                    </span>
+                  ))}
+                  <span className="ml-auto text-muted-foreground capitalize">
+                    {insight.effort} effort
+                  </span>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>

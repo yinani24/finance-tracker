@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTransactions, getAccounts, updateTransaction } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
-import { Search } from "lucide-react";
-import { StatementImport } from "@/components/statement-import";
+import { Search, Plus, X } from "lucide-react";
+import { useSession } from "@/lib/session/session-context";
+import { StatementDropzone } from "@/components/statement-dropzone";
 
 // The fixed internal category set — must stay in sync with the backend taxonomy
 // (`apps/api/app/services/enrichment/taxonomy.py`). Editing a transaction's
@@ -24,57 +23,30 @@ const TAXONOMY_CATEGORIES = [
 ] as const;
 
 export default function TransactionsPage() {
-  const queryClient = useQueryClient();
+  const { session, ready, updateTransaction } = useSession();
   const [search, setSearch] = useState("");
-  const [filterAccount, setFilterAccount] = useState<number | undefined>();
+  const [filterCard, setFilterCard] = useState<string | undefined>();
   const [filterCategory, setFilterCategory] = useState<string | undefined>();
-  const [savingId, setSavingId] = useState<number | null>(null);
+  // The dropzone is opened on demand: once transactions exist, the table is
+  // the point of the page and a permanent upload panel just pushes it down.
+  const [importing, setImporting] = useState(false);
 
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ["transactions", filterAccount, filterCategory],
-    queryFn: () =>
-      getTransactions({
-        account_id: filterAccount,
-        category: filterCategory,
-      }),
-  });
+  const { transactions, heldCards } = session;
+  const cardMap = Object.fromEntries(heldCards.map((c) => [c.id, c.name]));
 
-  // Editing a category PATCHes the transaction; the backend fires
-  // TRANSACTION_MUTATED, which recomputes the spending profile + insights, so we
-  // invalidate those consumers too and the "you dine out ~N×/month" figure
-  // self-corrects.
-  const recategorize = useMutation({
-    mutationFn: ({ id, category }: { id: number; category: string }) =>
-      updateTransaction(id, { category }),
-    onMutate: ({ id }) => setSavingId(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
-      queryClient.invalidateQueries({ queryKey: ["insights"] });
-      queryClient.invalidateQueries({ queryKey: ["insights-summary"] });
-    },
-    onSettled: () => setSavingId(null),
-  });
-
-  const { data: accounts = [] } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: getAccounts,
-  });
-
-  const accountMap = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
-
-  const filtered = search
-    ? transactions.filter(
+  const sorted = useMemo(() => {
+    const needle = search.toLowerCase();
+    return transactions
+      .filter((t) => !filterCard || t.sourceId === filterCard)
+      .filter((t) => !filterCategory || t.category === filterCategory)
+      .filter(
         (t) =>
-          t.merchant.toLowerCase().includes(search.toLowerCase()) ||
-          (t.category || "").toLowerCase().includes(search.toLowerCase())
+          !needle ||
+          t.merchant.toLowerCase().includes(needle) ||
+          t.category.toLowerCase().includes(needle)
       )
-    : transactions;
-
-  const sorted = [...filtered].sort(
-    (a, b) =>
-      new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime()
-  );
+      .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
+  }, [transactions, search, filterCard, filterCategory]);
 
   // Paginate the (filtered, sorted) list so long statements stay scannable.
   const PAGE_SIZE = 25;
@@ -88,209 +60,213 @@ export default function TransactionsPage() {
   // Jump back to page 1 whenever the filters/search change the result set.
   useEffect(() => {
     setPage(1);
-  }, [search, filterAccount, filterCategory]);
+  }, [search, filterCard, filterCategory]);
+
+  const empty = ready && transactions.length === 0;
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-card-foreground">
-          Transactions
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          {isLoading ? (
-            <span className="inline-block h-4 w-24 bg-accent rounded animate-pulse align-middle" />
-          ) : (
-            <>
-              <span className="font-mono tabular-nums">
-                {transactions.length}
-              </span>{" "}
-              transactions
-            </>
-          )}
-        </p>
-      </div>
-
-      <StatementImport />
-
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search merchants..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-input bg-background text-foreground rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
-          />
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-card-foreground">
+            Transactions
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            {!ready ? (
+              <span className="inline-block h-4 w-24 bg-accent rounded animate-pulse align-middle" />
+            ) : (
+              <>
+                <span className="font-mono tabular-nums">
+                  {transactions.length}
+                </span>{" "}
+                transactions, read in this tab
+              </>
+            )}
+          </p>
         </div>
-        <select
-          value={filterAccount ?? ""}
-          onChange={(e) =>
-            setFilterAccount(e.target.value ? Number(e.target.value) : undefined)
-          }
-          className="border border-input bg-background text-foreground rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
-        >
-          <option value="">All Accounts</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+        {!empty && (
+          <button
+            type="button"
+            onClick={() => setImporting((v) => !v)}
+            className="motion-base flex flex-shrink-0 items-center gap-2 border border-border px-3 py-2 text-sm hover:bg-accent/40"
+          >
+            {importing ? (
+              <>
+                <X className="h-4 w-4" /> Close
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" /> Add a statement
+              </>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Segmented pill filters — the taxonomy is a small fixed set, so a
-          visible toggle row beats a dropdown that hides every option. */}
-      <div className="flex flex-wrap items-center gap-5 mb-6 border-b border-border">
-        {[null, ...TAXONOMY_CATEGORIES].map((c) => {
-          const active = c === null ? !filterCategory : filterCategory === c;
-          return (
-            <button
-              key={c ?? "all"}
-              type="button"
-              onClick={() => setFilterCategory(c ?? undefined)}
-              data-active={active}
-              className={
-                "relative -mb-px border-b-2 pb-2.5 pt-1 text-[13px] font-medium capitalize motion-base " +
-                (active
-                  ? "border-primary text-card-foreground"
-                  : "border-transparent text-muted hover:text-card-foreground")
-              }
-            >
-              {c ?? "All"}
-            </button>
-          );
-        })}
-      </div>
-
-      {recategorize.isError && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-          Couldn&apos;t update the category. Please try again.
+      {(empty || importing) && (
+        <div className="mb-6">
+          <StatementDropzone
+            compact={!empty}
+            onIngested={() => setImporting(false)}
+          />
         </div>
       )}
 
-      <div className="bg-card rounded-md border border-border overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Merchant
-              </th>
-              <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Account
-              </th>
-              <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading
-              ? [...Array(6)].map((_, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-border last:border-0 animate-pulse"
-                  >
-                    <td className="px-5 py-3">
-                      <div className="h-4 w-20 bg-accent rounded" />
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="h-4 w-28 bg-accent rounded" />
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="h-5 w-16 bg-accent rounded" />
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="h-4 w-24 bg-accent rounded" />
-                    </td>
-                    <td className="px-5 py-3 flex justify-end">
-                      <div className="h-4 w-16 bg-accent rounded" />
-                    </td>
-                  </tr>
-                ))
-              : paged.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="row-interactive border-b border-border last:border-0 hover:bg-accent/30"
-                  >
-                    <td className="px-5 py-3 text-sm text-muted font-mono tabular-nums">
-                      {t.occurred_on}
-                    </td>
-                    <td className="px-5 py-3 text-sm font-medium text-card-foreground">
-                      {t.merchant}
-                    </td>
-                    <td className="px-5 py-3">
-                      <select
-                        aria-label="Category"
-                        value={t.category ?? "other"}
-                        disabled={savingId === t.id}
-                        onChange={(e) =>
-                          recategorize.mutate({
-                            id: t.id,
-                            category: e.target.value,
-                          })
-                        }
-                        className="border border-input bg-background text-foreground rounded-lg px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base disabled:opacity-50 disabled:cursor-wait"
-                      >
-                        {TAXONOMY_CATEGORIES.map((c) => (
-                          <option key={c} value={c} className="capitalize">
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-muted">
-                      {accountMap[t.account_id] || `#${t.account_id}`}
-                    </td>
-                    <td
-                      className={`px-5 py-3 text-sm font-mono font-medium tabular-nums text-right ${t.is_income ? "text-success" : "text-card-foreground"}`}
-                    >
-                      {t.is_income ? "+" : "-"}
-                      {formatCurrency(Math.abs(t.amount))}
-                    </td>
-                  </tr>
+      {!empty && (
+        <>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search merchants..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full border border-input bg-background text-foreground pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
+              />
+            </div>
+            {heldCards.length > 1 && (
+              <select
+                value={filterCard ?? ""}
+                onChange={(e) => setFilterCard(e.target.value || undefined)}
+                className="border border-input bg-background text-foreground px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
+              >
+                <option value="">All cards</option>
+                {heldCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
-          </tbody>
-        </table>
-      </div>
-
-      {!isLoading && sorted.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between mt-4 text-sm">
-          <span className="text-muted">
-            Showing{" "}
-            <span className="font-mono tabular-nums">
-              {(currentPage - 1) * PAGE_SIZE + 1}–
-              {Math.min(currentPage * PAGE_SIZE, sorted.length)}
-            </span>{" "}
-            of{" "}
-            <span className="font-mono tabular-nums">{sorted.length}</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className="motion-base px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="text-muted font-mono tabular-nums">
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="motion-base px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+              </select>
+            )}
           </div>
-        </div>
+
+          {/* Segmented pill filters — the taxonomy is a small fixed set, so a
+              visible toggle row beats a dropdown that hides every option. */}
+          <div className="flex flex-wrap items-center gap-5 mb-6 border-b border-border">
+            {[null, ...TAXONOMY_CATEGORIES].map((c) => {
+              const active = c === null ? !filterCategory : filterCategory === c;
+              return (
+                <button
+                  key={c ?? "all"}
+                  type="button"
+                  onClick={() => setFilterCategory(c ?? undefined)}
+                  data-active={active}
+                  className={
+                    "relative -mb-px border-b-2 pb-2.5 pt-1 text-[13px] font-medium capitalize motion-base " +
+                    (active
+                      ? "border-primary text-card-foreground"
+                      : "border-transparent text-muted hover:text-card-foreground")
+                  }
+                >
+                  {c ?? "All"}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="border border-border overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Merchant
+                  </th>
+                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Card
+                  </th>
+                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider text-right">
+                    Amount
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((t) => {
+                  const income = t.amount > 0;
+                  return (
+                    <tr
+                      key={t.id}
+                      className="row-interactive border-b border-border last:border-0 hover:bg-accent/30"
+                    >
+                      <td className="px-5 py-3 text-sm text-muted font-mono tabular-nums">
+                        {t.occurredOn}
+                      </td>
+                      <td
+                        className="px-5 py-3 text-sm font-medium text-card-foreground"
+                        title={t.rawMerchant ?? undefined}
+                      >
+                        {t.merchant}
+                      </td>
+                      <td className="px-5 py-3">
+                        <select
+                          aria-label="Category"
+                          value={t.category}
+                          onChange={(e) =>
+                            updateTransaction(t.id, { category: e.target.value })
+                          }
+                          className="border border-input bg-background text-foreground px-2 py-1 text-xs capitalize focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring motion-base"
+                        >
+                          {TAXONOMY_CATEGORIES.map((c) => (
+                            <option key={c} value={c} className="capitalize">
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-muted">
+                        {t.sourceId ? cardMap[t.sourceId] ?? "—" : "—"}
+                      </td>
+                      <td
+                        className={`px-5 py-3 text-sm font-mono font-medium tabular-nums text-right ${income ? "text-success" : "text-card-foreground"}`}
+                      >
+                        {income ? "+" : "-"}
+                        {formatCurrency(Math.abs(t.amount))}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {sorted.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-4 text-sm">
+              <span className="text-muted">
+                Showing{" "}
+                <span className="font-mono tabular-nums">
+                  {(currentPage - 1) * PAGE_SIZE + 1}–
+                  {Math.min(currentPage * PAGE_SIZE, sorted.length)}
+                </span>{" "}
+                of <span className="font-mono tabular-nums">{sorted.length}</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="motion-base px-3 py-1.5 border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-muted font-mono tabular-nums">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="motion-base px-3 py-1.5 border border-border text-sm hover:bg-accent/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

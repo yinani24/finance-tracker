@@ -12,7 +12,21 @@ export type ScoreBand = "excellent" | "good" | "fair" | "poor";
 /** A card the user says they already hold. */
 export interface HeldCard {
   id: string;
+  /** Display label, e.g. "Chase Sapphire Preferred ••1234". */
   name: string;
+  /**
+   * The product name on its own, e.g. "Sapphire Preferred".
+   *
+   * The card dataset is keyed on product name + issuer, and the display label
+   * carries an issuer prefix and the last four, so matching on `name` fails and
+   * every earn rate comes back 0. Kept separate rather than parsed back out at
+   * each call site.
+   */
+  productName?: string;
+  /** Last four of the account number — the strongest identity a statement gives. */
+  last4?: string;
+  /** Period end of the newest statement seen, so older ones don't overwrite. */
+  statementThrough?: string;
   issuer?: string;
   /** Credit limit, in dollars. Drives utilization. */
   creditLimit?: number;
@@ -30,7 +44,10 @@ export interface CreditStanding {
 export interface SessionTransaction {
   id: string;
   occurredOn: string; // ISO date
+  /** Cleaned name, used for grouping and display. */
   merchant: string;
+  /** The descriptor exactly as the statement printed it. */
+  rawMerchant?: string;
   /** Negative = spend, positive = money in — the app-wide convention. */
   amount: number;
   category: string;

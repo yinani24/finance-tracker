@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { migrate } from "./migrate";
 import {
   EMPTY_SESSION,
   type HeldCard,
@@ -38,13 +39,15 @@ interface SessionContextValue {
   ready: boolean;
   setStep: (step: SessionStep) => void;
   setCredit: (credit: CreditStanding) => void;
-  addCard: (card: Omit<HeldCard, "id">) => void;
+  /** Returns the new card's id so callers can attribute transactions to it. */
+  addCard: (card: Omit<HeldCard, "id">) => string;
   updateCard: (id: string, patch: Partial<HeldCard>) => void;
   removeCard: (id: string) => void;
   addTransactions: (
     rows: Omit<SessionTransaction, "id">[],
     record: Omit<ImportRecord, "id" | "importedAt">
   ) => void;
+  updateTransaction: (id: string, patch: Partial<SessionTransaction>) => void;
   clear: () => void;
 }
 
@@ -60,7 +63,7 @@ function readStored(): SessionState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SessionState;
     // Defensive: a shape change between versions must not crash the app.
-    return { ...EMPTY_SESSION, ...parsed };
+    return migrate({ ...EMPTY_SESSION, ...parsed });
   } catch {
     return null;
   }
@@ -99,7 +102,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCard = useCallback((card: Omit<HeldCard, "id">) => {
-    setSession((s) => ({ ...s, heldCards: [...s.heldCards, { ...card, id: newId() }] }));
+    // The id is minted here and returned, so the caller can tag the statement's
+    // transactions with the card they came from in the same pass.
+    const id = newId();
+    setSession((s) => ({ ...s, heldCards: [...s.heldCards, { ...card, id }] }));
+    return id;
   }, []);
 
   const updateCard = useCallback((id: string, patch: Partial<HeldCard>) => {
@@ -141,6 +148,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const updateTransaction = useCallback(
+    (id: string, patch: Partial<SessionTransaction>) => {
+      setSession((s) => ({
+        ...s,
+        transactions: s.transactions.map((t) =>
+          t.id === id ? { ...t, ...patch } : t
+        ),
+      }));
+    },
+    []
+  );
+
   const clear = useCallback(() => {
     setSession(EMPTY_SESSION);
     try {
@@ -160,9 +179,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       updateCard,
       removeCard,
       addTransactions,
+      updateTransaction,
       clear,
     }),
-    [session, ready, setStep, setCredit, addCard, updateCard, removeCard, addTransactions, clear]
+    [
+      session,
+      ready,
+      setStep,
+      setCredit,
+      addCard,
+      updateCard,
+      removeCard,
+      addTransactions,
+      updateTransaction,
+      clear,
+    ]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
