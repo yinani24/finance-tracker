@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Trash2, X } from "lucide-react";
-import { postStatelessPortfolio } from "@/lib/api";
+import { postStatelessPortfolio, hasApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
 import { summarize, categoryTotals } from "@/lib/session/derive";
@@ -40,7 +40,7 @@ export default function PortfolioPage() {
       session.heldCards.map((c) => c.name).join(","),
       Math.round(summary.monthlySpend),
     ],
-    enabled: ready && session.heldCards.length > 0,
+    enabled: ready && hasApi && session.heldCards.length > 0,
     queryFn: () =>
       postStatelessPortfolio({
         avg_monthly_spend: summary.monthlySpend,

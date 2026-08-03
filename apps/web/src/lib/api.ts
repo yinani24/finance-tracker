@@ -23,6 +23,20 @@ import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/**
+ * Is a reachable API configured?
+ *
+ * Statement parsing, the spending profile, subscriptions and income all run in
+ * the browser, so the app is useful with no backend at all. Only card ranking
+ * needs one, because it reads the public card dataset. On a deployment with no
+ * API configured the default would be `localhost:8000`, which exists on the
+ * developer's machine and nowhere else — so every visitor would sit in front of
+ * a spinner that never resolves. Callers gate those queries on this instead.
+ */
+export const hasApi =
+  Boolean(process.env.NEXT_PUBLIC_API_URL) ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost");
+
 // Global callback for session expiry — set by AuthProvider
 let onSessionExpired: (() => void) | null = null;
 
@@ -34,6 +48,7 @@ async function getAccessToken(
   forceRefresh = false
 ): Promise<string | null> {
   const supabase = createClient();
+  if (!supabase) return null;
   if (forceRefresh) {
     const { data, error } = await supabase.auth.refreshSession();
     if (error || !data.session) return null;

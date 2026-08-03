@@ -13,7 +13,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import { postStatelessRecommendations } from "@/lib/api";
+import { postStatelessRecommendations, hasApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
 import { summarize, categoryTotals, topMerchants } from "@/lib/session/derive";
@@ -75,7 +75,7 @@ export default function DashboardPage() {
       session.credit.scoreBand,
       session.heldCards.length,
     ],
-    enabled: hasData,
+    enabled: hasData && hasApi,
     queryFn: () =>
       postStatelessRecommendations({
         avg_monthly_spend: summary.monthlySpend,

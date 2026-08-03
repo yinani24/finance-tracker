@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, TrendingUp, CircleAlert, Check } from "lucide-react";
-import { postStatelessPortfolio } from "@/lib/api";
+import { postStatelessPortfolio, hasApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
 import { summarize, categoryTotals } from "@/lib/session/derive";
@@ -52,7 +52,7 @@ export default function InsightsPage() {
       session.heldCards.map((c) => c.name).join(","),
       Math.round(summary.monthlySpend),
     ],
-    enabled: hasData && session.heldCards.length > 0,
+    enabled: hasData && hasApi && session.heldCards.length > 0,
     queryFn: () =>
       postStatelessPortfolio({
         avg_monthly_spend: summary.monthlySpend,

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Lightbulb, ExternalLink, Loader2 } from "lucide-react";
-import { postStatelessRecommendations } from "@/lib/api";
+import { postStatelessRecommendations, hasApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
 import { summarize, categoryTotals } from "@/lib/session/derive";
@@ -46,7 +46,7 @@ export default function RecommendationsPage() {
       session.credit.scoreBand,
       session.heldCards.map((c) => c.name).join(","),
     ],
-    enabled: hasData,
+    enabled: hasData && hasApi,
     queryFn: () =>
       postStatelessRecommendations({
         avg_monthly_spend: summary.monthlySpend,
@@ -123,7 +123,20 @@ export default function RecommendationsPage() {
         </div>
       )}
 
-      {!isLoading && recs.length === 0 && (
+      {!hasApi && (
+        <div className="border border-border py-12 text-center text-muted">
+          <Lightbulb className="mx-auto mb-3 h-8 w-8 opacity-50" />
+          <p className="mx-auto max-w-md text-sm">
+            Card ranking needs the card dataset, which is served by the API.
+            Set <code className="font-mono text-xs">NEXT_PUBLIC_API_URL</code>{" "}
+            to a running instance to enable it. Everything else on this site —
+            parsing, spending, subscriptions, income — runs in your browser and
+            works without it.
+          </p>
+        </div>
+      )}
+
+      {hasApi && !isLoading && recs.length === 0 && (
         <div className="border border-border py-12 text-center text-muted">
           <Lightbulb className="mx-auto mb-3 h-8 w-8 opacity-50" />
           <p className="text-sm">
