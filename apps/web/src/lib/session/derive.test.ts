@@ -173,8 +173,8 @@ describe("transfers are neither income nor spend", () => {
     // These come from a real Chase bank export loaded alongside the card
     // statement: counting them as income added $5,561 that was never earned.
     const cats = categoryTotals([
-      txn("Payment Thank You-Mobile", "2026-07-03", 2992.07, "other"),
-      txn("AUTOMATIC PAYMENT - THANK YOU", "2026-07-03", 869.52, "other"),
+      txn("Payment Thank You-Mobile", "2026-07-03", 1450.00, "other"),
+      txn("AUTOMATIC PAYMENT - THANK YOU", "2026-07-03", 620.00, "other"),
       txn("COFFEE", "2026-07-04", -5, "dining"),
     ]);
     expect(cats).toEqual([
@@ -184,11 +184,11 @@ describe("transfers are neither income nor spend", () => {
 
   it("excludes the paying side too, so spend is not double counted", () => {
     const trend = monthlyTrend([
-      txn("CHASE CREDIT CRD EPAY", "2026-07-03", -2992.07, "other"),
-      txn("BOTERO LABS PAYROLL", "2026-07-31", 4660.65, "income"),
+      txn("CHASE CREDIT CRD EPAY", "2026-07-03", -1450.00, "other"),
+      txn("NORTHWIND LABS PAYROLL", "2026-07-31", 4800.00, "income"),
     ]);
     expect(trend[0].spend).toBe(0);
-    expect(trend[0].income).toBeCloseTo(4660.65, 2);
+    expect(trend[0].income).toBeCloseTo(4800.00, 2);
   });
 
   it("leaves ordinary merchants alone", () => {

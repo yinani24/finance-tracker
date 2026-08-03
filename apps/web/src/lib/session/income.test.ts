@@ -9,11 +9,11 @@ function dep(merchant: string, occurredOn: string, amount: number): SessionTrans
 
 /** The payroll rows from a real Chase bank export, verbatim. */
 const PAYROLL = [
-  dep("BOTERO LABS PAYROLL", "2026-05-29", 4918.47),
-  dep("BOTERO LABS PAYROLL", "2026-06-15", 4918.47),
-  dep("BOTERO LABS PAYROLL", "2026-06-30", 4918.47),
-  dep("BOTERO LABS PAYROLL", "2026-07-16", 4660.66),
-  dep("BOTERO LABS PAYROLL", "2026-07-31", 4660.65),
+  dep("NORTHWIND LABS PAYROLL", "2026-05-29", 5100.00),
+  dep("NORTHWIND LABS PAYROLL", "2026-06-15", 5100.00),
+  dep("NORTHWIND LABS PAYROLL", "2026-06-30", 5100.00),
+  dep("NORTHWIND LABS PAYROLL", "2026-07-16", 4800.00),
+  dep("NORTHWIND LABS PAYROLL", "2026-07-31", 4800.00),
 ];
 
 const INTEREST = [
@@ -29,11 +29,11 @@ const INTEREST = [
 describe("analyzeIncome", () => {
   it("reads a semi-monthly salary as 24 pay periods, not 26", () => {
     const { primary } = analyzeIncome(PAYROLL);
-    expect(primary?.merchant).toBe("BOTERO LABS PAYROLL");
+    expect(primary?.merchant).toBe("NORTHWIND LABS PAYROLL");
     expect(primary?.cadence).toBe("semimonthly");
     // Median of the three most recent deposits, so a pay change wins over history.
-    expect(primary?.amount).toBeCloseTo(4660.66, 2);
-    expect(primary?.annualized).toBeCloseTo(4660.66 * 24, 2);
+    expect(primary?.amount).toBeCloseTo(4800.00, 2);
+    expect(primary?.annualized).toBeCloseTo(4800.00 * 24, 2);
   });
 
   it("does not dilute salary across months that predate the job", () => {
@@ -53,7 +53,7 @@ describe("analyzeIncome", () => {
     expect(interest.isRecurring).toBe(true);
     expect(interest.looksLikePayroll).toBe(false);
     // Primary is the largest recurring source, so interest never leads.
-    expect(primary?.merchant).toBe("BOTERO LABS PAYROLL");
+    expect(primary?.merchant).toBe("NORTHWIND LABS PAYROLL");
   });
 
   it("flags a payroll name", () => {
@@ -96,7 +96,7 @@ describe("analyzeIncome", () => {
 
   it("excludes card payments, which are transfers rather than earnings", () => {
     const { sources } = analyzeIncome([
-      dep("Payment Thank You-Mobile", "2026-07-03", 2992.07),
+      dep("Payment Thank You-Mobile", "2026-07-03", 1450.00),
       ...PAYROLL,
     ]);
     expect(sources.map((s) => s.merchant)).not.toContain(

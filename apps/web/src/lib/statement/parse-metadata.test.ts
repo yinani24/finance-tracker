@@ -10,7 +10,7 @@ import {
 const CHASE = `
 Manage your account online at: www.chase.com/cardhelp
 ACCOUNT SUMMARY
-Account Number: XXXX XXXX XXXX 3146
+Account Number: XXXX XXXX XXXX 1234
 Previous Balance $2,848.21
 Payment, Credits -$5,840.28
 Purchases +$3,026.96
@@ -27,7 +27,7 @@ describe("parseStatementMetadata", () => {
     const m = parseStatementMetadata(CHASE);
     expect(m.issuer).toBe("Chase");
     expect(m.cardName).toBe("Sapphire Preferred");
-    expect(m.last4).toBe("3146");
+    expect(m.last4).toBe("1234");
     expect(m.periodStart).toBe("06/05/26");
     expect(m.periodEnd).toBe("07/04/26");
   });
@@ -75,7 +75,7 @@ describe("parseStatementMetadata", () => {
 
   it("labels the account from whatever was found", () => {
     expect(statementLabel(parseStatementMetadata(CHASE))).toBe(
-      "Chase Sapphire Preferred ••3146"
+      "Chase Sapphire Preferred ••1234"
     );
   });
 });

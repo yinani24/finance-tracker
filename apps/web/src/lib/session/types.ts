@@ -12,7 +12,7 @@ export type ScoreBand = "excellent" | "good" | "fair" | "poor";
 /** A card the user says they already hold. */
 export interface HeldCard {
   id: string;
-  /** Display label, e.g. "Chase Sapphire Preferred ••3146". */
+  /** Display label, e.g. "Chase Sapphire Preferred ••1234". */
   name: string;
   /**
    * The product name on its own, e.g. "Sapphire Preferred".

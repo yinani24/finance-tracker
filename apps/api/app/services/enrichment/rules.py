@@ -166,7 +166,7 @@ def _compile(keywords: tuple[str, ...]) -> re.Pattern[str]:
     alphanumeric, so entries like ``booking.`` or ``pg&e`` still match.
     A trailing ``*`` marks a PREFIX keyword — no closing boundary — for merchants
     that run a code straight onto the name (``american air*`` matches
-    ``AMERICAN AIR0017412354781``).
+    ``AMERICAN AIR0011111111111``).
     """
     parts = []
     for kw in keywords:

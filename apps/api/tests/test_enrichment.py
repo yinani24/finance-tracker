@@ -381,7 +381,7 @@ class TestProcessorAndBoundaryRules:
         assert self._cat("Payment Thank You-Mobile") != "transport"
 
     def test_prefix_keyword_matches_name_run_onto_digits(self):
-        assert self._cat("AMERICAN AIR0017412354781 FORT WORTH TX") == "travel"
+        assert self._cat("AMERICAN AIR0011111111111 FORT WORTH TX") == "travel"
 
     def test_unknown_still_falls_back_to_other(self):
         assert self._cat("ZZZQQ HOLDINGS LLC") == "other"

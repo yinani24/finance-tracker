@@ -188,7 +188,7 @@ function isAlnum(ch: string): boolean {
  * A boundary is only added where the keyword's edge is alphanumeric, so entries
  * like `booking.` or `pg&e` still match. A trailing `*` marks a PREFIX keyword
  * — no closing boundary — for merchants that run a code straight onto the name
- * (`american air*` matches `AMERICAN AIR0017412354781`).
+ * (`american air*` matches `AMERICAN AIR0011111111111`).
  */
 export function compileKeywords(keywords: readonly string[]): RegExp {
   const parts: string[] = [];

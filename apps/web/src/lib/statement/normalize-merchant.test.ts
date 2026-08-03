@@ -9,10 +9,10 @@ import { normalizeMerchant, extractProcessor } from "./normalize-merchant";
 describe("normalizeMerchant", () => {
   it("collapses airline tickets to one airline", () => {
     const raw = [
-      "AMERICAN AIR0017412354781 FORT WORTH TX",
-      "AMERICAN AIR0017412354782 FORT WORTH TX",
-      "AMERICAN AIR0017412225867 FORT WORTH TX",
-      "AMERICAN AIR0017521226538 FORT WORTH TX",
+      "AMERICAN AIR0011111111111 FORT WORTH TX",
+      "AMERICAN AIR0011111111112 FORT WORTH TX",
+      "AMERICAN AIR0011111111113 FORT WORTH TX",
+      "AMERICAN AIR0011111111114 FORT WORTH TX",
     ];
     expect(raw.map(normalizeMerchant)).toEqual([
       "American Airlines",
@@ -27,19 +27,19 @@ describe("normalizeMerchant", () => {
   });
 
   it("collapses Amazon order references", () => {
-    expect(normalizeMerchant("AMAZON MKTPL*T80A93XN3 Amzn.com/bill WA")).toBe(
+    expect(normalizeMerchant("AMAZON MKTPL*AB1CD2EF3 Amzn.com/bill WA")).toBe(
       "Amazon"
     );
-    expect(normalizeMerchant("AMAZON MKTPL*1U4CD8MR3 Amzn.com/bill WA")).toBe(
+    expect(normalizeMerchant("AMAZON MKTPL*GH4IJ5KL6 Amzn.com/bill WA")).toBe(
       "Amazon"
     );
   });
 
   it("handles Delta's space-separated ticket numbers", () => {
-    expect(normalizeMerchant("DELTA AIR 0067493890566 SEATTLE WA")).toBe(
+    expect(normalizeMerchant("DELTA AIR 0022222222221 SEATTLE WA")).toBe(
       "Delta Air Lines"
     );
-    expect(normalizeMerchant("DELTA AIR 0067497239833 SEATTLE WA")).toBe(
+    expect(normalizeMerchant("DELTA AIR 0022222222222 SEATTLE WA")).toBe(
       "Delta Air Lines"
     );
   });
@@ -66,7 +66,7 @@ describe("normalizeMerchant", () => {
   });
 
   it("never returns empty, even when everything looks like noise", () => {
-    expect(normalizeMerchant("0017412354781 CA")).toBe("0017412354781 CA");
+    expect(normalizeMerchant("0011111111111 CA")).toBe("0011111111111 CA");
     expect(normalizeMerchant("999999")).toBe("999999");
     expect(normalizeMerchant("   ")).toBe("");
   });
@@ -88,7 +88,7 @@ describe("extractProcessor", () => {
   });
 
   it("returns null when there is no marker", () => {
-    expect(extractProcessor("AMERICAN AIR0017412354781")).toBeNull();
+    expect(extractProcessor("AMERICAN AIR0011111111111")).toBeNull();
   });
 });
 
@@ -108,9 +108,9 @@ describe("normalizeMerchant — brand collisions", () => {
 describe("normalizeMerchant — Amazon descriptor shapes", () => {
   it("collapses every Amazon descriptor to one merchant", () => {
     const names = [
-      "AMAZON MKTPL*T80A93XN3 Amzn.com/bill WA",
-      "Amazon.com*KZ5738343 Amzn.com/bill WA",
-      "AMZN Mktp US*2H4KL9QP1",
+      "AMAZON MKTPL*AB1CD2EF3 Amzn.com/bill WA",
+      "Amazon.com*MN7OP8QR9 Amzn.com/bill WA",
+      "AMZN Mktp US*ST1UV2WX3",
       "AMAZON RETAIL* 7712 SEATTLE WA",
     ].map(normalizeMerchant);
     expect(new Set(names)).toEqual(new Set(["Amazon"]));

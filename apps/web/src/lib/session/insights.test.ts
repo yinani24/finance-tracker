@@ -161,20 +161,20 @@ describe("buildInsights", () => {
 
 describe("buildInsights — lookup failures", () => {
   it("stays quiet when every rate is zero, which means the card never matched", () => {
-    // A statement-derived name like "Chase Sapphire Preferred ••3146" does not
+    // A statement-derived name like "Chase Sapphire Preferred ••1234" does not
     // match the dataset key, so every rate returns 0. Reporting "earns only 0%"
     // off that is a false claim about a card that earns 2% on travel.
     const insights = buildInsights(
       session({
-        heldCards: [{ id: "a", name: "Chase Sapphire Preferred ••3146" }],
+        heldCards: [{ id: "a", name: "Chase Sapphire Preferred ••1234" }],
         transactions: [txn("AIRLINE", "2026-06-01", -1000, "travel", "a")],
       }),
       [
         {
           category: "travel",
-          best_card: { name: "Chase Sapphire Preferred ••3146", issuer: "CHASE" },
+          best_card: { name: "Chase Sapphire Preferred ••1234", issuer: "CHASE" },
           rate: 0,
-          card_rates: { "Chase Sapphire Preferred ••3146": 0 },
+          card_rates: { "Chase Sapphire Preferred ••1234": 0 },
         },
       ]
     );

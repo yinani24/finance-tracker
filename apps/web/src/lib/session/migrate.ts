@@ -68,7 +68,7 @@ function dedupeCards(session: SessionState): SessionState {
  *
  * Merchant normalization runs at import time, so transactions written before
  * it existed keep their raw descriptors — a tab open across the change would
- * still show "AMERICAN AIR0017412354781 FORT WORTH TX" in every merchant list.
+ * still show "AMERICAN AIR0011111111111 FORT WORTH TX" in every merchant list.
  * Normalizing on load repairs those in place. The absence of `rawMerchant` is
  * what marks a transaction as pre-migration, and setting it makes the pass
  * idempotent.

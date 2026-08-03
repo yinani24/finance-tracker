@@ -17,7 +17,7 @@ describe("migrate", () => {
   it("normalizes merchants stored before normalization existed", () => {
     const out = migrate({
       ...EMPTY_SESSION,
-      transactions: [txn("AMERICAN AIR0017412354781 FORT WORTH TX")],
+      transactions: [txn("AMERICAN AIR0011111111111 FORT WORTH TX")],
     });
     expect(out.transactions[0].merchant).toBe("American Airlines");
   });
@@ -31,7 +31,7 @@ describe("migrate", () => {
   it("is idempotent — a second pass changes nothing", () => {
     const once = migrate({
       ...EMPTY_SESSION,
-      transactions: [txn("AMAZON MKTPL*T80A93XN3 Amzn.com/bill WA")],
+      transactions: [txn("AMAZON MKTPL*AB1CD2EF3 Amzn.com/bill WA")],
     });
     expect(migrate(once)).toEqual(once);
   });

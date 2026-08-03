@@ -69,7 +69,7 @@ describe("categorize — word boundaries and prefix keywords", () => {
   });
 
   it("matches a prefix keyword run straight onto digits", () => {
-    expect(cat("AMERICAN AIR0017412354781 FORT WORTH TX")).toBe("travel");
+    expect(cat("AMERICAN AIR0011111111111 FORT WORTH TX")).toBe("travel");
   });
 
   it("matches trader joe* against TRADER JOES", () => {

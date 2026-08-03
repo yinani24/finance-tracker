@@ -5,12 +5,12 @@
  * with a processor prefix, a booking or order reference, a support URL, a
  * phone number and a city/state. Left alone, the reference number makes every
  * charge look like a different company: four American Airlines tickets appear
- * as `AMERICAN AIR0017412354781`, `AMERICAN AIR0017412354782` and so on, so a
+ * as `AMERICAN AIR0011111111111`, `AMERICAN AIR0011111111112` and so on, so a
  * top-merchant list becomes a list of ticket numbers.
  *
  * The server has `app/services/merchant.py`, but its trailing-noise rules
  * assume the reference is space-separated (`\s+\d{3,}`), which misses the
- * glued `AIR0017412354781` form entirely. This is the stricter version.
+ * glued `AIR0011111111111` form entirely. This is the stricter version.
  *
  * Normalization is for grouping and display only. Categorization still reads
  * the raw string, because the processor prefix it strips (`DD*`, `TST*`) is
@@ -123,7 +123,7 @@ export function normalizeMerchant(raw: string): string {
   if (!original) return "";
 
   // Brands are matched against the raw descriptor first. Reference stripping
-  // removes "AIR0017412354781" as one token, taking the "AIR" that identifies
+  // removes "AIR0011111111111" as one token, taking the "AIR" that identifies
   // the airline with it — so by the time the string is clean, "AMERICAN" alone
   // is left, which must not be confused with American Express.
   // The `*` a brand stamps before its own sub-product ("UBER *EATS") is a

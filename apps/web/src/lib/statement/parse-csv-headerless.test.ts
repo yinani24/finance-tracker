@@ -5,9 +5,9 @@ import { parseCsv } from "./parse-csv";
  * Chase's bank-account export is bare `date,description,amount` with no titles.
  * The parser used to reject it as having "no CSV header row found".
  */
-const HEADERLESS = `2026-07-31,"BOTERO LABS PAYROLL",4660.65
-2026-07-16,"BOTERO LABS PAYROLL",4660.66
-2026-07-03,"CHASE CREDIT CRD EPAY",-2992.07
+const HEADERLESS = `2026-07-31,"NORTHWIND LABS PAYROLL",4800.00
+2026-07-16,"NORTHWIND LABS PAYROLL",4800.00
+2026-07-03,"CHASE CREDIT CRD EPAY",-1450.00
 2026-07-02,"Interest Payment",46.56`;
 
 describe("parseCsv — no header row", () => {
@@ -17,8 +17,8 @@ describe("parseCsv — no header row", () => {
     expect(rows).toHaveLength(4);
     expect(rows[0]).toEqual({
       occurredOn: "2026-07-31",
-      merchant: "BOTERO LABS PAYROLL",
-      signedAmount: 4660.65,
+      merchant: "NORTHWIND LABS PAYROLL",
+      signedAmount: 4800.00,
     });
   });
 
@@ -26,7 +26,7 @@ describe("parseCsv — no header row", () => {
     const { rows } = parseCsv(HEADERLESS);
     expect(rows.filter((r) => r.signedAmount > 0)).toHaveLength(3);
     expect(rows.find((r) => r.merchant.includes("EPAY"))!.signedAmount).toBe(
-      -2992.07,
+      -1450.00,
     );
   });
 
