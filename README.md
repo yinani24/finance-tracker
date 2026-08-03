@@ -2,7 +2,7 @@
 
 **Drop a credit card statement in. Find out which card you should have used.**
 
-[Live app](https://web-kw97mkws8-yash-9893s-projects.vercel.app) · No account, no sign-up, nothing uploaded.
+[Live app](https://web-one-pi-66.vercel.app) · No account, no sign-up, nothing uploaded.
 
 ---
 
