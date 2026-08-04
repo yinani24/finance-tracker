@@ -17,6 +17,7 @@ import { postStatelessRecommendations, hasApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
 import { summarize, categoryTotals, topMerchants } from "@/lib/session/derive";
+import { buildNarrative } from "@/lib/session/narrative";
 import { StatementDropzone } from "@/components/statement-dropzone";
 
 function StatCard({
@@ -60,6 +61,7 @@ export default function DashboardPage() {
     () => topMerchants(session.transactions, 6),
     [session.transactions]
   );
+  const story = useMemo(() => buildNarrative(session), [session]);
 
   const hasData = ready && session.transactions.length > 0;
 
@@ -117,6 +119,30 @@ export default function DashboardPage() {
             : ""}
         </p>
       </div>
+
+      {/* The summary in words, before the same facts as figures. Reading a
+          sentence is less work than reading a table, and the two can't
+          disagree because both come from the same derived values. */}
+      <section className="mb-8 max-w-3xl">
+        <p className="text-lg leading-relaxed text-card-foreground">
+          {story.headline}
+        </p>
+        {story.points.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {story.points.map((point, i) => (
+              <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-muted">
+                <span aria-hidden className="mt-2 h-px w-4 flex-shrink-0 bg-border" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {story.suggestion && (
+          <p className="mt-4 border-l-2 border-primary pl-4 text-[15px] leading-relaxed text-card-foreground">
+            {story.suggestion}
+          </p>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
