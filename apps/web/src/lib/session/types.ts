@@ -36,6 +36,16 @@ export interface HeldCard {
 
 export interface CreditStanding {
   scoreBand?: ScoreBand;
+  /**
+   * Gross annual income, as the user would state it on an application.
+   *
+   * Deposits show take-home pay — after tax, retirement and benefits — which
+   * is the right number for "can I afford this" but the wrong one for card
+   * applications, which ask for gross. The two differ by roughly a third, so
+   * deriving one from the other would be a guess; this is only ever supplied
+   * by the user.
+   */
+  grossAnnualIncome?: number;
   /** Cards opened in the last 24 months — drives issuer velocity rules. */
   recentApplications?: number;
 }

@@ -19,7 +19,7 @@ import { StatementDropzone } from "@/components/statement-dropzone";
  * positive amounts, and the same parser handles them.
  */
 export default function IncomePage() {
-  const { session, ready } = useSession();
+  const { session, ready, setCredit } = useSession();
   const txns = session.transactions;
 
   const summary = useMemo(() => summarize(session), [session]);
@@ -59,7 +59,7 @@ export default function IncomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="border border-border p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted">Monthly income</span>
+                <span className="text-sm text-muted">Monthly take-home</span>
                 <Wallet className="w-5 h-5 text-muted-foreground" />
               </div>
               <span className="text-2xl font-semibold font-mono tabular-nums text-card-foreground">
@@ -67,7 +67,8 @@ export default function IncomePage() {
               </span>
               {income.primary && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {formatCurrency(income.annualTotal)} a year
+                  {formatCurrency(income.annualTotal)} a year, after tax and
+                  deductions
                 </p>
               )}
             </div>
@@ -94,6 +95,52 @@ export default function IncomePage() {
               )}
             </div>
           </div>
+
+          {/* Gross is asked for rather than derived. The gap between deposits
+              and salary is tax, retirement and benefits — a third or so, but
+              varying enough by state and election that guessing would be
+              worse than asking. */}
+          <section className="border border-border p-6 mb-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-card-foreground">
+                  Gross salary
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  What you&apos;d put on a card application — before tax and
+                  deductions. Deposits above are what actually arrives.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-muted">$</span>
+                <input
+                  inputMode="decimal"
+                  defaultValue={session.credit.grossAnnualIncome ?? ""}
+                  onBlur={(e) =>
+                    setCredit({
+                      grossAnnualIncome: e.target.value
+                        ? Number(e.target.value.replace(/[$,\s]/g, ""))
+                        : undefined,
+                    })
+                  }
+                  placeholder="180000"
+                  className="w-32 border border-input bg-background px-3 py-2 text-right font-mono tabular-nums text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40 motion-base"
+                />
+                <span className="text-muted">/yr</span>
+              </label>
+            </div>
+            {session.credit.grossAnnualIncome ? (
+              <p className="mt-3 text-sm text-muted">
+                Your deposits come to{" "}
+                {formatCurrency(income.annualTotal)} a year, which is{" "}
+                {Math.round(
+                  (income.annualTotal / session.credit.grossAnnualIncome) * 100
+                )}
+                % of that — the rest goes to tax, retirement and benefits before
+                it ever reaches you.
+              </p>
+            ) : null}
+          </section>
 
           <section className="border border-border p-6 mb-6">
             <h2 className="font-semibold text-card-foreground mb-4">

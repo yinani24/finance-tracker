@@ -105,7 +105,7 @@ export function buildNarrative(session: SessionState): Narrative {
   if (income.primary) {
     const p = income.primary;
     points.push(
-      `${p.merchant} pays ${money(p.amount)} ${cadenceLabel(p.cadence)}, which works out to ${money(p.annualized)} a year.`
+      `${p.merchant} deposits ${money(p.amount)} ${cadenceLabel(p.cadence)} — ${money(p.annualized)} a year reaching your account, after tax and deductions.`
     );
     const net = income.monthlyTotal - s.monthlySpend;
     if (net < 0) {
@@ -114,7 +114,7 @@ export function buildNarrative(session: SessionState): Narrative {
       );
     } else if (income.monthlyTotal > 0) {
       points.push(
-        `That leaves ${money(net)} a month after the spending above — ${Math.round((net / income.monthlyTotal) * 100)}% of what you earn.`
+        `That leaves ${money(net)} a month after the spending above — ${Math.round((net / income.monthlyTotal) * 100)}% of what lands in your account.`
       );
     }
   }
