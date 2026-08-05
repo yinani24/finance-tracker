@@ -144,3 +144,55 @@ class TestRecommendationsAPI:
         resp = client.post("/recommendations/refresh")
         assert resp.status_code == 200
         assert resp.json()["status"] == "refreshed"
+
+
+class TestStatelessCombination:
+    """`POST /recommendations/combination/stateless` — the stateless mirror of
+    the DB-backed combination endpoint (#242). Keyless: no auth, no DB writes;
+    the profile is supplied in the request and the card set is patched."""
+
+    # Stateless endpoints call `_fetch_cards` via the name imported into the
+    # router module, so that is the patch target (not the snapshot service's).
+    @patch("app.api.recommendations._fetch_cards", return_value=MOCK_CARDS)
+    def test_shape_and_no_profile_leak(self, mock_fetch, client: TestClient):
+        resp = client.post(
+            "/recommendations/combination/stateless",
+            json={
+                "avg_monthly_spend": 2000.0,
+                "category_breakdown": {"dining": 800.0, "shopping": 1200.0},
+                "held_cards": [],
+                "max_results": 10,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # The combination shape, returned verbatim.
+        for key in (
+            "recommended_new_cards",
+            "per_category_routing",
+            "baseline_first_year_value",
+            "projected_first_year_value",
+        ):
+            assert key in data
+        # Mirrors next-card/portfolio stateless: the caller already holds the
+        # profile it posted, so it must not come back.
+        assert "spending_profile" not in data
+        # Projection can never sit below the held-wallet baseline: the engine
+        # only adds a card when its marginal first-year value is positive.
+        assert data["projected_first_year_value"] >= data["baseline_first_year_value"]
+        # Empty wallet + real spend + a positive-value card on the market →
+        # the combination recommends applying for it.
+        assert len(data["recommended_new_cards"]) >= 1
+
+    @patch("app.api.recommendations._fetch_cards", return_value=MOCK_CARDS)
+    def test_empty_profile_recommends_nothing(self, mock_fetch, client: TestClient):
+        resp = client.post(
+            "/recommendations/combination/stateless",
+            json={"avg_monthly_spend": 0.0, "category_breakdown": {}, "held_cards": []},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # No spend and no achievable bonus signal → no card clears the positive
+        # marginal-value bar, and baseline == projected.
+        assert data["recommended_new_cards"] == []
+        assert data["projected_first_year_value"] == data["baseline_first_year_value"]
