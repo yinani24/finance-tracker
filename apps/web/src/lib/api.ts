@@ -286,6 +286,41 @@ export const postStatelessPortfolio = (body: StatelessProfileRequest) =>
     method: "POST",
     body: JSON.stringify(body),
   });
+
+/**
+ * The optimal SET of cards (held + new) that maximizes total first-year value
+ * — the DB-free mirror of `GET /recommendations/combination`. Every dollar
+ * figure (`marginal_value`, `baseline_first_year_value`,
+ * `projected_first_year_value`) is USD; `rate` is already a percent-equivalent
+ * number (e.g. `3.0` means 3%). Omits `spending_profile` — the caller already
+ * holds the profile it posted.
+ */
+export interface StatelessCombinationResponse {
+  recommended_new_cards: {
+    name: string;
+    issuer: string;
+    marginal_value: number;
+    categories_won: string[];
+    rationale: string;
+  }[];
+  per_category_routing: {
+    category: string;
+    card: { name: string; issuer: string };
+    is_new: boolean;
+    rate: number;
+  }[];
+  baseline_first_year_value: number;
+  projected_first_year_value: number;
+}
+
+export const postStatelessCombination = (body: StatelessProfileRequest) =>
+  request<StatelessCombinationResponse>(
+    "/recommendations/combination/stateless",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
 export const getPortfolioAnalysis = () =>
   request<PortfolioResponse>("/recommendations/portfolio");
 export const getSpendingProfile = () =>
