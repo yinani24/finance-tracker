@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Web: the optimal set of cards, in the client-only flow (#244).** The
+  recommendations page now renders the multi-card combination recommender
+  (`optimal_card_combination`, #185 — PRODUCT.md Decision #1) alongside the
+  ranked-singles list, via a new `postStatelessCombination` client method +
+  `StatelessCombinationResponse` type calling `POST
+  /recommendations/combination/stateless` (#242). Shows the baseline →
+  projected first-year value uplift, each recommended new card (issuer,
+  marginal first-year value, categories won, rationale), and a per-category
+  routing table ("use this card for dining"), with an "already optimal" empty
+  state. Both recommenders now build from one shared `profile` memo so they
+  can't drift. Dollar figures render via `formatCurrency`; `rate` is already a
+  percent-equivalent (rendered `toFixed(1)%`, not ×100). No new persisted
+  state — consistent with the stateless flow.
 - **Transaction enrichment provenance (#208, slice 2a).** Added two nullable
   columns to `transactions` — `category_confidence` (the provider's 0..1
   confidence in `category`) and `enriched_at` (when a provider last classified

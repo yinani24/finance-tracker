@@ -3,7 +3,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Lightbulb, ExternalLink, Loader2 } from "lucide-react";
-import { postStatelessRecommendations, hasApi } from "@/lib/api";
+import {
+  postStatelessRecommendations,
+  postStatelessCombination,
+  hasApi,
+  type StatelessProfileRequest,
+} from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useSession } from "@/lib/session/session-context";
 import { summarize, categoryTotals } from "@/lib/session/derive";
@@ -37,31 +42,52 @@ export default function RecommendationsPage() {
 
   const hasData = ready && session.transactions.length > 0;
 
-  const { data, isLoading } = useQuery({
-    queryKey: [
-      "recommendations",
-      "stateless",
-      Math.round(summary.monthlySpend),
-      cats.map((c) => `${c.category}:${Math.round(c.total)}`).join(","),
+  // One profile, two recommenders: "what to get next" (single best cards) and
+  // "the optimal set" (combination) rank against the exact same locally-derived
+  // spending. Factoring it here keeps the two calls from drifting apart.
+  const profile = useMemo<StatelessProfileRequest>(
+    () => ({
+      avg_monthly_spend: summary.monthlySpend,
+      category_breakdown: Object.fromEntries(
+        cats.map((c) => [c.category, c.total / summary.months])
+      ),
+      held_cards: session.heldCards.map((c) => ({
+        // The dataset is keyed on the product name, not the display label.
+        name: c.productName ?? c.name,
+        issuer: c.issuer,
+      })),
+      credit_score_band: session.credit.scoreBand ?? null,
+      recent_card_applications: session.credit.recentApplications ?? null,
+      max_results: 10,
+    }),
+    [
+      summary.monthlySpend,
+      summary.months,
+      cats,
+      session.heldCards,
       session.credit.scoreBand,
-      session.heldCards.map((c) => c.name).join(","),
-    ],
+      session.credit.recentApplications,
+    ]
+  );
+
+  // The two queries share the same discriminators so they invalidate together.
+  const queryInputs = [
+    Math.round(summary.monthlySpend),
+    cats.map((c) => `${c.category}:${Math.round(c.total)}`).join(","),
+    session.credit.scoreBand,
+    session.heldCards.map((c) => c.name).join(","),
+  ];
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["recommendations", "stateless", ...queryInputs],
     enabled: hasData && hasApi,
-    queryFn: () =>
-      postStatelessRecommendations({
-        avg_monthly_spend: summary.monthlySpend,
-        category_breakdown: Object.fromEntries(
-          cats.map((c) => [c.category, c.total / summary.months])
-        ),
-        held_cards: session.heldCards.map((c) => ({
-          // The dataset is keyed on the product name, not the display label.
-          name: c.productName ?? c.name,
-          issuer: c.issuer,
-        })),
-        credit_score_band: session.credit.scoreBand ?? null,
-        recent_card_applications: session.credit.recentApplications ?? null,
-        max_results: 10,
-      }),
+    queryFn: () => postStatelessRecommendations(profile),
+  });
+
+  const { data: combo } = useQuery({
+    queryKey: ["combination", "stateless", ...queryInputs],
+    enabled: hasData && hasApi,
+    queryFn: () => postStatelessCombination(profile),
   });
 
   if (ready && !hasData) {
@@ -115,6 +141,123 @@ export default function RecommendationsPage() {
           </select>
         </label>
       </div>
+
+      {/* The optimal SET of cards (held + new) — the combination recommender,
+          PRODUCT.md Decision #1. Distinct from the ranked-singles list below:
+          this answers "which cards, together, extract the most first-year
+          value," then routes each spending category to whichever card in that
+          combined wallet earns most on it. Every figure below is USD; `rate`
+          is already a percent-equivalent, so it renders as-is. */}
+      {hasApi && combo && (
+        <section className="mb-8 border border-border p-6">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            The optimal set of cards
+          </h2>
+
+          {combo.recommended_new_cards.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">
+              Your current wallet is already optimal for this spending — no card
+              worth adding.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-muted">
+                Adding{" "}
+                {combo.recommended_new_cards.length === 1
+                  ? "this card"
+                  : `these ${combo.recommended_new_cards.length} cards`}{" "}
+                lifts your first-year value from{" "}
+                <span className="font-mono tabular-nums text-card-foreground">
+                  {formatCurrency(combo.baseline_first_year_value)}
+                </span>{" "}
+                to{" "}
+                <span className="font-mono tabular-nums text-success">
+                  {formatCurrency(combo.projected_first_year_value)}
+                </span>{" "}
+                <span className="text-success">
+                  (+
+                  {formatCurrency(
+                    combo.projected_first_year_value -
+                      combo.baseline_first_year_value
+                  )}
+                  )
+                </span>
+                .
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {combo.recommended_new_cards.map((c) => (
+                  <div
+                    key={`${c.name}:${c.issuer}`}
+                    className="border border-border p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-card-foreground">
+                          {c.name}
+                        </h3>
+                        <p className="text-sm text-muted">{pretty(c.issuer)}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <div className="font-mono tabular-nums text-success">
+                          +{formatCurrency(c.marginal_value)}
+                        </div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          first-year value
+                        </div>
+                      </div>
+                    </div>
+                    {c.categories_won.length > 0 && (
+                      <p className="mt-2 text-xs text-muted">
+                        Wins{" "}
+                        <span className="text-card-foreground">
+                          {c.categories_won.join(", ")}
+                        </span>
+                      </p>
+                    )}
+                    {c.rationale && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {c.rationale}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {combo.per_category_routing.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Which card to use, by category
+              </h3>
+              <ul className="mt-2 divide-y divide-border border border-border">
+                {combo.per_category_routing.map((r) => (
+                  <li
+                    key={r.category}
+                    className="flex items-center justify-between gap-4 px-4 py-2 text-sm"
+                  >
+                    <span className="capitalize text-muted">{r.category}</span>
+                    <span className="flex items-center gap-2 text-right">
+                      <span className="text-card-foreground">
+                        {r.card.name}
+                      </span>
+                      {r.is_new && (
+                        <span className="mono-chip text-[10px] uppercase">
+                          new
+                        </span>
+                      )}
+                      <span className="font-mono tabular-nums text-muted">
+                        {r.rate.toFixed(1)}%
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted">
