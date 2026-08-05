@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Stateless multi-card combination endpoint (`POST /recommendations/combination/stateless`, #242).**
+  The stateless mirror of the DB-backed `GET /recommendations/combination` (#185).
+  The web pivoted to a client-only flow (statements parsed in the browser, never
+  written to the DB) that ranks via `POST /recommendations/{next-card,portfolio}/stateless`;
+  combination was the only recommender still reachable **only** through the
+  DB-backed GET, so the product's headline "optimal SET of cards" capability
+  couldn't reach users. This endpoint takes the same aggregate-only
+  `StatelessProfileRequest` and returns the combination dict verbatim
+  (`recommended_new_cards`, `per_category_routing`, `baseline_first_year_value`,
+  `projected_first_year_value`), omitting `spending_profile` like the other two
+  stateless endpoints. Touches no session, user row or table; keyless hermetic
+  tests. (Web render of the combination is a separate follow-up slice.)
 - **Transaction enrichment provenance (#208, slice 2a).** Added two nullable
   columns to `transactions` — `category_confidence` (the provider's 0..1
   confidence in `category`) and `enriched_at` (when a provider last classified

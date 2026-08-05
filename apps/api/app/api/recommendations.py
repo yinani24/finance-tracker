@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
-from app.database import get_db
 from app.config import settings
+from app.database import get_db
 from app.services.approval_odds import ApprovalProfile
 from app.services.card_recommendation import CardRecommendationService
 from app.services.recommendation_snapshot import (
@@ -204,6 +204,46 @@ def post_portfolio_stateless(payload: StatelessProfileRequest) -> dict:
             service, payload.category_breakdown, available
         ),
     }
+
+
+@router.post("/combination/stateless")
+def post_combination_stateless(payload: StatelessProfileRequest) -> dict:
+    """The optimal SET of cards (held + new) from a profile supplied in the request.
+
+    The stateless mirror of ``GET /recommendations/combination`` (#185, the
+    headline "recommend across BOTH existing + new cards" capability). Same
+    contract as the other two stateless endpoints — aggregates in, analysis out,
+    nothing persisted — so the client-only flow (statements parsed in the
+    browser, never written to the DB) can reach the combination engine the same
+    way it reaches next-card and portfolio.
+
+    Returns the combination dict verbatim (``recommended_new_cards``,
+    ``per_category_routing``, ``baseline_first_year_value``,
+    ``projected_first_year_value``). ``spending_profile`` is deliberately omitted,
+    matching ``next-card``/``portfolio`` stateless: the caller already holds the
+    profile it just posted.
+    """
+    service = CardRecommendationService()
+    profile = {
+        "avg_monthly_spend": payload.avg_monthly_spend,
+        "category_breakdown": payload.category_breakdown,
+        "top_merchants": [],
+    }
+    user_cards = [
+        {
+            "name": c.name,
+            "issuer": c.issuer or "",
+            "network": "",
+            "annual_fee": c.annual_fee,
+        }
+        for c in payload.held_cards
+    ]
+    return service.optimal_card_combination(
+        profile,
+        user_cards,
+        _fetch_cards(),
+        points_value_cents=settings.points_value_cents,
+    )
 
 
 # What a point is worth, in cents, by the currency the card earns.
